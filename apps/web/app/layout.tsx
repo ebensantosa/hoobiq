@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Nunito, JetBrains_Mono } from "next/font/google";
 import { themeInitScript } from "@/components/theme-toggle";
@@ -19,6 +19,12 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+// themeColor moved to its own `viewport` export — Next.js 15 split this out
+// of `metadata` and now warns (but still works) when it's left in metadata.
+export const viewport: Viewport = {
+  themeColor: "#E7559F",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Hoobiq — Collect · Connect · Trade",
@@ -27,7 +33,6 @@ export const metadata: Metadata = {
   description:
     "Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merchandise, komik. Transaksi aman via Hoobiq Pay.",
   applicationName: "Hoobiq",
-  themeColor: "#E7559F",
   openGraph: {
     title: "Hoobiq — Collect · Connect · Trade",
     description: "Marketplace & komunitas kolektor hobi Indonesia.",

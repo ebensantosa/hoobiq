@@ -10,14 +10,15 @@ const timeline = [
   { actor: "@nendohunt",  role: "buyer",  body: "Video unboxing utuh dari saat nerima paket. Bisa dicek dari kurir atau seller salah packing.", when: "25 Apr · 18:02" },
 ];
 
-export default function AdminDisputeDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminDisputeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <AdminShell active="Dispute">
       <div className="px-8 py-8">
         <nav className="mb-6 text-xs text-fg-subtle">
           <Link href="/admin/dispute" className="hover:text-fg">Dispute</Link>
           <span className="mx-2">/</span>
-          <span>#{params.id}</span>
+          <span>#{id}</span>
         </nav>
 
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-6">
@@ -25,7 +26,7 @@ export default function AdminDisputeDetailPage({ params }: { params: { id: strin
             <div className="flex items-center gap-2">
               <Badge tone="crim" size="sm">Baru · High priority</Badge>
               <span className="font-mono text-xs text-fg-subtle">
-                Dispute #{params.id} · tx HBQ-2026-04845120
+                Dispute #{id} · tx HBQ-2026-04845120
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-bold text-fg">

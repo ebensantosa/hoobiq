@@ -11,9 +11,10 @@ const actions = [
   { by: "Rina A.", what: "Membalas tiket bantuan #8821", when: "14 Mar 2026" },
 ];
 
-export default function AdminUserDetailPage({ params }: { params: { username: string } }) {
+export default async function AdminUserDetailPage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
   const u = {
-    username: params.username,
+    username,
     name: "Aditya Kurniawan",
     email: "aditya@gmail.com",
     phone: "+62 812-3456-7890",

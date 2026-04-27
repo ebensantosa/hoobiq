@@ -11,21 +11,22 @@ const reporters = [
   { user: "nendolover",  when: "8 jam lalu",  body: "Chat minta transfer dulu, bilang 'biar murah tanpa fee'." },
 ];
 
-export default function AdminReportDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <AdminShell active="Laporan & abuse">
       <div className="px-8 py-8">
         <nav className="mb-6 text-xs text-fg-subtle">
           <Link href="/admin/laporan" className="hover:text-fg">Laporan</Link>
           <span className="mx-2">/</span>
-          <span>#{params.id}</span>
+          <span>#{id}</span>
         </nav>
 
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-6">
           <div>
             <div className="flex items-center gap-2">
               <Badge tone="crim" size="sm">Terbuka · High severity</Badge>
-              <span className="font-mono text-xs text-fg-subtle">Laporan #{params.id}</span>
+              <span className="font-mono text-xs text-fg-subtle">Laporan #{id}</span>
             </div>
             <h1 className="mt-3 text-2xl font-bold text-fg">
               Target: <span className="text-brand-400">@spamseller88</span>

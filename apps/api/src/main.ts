@@ -52,8 +52,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  // API versioning from day 1
-  app.setGlobalPrefix("api/v1");
+  // API versioning from day 1. Health endpoints stay at the root so reverse
+  // proxies can hit /healthz and /readyz without knowing the API prefix.
+  app.setGlobalPrefix("api/v1", { exclude: ["healthz", "readyz"] });
 
   // Static serving for user-uploaded media. Files live in `apps/api/public/`
   // — same convention as Next.js so it's intuitive. We resolve relative to

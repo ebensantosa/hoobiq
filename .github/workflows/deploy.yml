@@ -1,0 +1,50 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  # Manual trigger from the Actions tab — useful for redeploying without
+  # making a no-op commit.
+  workflow_dispatch:
+
+# Prevent two deploys racing each other. The second push waits for the first.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # We don't build on the runner — we ssh into the VPS and let it pull
+      # + build. Keeps deploy logs in one place (the VPS) and avoids
+      # shipping a .next bundle through the wire on every push.
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run deploy.sh on VPS
+        run: |
+          ssh -o StrictHostKeyChecking=yes \
+              hoobiq@${{ secrets.VPS_HOST }} \
+              "bash /var/www/hoobiq/scripts/deploy.sh"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deploy failed — VPS auto-rolled back to previous commit."
+          echo "Check pm2 logs on the VPS:"
+          echo "  ssh hoobiq@\$VPS_HOST 'pm2 logs hoobiq-api --lines 50'"
+          echo "  ssh hoobiq@\$VPS_HOST 'pm2 logs hoobiq-web --lines 50'"

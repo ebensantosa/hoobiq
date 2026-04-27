@@ -23,6 +23,7 @@ import { FloorModule } from "./modules/floor/floor.module";
 import { DropsModule } from "./modules/drops/drops.module";
 import { TradesModule } from "./modules/trades/trades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
+import { HealthModule } from "./modules/health/health.module";
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
     DropsModule,
     TradesModule,
     UploadsModule,
+    HealthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -1,12 +1,14 @@
 // Hoobiq — marketplace & komunitas kolektor Indonesia
-// SQLite for dev (zero-infra). Prod: swap provider to postgresql via env.
+// Postgres for both dev and prod (swap to local Postgres via DATABASE_URL).
+// SQLite was used during early prototyping; we moved to Postgres so dev
+// behavior matches production exactly (booleans, transactions, json types).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -166,7 +168,7 @@ model ListingReview {
   listingId String   @map("listing_id")
   buyerId   String   @map("buyer_id")
   orderId   String   @unique @map("order_id")
-  rating    Int      // 1–5
+  rating    Int // 1–5
   body      String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -201,40 +203,40 @@ model WishlistItem {
 //  - shipmentDeadlineAt: 7 days after `paid`. If still not shipped → auto-cancel + refund.
 //  - autoReleaseAt: 3 days after `delivered` (or buyer marks received). Funds released to seller.
 model Order {
-  id                  String    @id @default(cuid())
-  humanId             String    @unique @map("human_id")
-  buyerId             String    @map("buyer_id")
-  sellerId            String    @map("seller_id")
-  listingId           String    @map("listing_id")
-  addressId           String    @map("address_id")
-  qty                 Int       @default(1)
-  priceCents          BigInt    @map("price_cents")
-  shippingCents       BigInt    @default(0) @map("shipping_cents")
-  platformFeeCents    BigInt    @default(0) @map("platform_fee_cents")
-  payFeeCents         BigInt    @default(0) @map("pay_fee_cents")
-  insuranceCents      BigInt    @default(0) @map("insurance_cents")
-  totalCents          BigInt    @map("total_cents")
-  courierCode         String    @map("courier_code")
-  trackingNumber      String?   @map("tracking_number")
-  status              String    @default("pending_payment")
-  paidAt              DateTime? @map("paid_at")
-  shippedAt           DateTime? @map("shipped_at")
-  deliveredAt         DateTime? @map("delivered_at")
-  completedAt         DateTime? @map("completed_at")
-  cancelledAt         DateTime? @map("cancelled_at")
-  refundedAt          DateTime? @map("refunded_at")
-  shipmentDeadlineAt  DateTime? @map("shipment_deadline_at")
-  autoReleaseAt       DateTime? @map("auto_release_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(cuid())
+  humanId            String    @unique @map("human_id")
+  buyerId            String    @map("buyer_id")
+  sellerId           String    @map("seller_id")
+  listingId          String    @map("listing_id")
+  addressId          String    @map("address_id")
+  qty                Int       @default(1)
+  priceCents         BigInt    @map("price_cents")
+  shippingCents      BigInt    @default(0) @map("shipping_cents")
+  platformFeeCents   BigInt    @default(0) @map("platform_fee_cents")
+  payFeeCents        BigInt    @default(0) @map("pay_fee_cents")
+  insuranceCents     BigInt    @default(0) @map("insurance_cents")
+  totalCents         BigInt    @map("total_cents")
+  courierCode        String    @map("courier_code")
+  trackingNumber     String?   @map("tracking_number")
+  status             String    @default("pending_payment")
+  paidAt             DateTime? @map("paid_at")
+  shippedAt          DateTime? @map("shipped_at")
+  deliveredAt        DateTime? @map("delivered_at")
+  completedAt        DateTime? @map("completed_at")
+  cancelledAt        DateTime? @map("cancelled_at")
+  refundedAt         DateTime? @map("refunded_at")
+  shipmentDeadlineAt DateTime? @map("shipment_deadline_at")
+  autoReleaseAt      DateTime? @map("auto_release_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  buyer   User     @relation("BuyerOrders", fields: [buyerId], references: [id])
-  seller  User     @relation("SellerOrders", fields: [sellerId], references: [id])
-  listing Listing  @relation(fields: [listingId], references: [id])
-  address Address  @relation(fields: [addressId], references: [id])
-  payment Payment?
-  dispute Dispute?
-  review  ListingReview?
+  buyer          User            @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller         User            @relation("SellerOrders", fields: [sellerId], references: [id])
+  listing        Listing         @relation(fields: [listingId], references: [id])
+  address        Address         @relation(fields: [addressId], references: [id])
+  payment        Payment?
+  dispute        Dispute?
+  review         ListingReview?
   cancelRequests CancelRequest[]
   returnRequests ReturnRequest[]
 
@@ -285,9 +287,9 @@ model ReturnRequest {
   evidenceJson         String    @default("[]") @map("evidence_json")
   status               String    @default("requested")
   rejectNote           String?   @map("reject_note")
-  responseDeadlineAt   DateTime  @map("response_deadline_at")  // requested → auto-approve
+  responseDeadlineAt   DateTime  @map("response_deadline_at") // requested → auto-approve
   shipBackDeadlineAt   DateTime? @map("ship_back_deadline_at") // approved → expired
-  confirmDeadlineAt    DateTime? @map("confirm_deadline_at")   // shipped_back → auto-confirm
+  confirmDeadlineAt    DateTime? @map("confirm_deadline_at") // shipped_back → auto-confirm
   returnTrackingNumber String?   @map("return_tracking_number")
   returnCourierCode    String?   @map("return_courier_code")
   shippedBackAt        DateTime? @map("shipped_back_at")
@@ -364,8 +366,8 @@ model Post {
   createdAt     DateTime  @default(now()) @map("created_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  author User       @relation(fields: [authorId], references: [id])
-  likes  PostLike[]
+  author   User          @relation(fields: [authorId], references: [id])
+  likes    PostLike[]
   comments PostComment[]
 
   @@index([authorId, createdAt])
@@ -508,20 +510,20 @@ model FeatureFlag {
 }
 
 model Drop {
-  id            String    @id @default(cuid())
-  slug          String    @unique
-  productName   String    @map("product_name")
-  brand         String
-  description   String?
-  heroImageUrl  String?   @map("hero_image_url")
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  productName  String    @map("product_name")
+  brand        String
+  description  String?
+  heroImageUrl String?   @map("hero_image_url")
   supplyQty    Int       @map("supply_qty")
-  priceIdr      BigInt?   @map("price_idr")
-  dropsAt       DateTime  @map("drops_at")
-  endsAt        DateTime? @map("ends_at")
-  listingSlug   String?   @map("listing_slug")
-  status        String    @default("scheduled") // scheduled | live | sold_out | cancelled
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  priceIdr     BigInt?   @map("price_idr")
+  dropsAt      DateTime  @map("drops_at")
+  endsAt       DateTime? @map("ends_at")
+  listingSlug  String?   @map("listing_slug")
+  status       String    @default("scheduled") // scheduled | live | sold_out | cancelled
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   reminders DropReminder[]
 
@@ -546,15 +548,15 @@ model DropReminder {
 }
 
 model TradeProposal {
-  id             String    @id @default(cuid())
-  fromUserId     String    @map("from_user_id")
-  toUserId       String    @map("to_user_id")
-  fromListingId  String    @map("from_listing_id")
-  toListingId    String    @map("to_listing_id")
-  message        String?
-  status         String    @default("pending") // pending | accepted | declined | cancelled | expired
-  respondedAt    DateTime? @map("responded_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(cuid())
+  fromUserId    String    @map("from_user_id")
+  toUserId      String    @map("to_user_id")
+  fromListingId String    @map("from_listing_id")
+  toListingId   String    @map("to_listing_id")
+  message       String?
+  status        String    @default("pending") // pending | accepted | declined | cancelled | expired
+  respondedAt   DateTime? @map("responded_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   @@index([toUserId, status, createdAt])
   @@index([fromUserId, status, createdAt])

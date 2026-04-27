@@ -1,0 +1,92 @@
+# ===========================================================================
+# Hoobiq — Caddy reverse proxy + auto-TLS
+#
+# Caddy auto-issues Let's Encrypt certs on first request and renews them.
+# Domains must already point to this VPS via DNS A records (Cloudflare).
+#
+# Cloudflare orange-cloud (proxied) sits in front: Cloudflare ↔ Caddy uses
+# Caddy's auto-TLS cert; Cloudflare ↔ browser uses Cloudflare's cert. SSL
+# mode in CF dashboard MUST be "Full (strict)" — otherwise you get a loop.
+# ===========================================================================
+
+# --------- Redirect www → apex --------------------------------------------
+www.hoobiq.com {
+  redir https://hoobiq.com{uri} permanent
+}
+
+# --------- Web (Next.js) ---------------------------------------------------
+hoobiq.com {
+  encode zstd gzip
+
+  # Health check — straight to upstream so the proxy itself is verified end-to-end.
+  handle /healthz {
+    reverse_proxy 127.0.0.1:3000
+  }
+
+  # Static assets from Next get aggressive cache (filenames are content-hashed).
+  @nextStatic path /_next/static/* /favicon.ico /robots.txt /sitemap.xml
+  header @nextStatic Cache-Control "public, max-age=31536000, immutable"
+
+  # Everything else → Next.js
+  reverse_proxy 127.0.0.1:3000 {
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  # Security headers (in addition to Helmet on the API side)
+  header {
+    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    X-Frame-Options "DENY"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "interest-cohort=(), camera=(), microphone=(), geolocation=()"
+    -Server
+  }
+
+  log {
+    output file /var/log/caddy/web.log {
+      roll_size 50mb
+      roll_keep 7
+    }
+  }
+}
+
+# --------- API (NestJS) ----------------------------------------------------
+api.hoobiq.com {
+  encode zstd gzip
+
+  handle /healthz {
+    reverse_proxy 127.0.0.1:4000
+  }
+  handle /readyz {
+    reverse_proxy 127.0.0.1:4000
+  }
+
+  # WebSocket upgrade for Socket.IO (DM, real-time notifications)
+  @websockets {
+    header Connection *Upgrade*
+    header Upgrade websocket
+  }
+  reverse_proxy @websockets 127.0.0.1:4000
+
+  reverse_proxy 127.0.0.1:4000 {
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  header {
+    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "no-referrer"
+    -Server
+  }
+
+  log {
+    output file /var/log/caddy/api.log {
+      roll_size 50mb
+      roll_keep 7
+    }
+  }
+}

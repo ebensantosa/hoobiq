@@ -38,8 +38,11 @@ done
 mkdir -p "$(dirname "$OUTPUT")"
 
 # 1. Dump + gzip ------------------------------------------------------------
+# Strip Prisma-style query params (?schema=public) — pg_dump doesn't accept
+# them in the connection URI even though the Prisma client does.
+DUMP_URL="${DATABASE_URL%%\?*}"
 echo "▶ pg_dump → $OUTPUT"
-pg_dump --dbname="${DATABASE_URL}" --no-owner --no-privileges --format=plain \
+pg_dump --dbname="${DUMP_URL}" --no-owner --no-privileges --format=plain \
   | gzip -9 > "$OUTPUT"
 SIZE="$(du -h "$OUTPUT" | cut -f1)"
 echo "  size: $SIZE"

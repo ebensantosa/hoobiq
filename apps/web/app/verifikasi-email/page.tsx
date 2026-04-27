@@ -4,13 +4,14 @@ import { ResendEmailButton } from "@/components/resend-email-button";
 
 export const metadata = { title: "Verifikasi email · Hoobiq" };
 
-export default function VerifikasiEmailPage({
+export default async function VerifikasiEmailPage({
   searchParams,
 }: {
-  searchParams: { status?: string; email?: string };
+  searchParams: Promise<{ status?: string; email?: string }>;
 }) {
-  const status = searchParams.status ?? "sent";
-  const email = searchParams.email ?? "nama@hoobiq.id";
+  const sp = await searchParams;
+  const status = sp.status ?? "sent";
+  const email = sp.email ?? "nama@hoobiq.id";
 
   if (status === "success") {
     return (

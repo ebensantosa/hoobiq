@@ -1,0 +1,592 @@
+// Hoobiq — marketplace & komunitas kolektor Indonesia
+// SQLite for dev (zero-infra). Prod: swap provider to postgresql via env.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  username       String    @unique
+  email          String    @unique
+  emailVerified  DateTime?
+  passwordHash   String    @map("password_hash")
+  phone          String?
+  name           String?
+  avatarUrl      String?   @map("avatar_url")
+  bio            String?
+  city           String?
+  role           String    @default("user")
+  status         String    @default("active")
+  trustScore     Float     @default(0) @map("trust_score")
+  exp            Int       @default(0)
+  level          Int       @default(1)
+  ktpVerified    Boolean   @default(false) @map("ktp_verified")
+  twoFAEnabled   Boolean   @default(false) @map("twofa_enabled")
+  twoFASecret    String?   @map("twofa_secret")
+  interestedJson String    @default("[]") @map("interested_json")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  sessions         Session[]
+  listings         Listing[]       @relation("SellerListings")
+  ordersAsBuyer    Order[]         @relation("BuyerOrders")
+  ordersAsSeller   Order[]         @relation("SellerOrders")
+  addresses        Address[]
+  bankAccounts     BankAccount[]
+  wishlist         WishlistItem[]
+  postsAuthored    Post[]
+  disputesAsBuyer  Dispute[]       @relation("BuyerDisputes")
+  disputesAsSeller Dispute[]       @relation("SellerDisputes")
+  reportsFiled     Report[]        @relation("ReporterReports")
+  notifications    Notification[]
+  auditEntries     AuditEntry[]
+  listingReviews   ListingReview[] @relation("BuyerReviews")
+
+  @@index([email])
+  @@index([username])
+  @@index([status, trustScore])
+  @@map("users")
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  userAgent String?   @map("user_agent")
+  ip        String?
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("sessions")
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  label     String
+  name      String
+  phone     String
+  line      String
+  city      String
+  province  String
+  postal    String
+  primary   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId, primary])
+  @@map("addresses")
+}
+
+model BankAccount {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  bank        String
+  numberEnc   String   @map("number_enc")
+  numberLast4 String   @map("number_last4")
+  holderName  String   @map("holder_name")
+  primary     Boolean  @default(false)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bank_accounts")
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  parentId  String?    @map("parent_id")
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  level     Int        @default(1)
+  order     Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  listings Listing[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Listing {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  sellerId     String    @map("seller_id")
+  categoryId   String    @map("category_id")
+  title        String
+  description  String
+  priceCents   BigInt    @map("price_cents")
+  stock        Int       @default(1)
+  condition    String
+  imagesJson   String    @default("[]") @map("images_json")
+  weightGrams  Int       @default(500) @map("weight_grams")
+  boostedUntil DateTime? @map("boosted_until")
+  views        Int       @default(0)
+  isPublished  Boolean   @default(false) @map("is_published")
+  moderation   String    @default("pending")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  seller   User            @relation("SellerListings", fields: [sellerId], references: [id])
+  category Category        @relation(fields: [categoryId], references: [id])
+  orders   Order[]
+  wishes   WishlistItem[]
+  reviews  ListingReview[]
+
+  @@index([sellerId, createdAt])
+  @@index([categoryId, createdAt])
+  @@index([isPublished, moderation, createdAt])
+  @@index([boostedUntil])
+  @@map("listings")
+}
+
+// Buyer review tied to a completed order. One review per order so you can't
+// spam-review the same listing. Star rating drives the listing's public
+// rating score; the body is optional plain-text feedback.
+model ListingReview {
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  buyerId   String   @map("buyer_id")
+  orderId   String   @unique @map("order_id")
+  rating    Int      // 1–5
+  body      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User    @relation("BuyerReviews", fields: [buyerId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
+  @@index([buyerId, createdAt])
+  @@map("listing_reviews")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  listingId String   @map("listing_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("wishlist_items")
+}
+
+// Order status values (string literal — SQLite has no enums):
+// pending_payment | paid | shipped | delivered | completed
+// cancelled | refunded | returning | disputed | expired
+//
+// Timer fields drive auto-transitions handled by OrdersSchedulerService:
+//  - shipmentDeadlineAt: 7 days after `paid`. If still not shipped → auto-cancel + refund.
+//  - autoReleaseAt: 3 days after `delivered` (or buyer marks received). Funds released to seller.
+model Order {
+  id                  String    @id @default(cuid())
+  humanId             String    @unique @map("human_id")
+  buyerId             String    @map("buyer_id")
+  sellerId            String    @map("seller_id")
+  listingId           String    @map("listing_id")
+  addressId           String    @map("address_id")
+  qty                 Int       @default(1)
+  priceCents          BigInt    @map("price_cents")
+  shippingCents       BigInt    @default(0) @map("shipping_cents")
+  platformFeeCents    BigInt    @default(0) @map("platform_fee_cents")
+  payFeeCents         BigInt    @default(0) @map("pay_fee_cents")
+  insuranceCents      BigInt    @default(0) @map("insurance_cents")
+  totalCents          BigInt    @map("total_cents")
+  courierCode         String    @map("courier_code")
+  trackingNumber      String?   @map("tracking_number")
+  status              String    @default("pending_payment")
+  paidAt              DateTime? @map("paid_at")
+  shippedAt           DateTime? @map("shipped_at")
+  deliveredAt         DateTime? @map("delivered_at")
+  completedAt         DateTime? @map("completed_at")
+  cancelledAt         DateTime? @map("cancelled_at")
+  refundedAt          DateTime? @map("refunded_at")
+  shipmentDeadlineAt  DateTime? @map("shipment_deadline_at")
+  autoReleaseAt       DateTime? @map("auto_release_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  buyer   User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller  User     @relation("SellerOrders", fields: [sellerId], references: [id])
+  listing Listing  @relation(fields: [listingId], references: [id])
+  address Address  @relation(fields: [addressId], references: [id])
+  payment Payment?
+  dispute Dispute?
+  review  ListingReview?
+  cancelRequests CancelRequest[]
+  returnRequests ReturnRequest[]
+
+  @@index([buyerId, status, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([status, autoReleaseAt])
+  @@index([status, shipmentDeadlineAt])
+  @@map("orders")
+}
+
+/// Buyer-initiated cancel request. Allowed only while order has not been
+/// shipped (no resi yet). Status flow:
+///   pending → accepted (seller acc → order cancelled + refund)
+///           → rejected (seller tolak with reason → order continues)
+///           → auto_accepted (seller diam 24 jam → order cancelled + refund)
+///           → cancelled  (buyer mengundurkan request)
+model CancelRequest {
+  id          String    @id @default(cuid())
+  orderId     String    @map("order_id")
+  buyerId     String    @map("buyer_id")
+  reason      String
+  status      String    @default("pending")
+  rejectNote  String?   @map("reject_note")
+  expiresAt   DateTime  @map("expires_at") // pending → auto_accepted di waktu ini
+  respondedAt DateTime? @map("responded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, status])
+  @@index([status, expiresAt])
+  @@map("cancel_requests")
+}
+
+/// Buyer-initiated return after delivery. Multi-step state machine:
+///   requested      — buyer ajukan retur, seller belum respond (timer 48h)
+///   approved       — seller approve / auto-approve, buyer harus kirim balik (timer 5d)
+///   shipped_back   — buyer input resi balik (timer 3d untuk seller konfirmasi)
+///   completed      — seller konfirmasi terima / auto-confirm → refund
+///   rejected       — seller tolak (masuk dispute)
+///   expired        — buyer gagal kirim balik dalam 5 hari (transaksi lanjut)
+model ReturnRequest {
+  id                   String    @id @default(cuid())
+  orderId              String    @map("order_id")
+  buyerId              String    @map("buyer_id")
+  reason               String
+  description          String
+  evidenceJson         String    @default("[]") @map("evidence_json")
+  status               String    @default("requested")
+  rejectNote           String?   @map("reject_note")
+  responseDeadlineAt   DateTime  @map("response_deadline_at")  // requested → auto-approve
+  shipBackDeadlineAt   DateTime? @map("ship_back_deadline_at") // approved → expired
+  confirmDeadlineAt    DateTime? @map("confirm_deadline_at")   // shipped_back → auto-confirm
+  returnTrackingNumber String?   @map("return_tracking_number")
+  returnCourierCode    String?   @map("return_courier_code")
+  shippedBackAt        DateTime? @map("shipped_back_at")
+  approvedAt           DateTime? @map("approved_at")
+  resolvedAt           DateTime? @map("resolved_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, status])
+  @@index([status, responseDeadlineAt])
+  @@index([status, shipBackDeadlineAt])
+  @@index([status, confirmDeadlineAt])
+  @@map("return_requests")
+}
+
+model Payment {
+  id           String    @id @default(cuid())
+  orderId      String    @unique @map("order_id")
+  provider     String    @default("midtrans")
+  providerTxId String?   @unique @map("provider_tx_id")
+  method       String?
+  amountCents  BigInt    @map("amount_cents")
+  statusRaw    String    @map("status_raw")
+  paidAt       DateTime? @map("paid_at")
+  payloadJson  String?   @map("payload_json")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+/// Admin-mediated dispute. Opened when buyer & seller can't agree on a
+/// retur/damage claim. Decision values are limited to the three CS options:
+///   refund_buyer_no_return — uang refund, barang tidak dikirim balik
+///   refund_buyer_with_return — uang refund, buyer wajib kirim balik dulu
+///   release_seller         — uang tetap ke seller, retur ditolak
+model Dispute {
+  id           String    @id @default(cuid())
+  orderId      String    @unique @map("order_id")
+  buyerId      String    @map("buyer_id")
+  sellerId     String    @map("seller_id")
+  kind         String    @default("damaged") // damaged | not_as_described | return_rejected | other
+  reason       String
+  description  String
+  evidenceJson String    @default("[]") @map("evidence_json")
+  status       String    @default("new") // new | reviewing | resolved
+  decision     String?
+  adminNote    String?   @map("admin_note")
+  resolvedAt   DateTime? @map("resolved_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  buyer  User  @relation("BuyerDisputes", fields: [buyerId], references: [id])
+  seller User  @relation("SellerDisputes", fields: [sellerId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("disputes")
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  authorId      String    @map("author_id")
+  body          String
+  imagesJson    String    @default("[]") @map("images_json")
+  categoryId    String?   @map("category_id")
+  likesCount    Int       @default(0) @map("likes_count")
+  commentsCount Int       @default(0) @map("comments_count")
+  viewsCount    Int       @default(0) @map("views_count")
+  moderation    String    @default("pending")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  author User       @relation(fields: [authorId], references: [id])
+  likes  PostLike[]
+  comments PostComment[]
+
+  @@index([authorId, createdAt])
+  @@index([moderation, createdAt])
+  @@map("posts")
+}
+
+model PostLike {
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  authorId  String   @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("post_comments")
+}
+
+model Conversation {
+  id        String               @id @default(cuid())
+  createdAt DateTime             @default(now()) @map("created_at")
+  messages  Message[]
+  members   ConversationMember[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  conversationId String    @map("conversation_id")
+  userId         String    @map("user_id")
+  lastReadAt     DateTime? @map("last_read_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String    @map("conversation_id")
+  senderId       String    @map("sender_id")
+  body           String
+  attachmentUrl  String?   @map("attachment_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Report {
+  id         String    @id @default(cuid())
+  reporterId String    @map("reporter_id")
+  targetType String    @map("target_type")
+  targetId   String    @map("target_id")
+  reason     String
+  status     String    @default("open")
+  severity   String    @default("mid")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  reporter User @relation("ReporterReports", fields: [reporterId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([status, severity, createdAt])
+  @@map("reports")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  kind      String
+  title     String
+  body      String
+  dataJson  String?   @map("data_json")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model AuditEntry {
+  id        String   @id @default(cuid())
+  actorId   String?  @map("actor_id")
+  action    String
+  targetRef String   @map("target_ref")
+  ip        String?
+  metaJson  String?  @map("meta_json")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_entries")
+}
+
+model WebhookLog {
+  id          String   @id @default(cuid())
+  source      String
+  event       String
+  statusRaw   String   @map("status_raw")
+  latencyMs   Int      @map("latency_ms")
+  payloadJson String   @map("payload_json")
+  signatureOk Boolean  @default(false) @map("signature_ok")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([source, createdAt])
+  @@map("webhook_logs")
+}
+
+model FeatureFlag {
+  key       String   @id
+  enabled   Boolean  @default(false)
+  note      String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
+}
+
+model Drop {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  productName   String    @map("product_name")
+  brand         String
+  description   String?
+  heroImageUrl  String?   @map("hero_image_url")
+  supplyQty    Int       @map("supply_qty")
+  priceIdr      BigInt?   @map("price_idr")
+  dropsAt       DateTime  @map("drops_at")
+  endsAt        DateTime? @map("ends_at")
+  listingSlug   String?   @map("listing_slug")
+  status        String    @default("scheduled") // scheduled | live | sold_out | cancelled
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  reminders DropReminder[]
+
+  @@index([dropsAt])
+  @@index([status, dropsAt])
+  @@map("drops")
+}
+
+model DropReminder {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  dropId    String    @map("drop_id")
+  notifyAt  DateTime  @map("notify_at")
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  drop Drop @relation(fields: [dropId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dropId])
+  @@index([sentAt, notifyAt])
+  @@map("drop_reminders")
+}
+
+model TradeProposal {
+  id             String    @id @default(cuid())
+  fromUserId     String    @map("from_user_id")
+  toUserId       String    @map("to_user_id")
+  fromListingId  String    @map("from_listing_id")
+  toListingId    String    @map("to_listing_id")
+  message        String?
+  status         String    @default("pending") // pending | accepted | declined | cancelled | expired
+  respondedAt    DateTime? @map("responded_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([toUserId, status, createdAt])
+  @@index([fromUserId, status, createdAt])
+  @@index([fromListingId, toListingId])
+  @@map("trade_proposals")
+}
+
+/// Swipe-left memory so the same candidate doesn't reappear in the deck.
+model TradePass {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  candidateUserId String   @map("candidate_user_id")
+  fromListingId   String   @map("from_listing_id")
+  toListingId     String   @map("to_listing_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, fromListingId, toListingId])
+  @@index([userId, createdAt])
+  @@map("trade_passes")
+}
+
+model PromoCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  kind       String
+  value      Int
+  minOrder   BigInt    @default(0) @map("min_order")
+  usageLimit Int       @default(0) @map("usage_limit")
+  used       Int       @default(0)
+  startsAt   DateTime? @map("starts_at")
+  endsAt     DateTime? @map("ends_at")
+  active     Boolean   @default(true)
+
+  @@map("promo_codes")
+}

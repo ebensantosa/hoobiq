@@ -1,0 +1,29 @@
+{
+  "name": "hoobiq",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "setup":     "node scripts/dev-setup.mjs",
+    "predev":    "npm run setup && npm --workspace @hoobiq/types run build",
+    "dev":       "concurrently -k -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api":   "npm run dev --workspace=@hoobiq/api",
+    "dev:web":   "npm run dev --workspace=@hoobiq/web",
+    "build":     "npm run build --workspaces --if-present",
+    "lint":      "npm run lint --workspaces --if-present",
+    "db:generate": "npm --workspace @hoobiq/db run db:generate",
+    "db:studio":   "npm --workspace @hoobiq/db run db:studio",
+    "db:seed":     "npm --workspace @hoobiq/db run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

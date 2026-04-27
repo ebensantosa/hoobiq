@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light mode (default) — minimal & clean */
+:root {
+  --canvas: 0 0% 100%;          /* white */
+  --panel: 0 0% 99%;            /* near-white */
+  --panel-2: 220 14% 96%;       /* slate-50 */
+  --rule: 220 13% 91%;          /* slate-200 */
+  --rule-strong: 220 13% 80%;   /* slate-300 */
+  --fg: 222 47% 11%;            /* slate-900 */
+  --fg-muted: 215 20% 38%;      /* slate-600 */
+  --fg-subtle: 215 16% 55%;     /* slate-500 */
+}
+
+/* Dark mode — opt-in via .dark class */
+html.dark {
+  --canvas: 225 24% 6%;
+  --panel: 224 24% 9%;
+  --panel-2: 222 21% 13%;
+  --rule: 220 17% 18%;
+  --rule-strong: 222 21% 13%;
+  --fg: 214 32% 97%;
+  --fg-muted: 218 11% 65%;
+  --fg-subtle: 220 9% 46%;
+}
+
+@layer base {
+  html             { color-scheme: light; }
+  html.dark        { color-scheme: dark; }
+  body {
+    @apply bg-canvas text-fg font-sans antialiased;
+  }
+  ::selection {
+    @apply bg-brand-400/25 text-fg;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+/* Marquee (infinite horizontal scroll) */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+  will-change: transform;
+}
+.animate-marquee:hover { animation-play-state: paused; }
+
+/* Gentle vertical float — for hero showcase cards */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-float   { animation: float-y 6s   ease-in-out infinite; }
+.animate-float-2 { animation: float-y 7.5s ease-in-out -1.2s infinite; }
+.animate-float-3 { animation: float-y 8.5s ease-in-out -2.5s infinite; }
+.animate-float-4 { animation: float-y 7s   ease-in-out -3.8s infinite; }
+
+/* Dropdown pop — small scale + fade for menu opening */
+@keyframes menu-pop {
+  0%   { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+.animate-menu-pop { animation: menu-pop 140ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Active nav indicator pop — gradient bar slides in when route activates */
+@keyframes nav-active {
+  0%   { transform: scaleX(0.4); opacity: 0.3; }
+  100% { transform: scaleX(1);   opacity: 1;   }
+}
+.nav-underline[data-active="true"]::after {
+  animation: nav-active 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Skeleton shimmer — diagonal highlight sliding across loading placeholders */
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-shimmer-sweep { animation: shimmer-sweep 1.6s ease-in-out infinite; }
+
+.mask-fade-x {
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Premium header — animated gradient bar under bottom border.
+   No `isolation: isolate` here (would create a new stacking context that
+   can break sticky/z-index in some browsers). Pseudo-element kept above
+   content with default z-stacking so the glow doesn't disappear behind body. */
+@keyframes brand-slide {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes header-shimmer {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+/* No `position: relative` here — the header element itself uses Tailwind's
+   `fixed` utility, which provides the positioning context for `::after`.
+   Adding `position: relative` as an unlayered rule would beat the layered
+   `.fixed` utility in the cascade and make the header scroll away. */
+.header-glow::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -2px 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #6B61AB    18%,
+    #E7559F    42%,
+    #FAA74A    62%,
+    #E7559F    82%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: brand-slide 6s linear infinite, header-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(231, 85, 159, 0.5));
+}
+
+/* Pulsing dot — used on icon buttons that have unread items. */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%      { transform: scale(1.6); opacity: 0.4; }
+}
+.animate-dot-pulse { animation: dot-pulse 1.6s ease-in-out infinite; }
+
+/* Animated underline + per-menu accent color. Each top-nav item carries
+   `data-color` (brand|ultra|flame|sky) so the underline AND active-state
+   text color match — easy to scan which area you're in. */
+.nav-underline {
+  position: relative;
+  --nav-accent: #E7559F;
+}
+.nav-underline[data-color="brand"] { --nav-accent: #E7559F; }
+.nav-underline[data-color="ultra"] { --nav-accent: #6B61AB; }
+.nav-underline[data-color="flame"] { --nav-accent: #FAA74A; }
+.nav-underline[data-color="sky"]   { --nav-accent: #6F8DC8; }
+.nav-underline::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -4px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--nav-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 220ms ease-out;
+}
+.nav-underline[data-active="true"]::after,
+.nav-underline:hover::after { transform: scaleX(1); }
+.nav-underline[data-active="true"] {
+  color: var(--nav-accent);
+}
+
+/* ----- Component animations -----
+ * Kept here (not in styled-jsx) because styled-jsx rewrites every
+ * `className=` in its file to inject a hash-prefix string concat, which
+ * breaks multi-line className values. Plain global keyframes work fine
+ * across all components and avoid that footgun. */
+
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Haul Reel — animated gradient ring + LIVE pulse + reactions float-up + Beli juga shimmer */
+@keyframes reel-ring    { to { --ring-angle: 360deg; } }
+@keyframes reel-pulse {
+  0%, 100% { opacity: 1;    transform: translateX(-50%) scale(1);    }
+  50%      { opacity: 0.85; transform: translateX(-50%) scale(1.06); }
+}
+@keyframes reel-float {
+  0%   { transform: translateY(0)     scale(0.6); opacity: 0; }
+  15%  { transform: translateY(-20px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-220px) scale(1);  opacity: 0; }
+}
+@keyframes reel-shimmer {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Drop Hero — LIVE indicator blink */
+@keyframes hero-blink {
+  0%, 100% { opacity: 1;    }
+  50%      { opacity: 0.35; }
+}
+
+/* Drop Calendar — selected-day pulse */
+@keyframes cal-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%      { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* Marketplace filters — distance range slider thumb. Fill % is driven from
+   React via a `--fill` custom property set inline on the element. */
+.hbq-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    #E7559F 0%,
+    #E7559F var(--fill, 0%),
+    rgba(127, 127, 127, 0.18) var(--fill, 0%),
+    rgba(127, 127, 127, 0.18) 100%
+  );
+  border-radius: 999px;
+  outline: none;
+}
+.hbq-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 2px solid #E7559F;
+  border-radius: 50%;
+  cursor: grab;
+  box-shadow: 0 2px 6px -1px rgba(0,0,0,0.25);
+}
+.hbq-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 2px solid #E7559F;
+  border-radius: 50%;
+  cursor: grab;
+  box-shadow: 0 2px 6px -1px rgba(0,0,0,0.25);
+}

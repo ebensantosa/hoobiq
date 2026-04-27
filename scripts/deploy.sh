@@ -70,9 +70,22 @@ if [[ -d "$WEB_STANDALONE" ]]; then
 fi
 
 # 4. Run migrations --------------------------------------------------------
+# Prisma reads DATABASE_URL from process env. The api .env file holds the
+# canonical value — source it for this step so we don't need to duplicate
+# the URL in packages/db/.env.
 log "Apply Prisma migrations (deploy mode)…"
+set -a
+. "$APP_DIR/apps/api/.env"
+set +a
 cd "$APP_DIR/packages/db"
-npx prisma migrate deploy
+# On a fresh DB with no migrations folder yet, fall back to `db push` to sync
+# the schema — migrate deploy would fail because there are no migration files.
+if [[ -d migrations ]] && ls migrations/*/migration.sql >/dev/null 2>&1; then
+  npx prisma migrate deploy
+else
+  warn "No migrations folder yet — running 'prisma db push' to sync schema."
+  npx prisma db push --skip-generate --accept-data-loss
+fi
 cd "$APP_DIR"
 
 # 5. Reload pm2 ------------------------------------------------------------

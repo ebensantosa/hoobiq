@@ -46,13 +46,18 @@ fi
 
 # 3. Install + build -------------------------------------------------------
 log "npm install (root + workspaces)…"
-npm install --no-audit --no-fund
+# --include=dev to ensure typescript / nest CLI are present for the build —
+# pm2 will run the compiled dist/ output so we don't ship devDeps to runtime.
+npm install --no-audit --no-fund --include=dev
 
 log "Build types package…"
 npm --workspace @hoobiq/types run build
 
 log "Generate Prisma client…"
 npm --workspace @hoobiq/db run db:generate
+
+log "Build db package (compile @hoobiq/db src/ → dist/)…"
+npm --workspace @hoobiq/db run build
 
 log "Build api…"
 npm --workspace @hoobiq/api run build
@@ -109,9 +114,12 @@ if [[ $api_ok -eq 0 || $web_ok -eq 0 ]]; then
   warn "Health check failed — rolling back to ${PREV_SHA:0:7}"
   if [[ -n "$PREV_SHA" ]]; then
     git reset --hard "$PREV_SHA"
-    npm install --no-audit --no-fund
+    # Use --include=dev so devDeps (typescript, nest CLI) are present —
+    # otherwise rollback's tsc/nest invocations fail with "command not found".
+    npm install --no-audit --no-fund --include=dev
     npm --workspace @hoobiq/types run build
     npm --workspace @hoobiq/db run db:generate
+    npm --workspace @hoobiq/db run build || true
     npm --workspace @hoobiq/api run build
     npm --workspace @hoobiq/web run build
     pm2 startOrReload "$APP_DIR/ecosystem.config.js" --update-env

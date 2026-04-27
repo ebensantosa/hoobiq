@@ -35,8 +35,10 @@ git reset --hard origin/main
 NEW_SHA="$(git rev-parse HEAD)"
 log "Deploying commit: ${NEW_SHA:0:7}"
 
-# 2. Pre-deploy backup of DB (cheap insurance, ~few seconds for small DB) -
-if command -v pg_dump >/dev/null && [[ -n "${SKIP_BACKUP:-}" == "" ]]; then
+# 2. Pre-deploy backup of DB (cheap insurance, ~few seconds for small DB).
+# Skipped on fresh installs where pg_dump auth isn't wired yet — set
+# SKIP_BACKUP=1 in the environment if you want to skip explicitly.
+if command -v pg_dump >/dev/null && [[ -z "${SKIP_BACKUP:-}" ]]; then
   log "Backing up DB before migrate…"
   BACKUP_PATH="$LOG_DIR/predeploy-$(date +%Y%m%d-%H%M%S).sql.gz"
   bash "$APP_DIR/scripts/backup.sh" --no-upload --output "$BACKUP_PATH" || warn "Backup failed, continuing"

@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { env } from "../../config/env";
 
-const PAYMENT_BASE = "https://payment.komerce.id/api/v1";
-const QRISLY_BASE  = "https://qrisly.komerce.id/api/v1";
+// Both base URLs come from env (with sensible defaults) so we can
+// re-point at sandbox/prod or whatever path Komerce settles on without
+// shipping a code change.
 
 export type ChargeMethod = "va" | "ewallet" | "qris";
 
@@ -63,7 +64,7 @@ export class KomercePaymentService {
           : "Pembayaran belum dikonfigurasi. Hubungi admin.",
       });
     }
-    const base = isQris ? QRISLY_BASE : PAYMENT_BASE;
+    const base = (isQris ? env.KOMERCE_QRISLY_BASE_URL : env.KOMERCE_PAYMENT_BASE_URL).replace(/\/$/, "");
     const path = isQris ? "/charges" : "/charges";
 
     const body = JSON.stringify({

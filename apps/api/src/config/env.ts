@@ -44,6 +44,11 @@ const schema = z.object({
   // Both optional; checkout falls back to Midtrans if unset.
   KOMERCE_PAYMENT_API_KEY: z.string().optional(),
   KOMERCE_QRISLY_API_KEY: z.string().optional(),
+  // Override hosts in case Komerce changes them or sandbox/prod differ.
+  // Defaults try the most common pattern; check your Komerce dashboard
+  // → Developer → API Documentation for the exact base URL.
+  KOMERCE_PAYMENT_BASE_URL: z.string().url().default("https://api.collaborator.komerce.id/payment/api/v1"),
+  KOMERCE_QRISLY_BASE_URL:  z.string().url().default("https://api.collaborator.komerce.id/qrisly/api/v1"),
 
   // Public base URL the API uses to construct absolute URLs for uploaded
   // files. Defaults to http://localhost:<port>; set in production to the

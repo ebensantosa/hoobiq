@@ -25,7 +25,6 @@ export async function TopNav({ active: _active }: { active?: string }) {
           <nav className="hidden items-center gap-1 lg:flex">
             <NavPill href="/feeds">Feeds</NavPill>
             <NavPill href="/marketplace">Marketplace</NavPill>
-            <NavPill href="/drops">Drops</NavPill>
             <NavPill href="/trades">Trades</NavPill>
           </nav>
         )}

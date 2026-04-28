@@ -64,6 +64,15 @@ export class PaymentsController {
     if ((input.method === "va" || input.method === "ewallet") && !input.channel) {
       throw new BadRequestException({ code: "missing_channel", message: "Pilih bank/e-wallet." });
     }
+    // Komerce requires a non-empty customer.phone. Block early with a clear
+    // pointer to the profile page instead of letting the upstream throw a
+    // 422 the buyer can't act on.
+    if (!order.buyer.phone || order.buyer.phone.trim().length < 8) {
+      throw new BadRequestException({
+        code: "missing_phone",
+        message: "Tambah nomor HP di /pengaturan dulu — Komerce butuh nomor untuk receipt.",
+      });
+    }
 
     const notifyUrl = `${(env.PUBLIC_API_BASE ?? "http://localhost:4000").replace(/\/$/, "")}/api/v1/webhooks/komerce`;
     // callback_api_key is required when callback_url is set. Reuse the

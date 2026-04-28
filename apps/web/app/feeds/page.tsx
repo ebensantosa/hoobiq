@@ -3,7 +3,6 @@ import { AppShell } from "@/components/app-shell";
 import { FeedCard } from "@/components/feed-card";
 import { FeedComposer } from "@/components/feed-composer";
 import { HaulReel, type HaulItem } from "@/components/haul-reel";
-import { DropHero, type DropSummary } from "@/components/drop-hero";
 import { PageHero } from "@/components/page-hero";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
@@ -40,10 +39,9 @@ export type FeedPost = {
 export default async function FeedsPage() {
   // Fetch a wider sample so the right-rail trending + top-collectors widgets
   // have enough signal. The visible feed still slices to 24.
-  const [data, me, drops] = await Promise.all([
+  const [data, me] = await Promise.all([
     serverApi<{ items: FeedPost[] }>("/posts?limit=60"),
     getSessionUser(),
-    serverApi<DropSummary[]>("/drops/upcoming"),
   ]);
   const allPosts = data?.items ?? [];
   const items = allPosts.slice(0, 24);
@@ -116,8 +114,6 @@ export default async function FeedsPage() {
             tone="brand"
             icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>}
           />
-
-          <DropHero initial={drops ?? []} />
 
           <HaulReel items={hauls} />
 

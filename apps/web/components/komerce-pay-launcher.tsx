@@ -42,9 +42,13 @@ export function KomercePayLauncher({
     setBusy(true);
     setErr(null);
     try {
+      // For "Payment Page" flow we pass a default bank channel (BCA) — the
+      // returned payment_url lands on Komerce's hosted page anyway, where
+      // the buyer can switch method if needed. Komerce rejects requests
+      // without a channel_code on bank_transfer so we can't omit it.
       const body =
         method === "page"
-          ? { orderHumanId: humanId, method: "va" as const, channel: "page" }
+          ? { orderHumanId: humanId, method: "va" as const, channel: "bca" }
           : { orderHumanId: humanId, method: "qris" as const };
       const res = await api<ChargeResult>("/payments/komerce/charge", { method: "POST", body });
 

@@ -10,19 +10,12 @@ import { KomercePaymentService, type ChargeMethod } from "./komerce-payment.serv
 const ChargeInput = z.object({
   orderHumanId: z.string().min(1).max(40),
   method: z.enum(["va", "ewallet", "qris"]),
-  channel: z.string().min(1).max(40).optional(), // bca/ovo/etc — required for va/ewallet
+  channel: z.string().min(1).max(40).optional(), // bank/ewallet code — required for va/ewallet
 });
 type ChargeInput = z.infer<typeof ChargeInput>;
 
-/**
- * Komerce-backed charge initiation. Buyer hits this after /orders/checkout
- * gives them a humanId — it produces a redirect URL (VA / e-wallet) or a
- * QR string (QRIS) the UI can render.
- *
- * The legacy Midtrans flow stays in /orders/checkout's createCharge call
- * for backward compat; this endpoint is opt-in until we migrate the
- * checkout UX to a method picker.
- */
+const CENTS_PER_RUPIAH = 100n;
+
 @Controller("payments/komerce")
 export class PaymentsController {
   constructor(
@@ -37,23 +30,34 @@ export class PaymentsController {
   ) {
     const order = await this.prisma.order.findUnique({
       where: { humanId: input.orderHumanId },
-      select: { id: true, buyerId: true, totalCents: true, status: true,
-                buyer: { select: { email: true, name: true, username: true, phone: true } } },
+      select: {
+        id: true, buyerId: true, totalCents: true, status: true, qty: true,
+        buyer: { select: { email: true, name: true, username: true, phone: true } },
+        listing: { select: { title: true, priceCents: true } },
+      },
     });
     if (!order) throw new NotFoundException({ code: "not_found", message: "Order tidak ditemukan." });
     if (order.buyerId !== user.id) throw new ForbiddenException({ code: "forbidden", message: "Bukan order kamu." });
     if (order.status !== "pending_payment") {
       throw new BadRequestException({ code: "bad_state", message: "Order sudah terbayar atau dibatalkan." });
     }
+    // VA / ewallet need a channel (bank/wallet code). Komerce expects a real
+    // bank code like "bca", "bni", "ovo" — not a generic "page" sentinel.
+    // The frontend now sends bca as the default for the Payment Page flow.
     if ((input.method === "va" || input.method === "ewallet") && !input.channel) {
       throw new BadRequestException({ code: "missing_channel", message: "Pilih bank/e-wallet." });
     }
 
     const notifyUrl = `${(env.PUBLIC_API_BASE ?? "http://localhost:4000").replace(/\/$/, "")}/api/v1/webhooks/komerce`;
+    // callback_api_key is required when callback_url is set. Reuse the
+    // configured webhook secret so the receiver can authenticate inbound
+    // pings against env.KOMERCE_WEBHOOK_SECRET.
+    const callbackKey = env.KOMERCE_WEBHOOK_SECRET ?? "";
+
     const charge = await this.komerce.createCharge({
       orderId: order.id,
       humanId: input.orderHumanId,
-      amountCents: order.totalCents,
+      amountIdr: Number(order.totalCents / CENTS_PER_RUPIAH),
       method: input.method as ChargeMethod,
       channel: input.channel,
       customer: {
@@ -61,7 +65,13 @@ export class PaymentsController {
         name:  order.buyer.name ?? order.buyer.username,
         phone: order.buyer.phone ?? "",
       },
+      items: [{
+        name: order.listing.title,
+        quantity: order.qty,
+        priceIdr: Number(order.listing.priceCents / CENTS_PER_RUPIAH),
+      }],
       notifyUrl,
+      callbackKey,
     });
 
     return {

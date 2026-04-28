@@ -1,48 +1,56 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { env } from "../../config/env";
 
-// Both base URLs come from env (with sensible defaults) so we can
-// re-point at sandbox/prod or whatever path Komerce settles on without
-// shipping a code change.
+// Both base URLs come from env (with sensible defaults); flip from sandbox
+// to prod by overriding KOMERCE_PAYMENT_BASE_URL / KOMERCE_QRISLY_BASE_URL.
 
 export type ChargeMethod = "va" | "ewallet" | "qris";
+
+export type ChargeItem = {
+  name: string;
+  quantity: number;
+  priceIdr: number; // rupiah, integer
+};
 
 export type ChargeRequest = {
   orderId: string;
   humanId: string;
-  amountCents: bigint;
+  /** Total amount in rupiah (integer). Komerce min is 10,000. */
+  amountIdr: number;
   method: ChargeMethod;
-  // For VA / ewallet: which provider (e.g. "bca", "ovo"). Optional for qris.
+  /** For VA: bank code ("bca", "bni", ...). For ewallet: provider ("ovo", "dana", ...). Ignored for qris. */
   channel?: string;
   customer: { email: string; name: string; phone: string };
-  /** Webhook callback URL — Komerce will POST status updates here. */
+  /** Webhook callback URL — Komerce POSTs status updates here. */
   notifyUrl: string;
+  /** Required when notifyUrl is set — Komerce includes this back in webhooks so we can authenticate them. */
+  callbackKey: string;
+  items: ChargeItem[];
 };
 
 export type ChargeResponse = {
-  /** Komerce-side charge id (used for reconciliation). */
+  /** Komerce-side charge id used for reconciliation. */
   externalId: string;
-  /** Where to redirect the buyer / display QR. */
+  /** Where to redirect the buyer (Payment Page) or display QR. */
   redirectUrl?: string;
-  qrString?: string;     // raw QRIS payload for QRISLY charges
-  qrImageUrl?: string;   // pre-rendered QR image
+  qrString?: string;
+  qrImageUrl?: string;
   expiresAt: string;
 };
 
 /**
- * Komerce Payment + QRISLY wrapper. Two separate Komerce products with
- * distinct API keys + base URLs but a similar shape:
- *   - Payment API: VA + e-wallet flows. Returns a redirectUrl.
- *   - QRISLY API: QRIS-only static + dynamic QR. Returns qrString / qrImageUrl.
+ * Komerce Payment + QRISLY wrapper. Speaks the public Komerce v1 contract:
+ *   POST {base}/user/payment/create
+ *   header: x-api-key
+ *   body:   { order_id, payment_type, channel_code, amount, customer,
+ *             items, expiry_duration, callback_url, callback_api_key }
  *
- * Auth: header `key: <API_KEY>` for both, mirroring the shipping module.
+ * For QRIS we use the same endpoint with payment_type="qris" — Komerce
+ * treats QRIS as one of several payment types under the same account.
+ * If your dashboard exposes a separate QRISLY base URL, override
+ * KOMERCE_QRISLY_BASE_URL.
  *
- * If the relevant key is missing, callers get a 503 — checkout can then
- * fall back to Midtrans (existing path) without crashing.
- *
- * NOTE: Endpoint payload shapes below are the documented Komerce contract
- * as of build time; if Komerce rolls a v2, swap the path/body and leave
- * the public method signatures intact.
+ * Reference: https://rajaongkir.com/docs/payment-api
  */
 @Injectable()
 export class KomercePaymentService {
@@ -65,15 +73,27 @@ export class KomercePaymentService {
       });
     }
     const base = (isQris ? env.KOMERCE_QRISLY_BASE_URL : env.KOMERCE_PAYMENT_BASE_URL).replace(/\/$/, "");
-    const path = isQris ? "/charges" : "/charges";
+    const path = "/user/payment/create";
+
+    // Map our internal method/channel to Komerce's payment_type/channel_code.
+    //   va     → bank_transfer + channel_code:"bca|bni|..."
+    //   ewallet→ ewallet       + channel_code:"ovo|dana|..."
+    //   qris   → qris          (no channel_code)
+    const payment_type =
+      req.method === "va"      ? "bank_transfer" :
+      req.method === "ewallet" ? "ewallet" :
+                                 "qris";
 
     const body = JSON.stringify({
-      external_id: req.humanId,
-      amount: Number(req.amountCents / 100n),
-      method: req.method,
-      ...(req.channel ? { channel: req.channel } : {}),
-      customer: { email: req.customer.email, name: req.customer.name, phone: req.customer.phone },
+      order_id: req.humanId,
+      payment_type,
+      ...(req.channel ? { channel_code: req.channel } : {}),
+      amount: Math.max(10_000, Math.round(req.amountIdr)),  // Komerce min 10k
+      customer: { name: req.customer.name, email: req.customer.email, phone: req.customer.phone },
+      items: req.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.priceIdr })),
+      expiry_duration: 24 * 3600,                            // 24h to pay (matches our auto-cancel window)
       callback_url: req.notifyUrl,
+      callback_api_key: req.callbackKey,
     });
 
     let res: Response;
@@ -81,13 +101,11 @@ export class KomercePaymentService {
     try {
       res = await fetch(`${base}${path}`, {
         method: "POST",
-        headers: { key, "Content-Type": "application/json" },
+        headers: { "x-api-key": key, "Content-Type": "application/json" },
         body,
       });
       text = await res.text();
     } catch (e) {
-      // Network-level failure (DNS, TCP, TLS, abort). Surface as HttpException
-      // with the upstream URL so we don't generic-internal-error in the UI.
       const reason = e instanceof Error ? e.message : String(e);
       this.log.error(`Komerce ${isQris ? "qrisly" : "payment"} fetch failed → ${base}${path}: ${reason}`);
       throw new BadRequestException({
@@ -96,7 +114,7 @@ export class KomercePaymentService {
       });
     }
     if (!res.ok) {
-      this.log.warn(`Komerce ${isQris ? "qrisly" : "payment"} ${res.status}: ${text.slice(0, 240)}`);
+      this.log.warn(`Komerce ${isQris ? "qrisly" : "payment"} ${res.status}: ${text.slice(0, 320)}`);
       let msg = `Komerce HTTP ${res.status}`;
       try {
         const j = JSON.parse(text);
@@ -109,7 +127,20 @@ export class KomercePaymentService {
       });
     }
 
-    let json: { data?: { id?: string; redirect_url?: string; qr_string?: string; qr_image_url?: string; expires_at?: string } };
+    // Komerce response shape (per docs):
+    //   { meta: {...}, data: { id, payment_url, qr_string, qr_image_url, expired_at, ... } }
+    // Field names vary across product types — we read defensively.
+    let json: {
+      data?: {
+        id?: string | number;
+        payment_url?: string;
+        redirect_url?: string;
+        qr_string?: string;
+        qr_image_url?: string;
+        expired_at?: string;
+        expires_at?: string;
+      };
+    };
     try {
       json = JSON.parse(text);
     } catch {
@@ -120,23 +151,23 @@ export class KomercePaymentService {
     }
     const d = json.data ?? {};
     return {
-      externalId: d.id ?? req.humanId,
-      redirectUrl: d.redirect_url,
+      externalId: String(d.id ?? req.humanId),
+      redirectUrl: d.payment_url ?? d.redirect_url,
       qrString: d.qr_string,
       qrImageUrl: d.qr_image_url,
-      expiresAt: d.expires_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      expiresAt: d.expired_at ?? d.expires_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
     };
   }
 
   /**
-   * Verify a webhook payload's HMAC signature against KOMERCE_WEBHOOK_SECRET.
-   * Komerce signs with HMAC-SHA256 over the raw body and sends it as
-   * `x-komerce-signature`. Compare in constant time.
+   * Verify a webhook payload using the callback_api_key we sent during
+   * createCharge. Komerce echoes that key back so we can authenticate.
+   * If you've also configured KOMERCE_WEBHOOK_SECRET (HMAC), use the
+   * signature path instead of the key match.
    */
   verifyWebhookSignature(rawBody: string, signature: string | undefined): boolean {
     const secret = env.KOMERCE_WEBHOOK_SECRET;
     if (!secret || !signature) return false;
-    // Lazy require so we don't pull node:crypto at module load if unused.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require("node:crypto") as typeof import("node:crypto");
     const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");

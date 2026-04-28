@@ -1,11 +1,18 @@
 "use client";
 import * as React from "react";
 
+const MAX_BYTES = 2 * 1024 * 1024; // 2MB hard cap, matched to upload server limit
+
 /**
  * Image upload widget — drag/drop or click. Stores File objects locally and
  * generates blob URLs for preview. Real R2 upload lands when storage signing
  * endpoint is wired; for now we accept the file and emit `dataUrl` strings to
  * the parent so the form can submit something convincing.
+ *
+ * Pre-validates size + MIME on the client BEFORE the file even hits state —
+ * rejected files surface as an inline error (via `onError`) instead of a JS
+ * alert or a server bounce-back. Files > 2MB never get base64-encoded so we
+ * don't waste memory either.
  *
  * The first slot is always the cover.
  */
@@ -13,32 +20,65 @@ export function ImageUpload({
   value,
   onChange,
   max = 8,
+  onError,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   max?: number;
+  onError?: (msg: string | null) => void;
 }) {
   const [dragOver, setDragOver] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
+  const [localErr, setLocalErr] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const setErr = React.useCallback((msg: string | null) => {
+    setLocalErr(msg);
+    onError?.(msg);
+  }, [onError]);
 
   const handleFiles = React.useCallback(
     async (files: FileList | File[]) => {
       const slots = max - value.length;
-      if (slots <= 0) return;
-      const arr = Array.from(files).slice(0, slots).filter((f) => f.type.startsWith("image/"));
-      if (arr.length === 0) return;
+      if (slots <= 0) {
+        setErr(`Maksimum ${max} foto.`);
+        return;
+      }
+      const incoming = Array.from(files);
+
+      // Pre-validate every file against MIME + 2MB BEFORE encoding. Anything
+      // that fails is reported with a precise message that names the file.
+      const bad: string[] = [];
+      const accepted: File[] = [];
+      for (const f of incoming) {
+        if (!f.type.startsWith("image/")) {
+          bad.push(`"${f.name}" bukan gambar.`);
+          continue;
+        }
+        if (f.size > MAX_BYTES) {
+          const mb = (f.size / 1024 / 1024).toFixed(1);
+          bad.push(`"${f.name}" ${mb}MB — maks 2MB.`);
+          continue;
+        }
+        accepted.push(f);
+      }
+
+      const useable = accepted.slice(0, slots);
+      if (accepted.length > slots) {
+        bad.push(`${accepted.length - slots} foto tidak dipakai (slot penuh).`);
+      }
+      if (bad.length > 0) setErr(bad.join(" ")); else setErr(null);
+      if (useable.length === 0) return;
 
       setUploading(true);
       try {
-        // Read each as data URL — instant local preview, no server roundtrip.
-        const datas = await Promise.all(arr.map((f) => readAsDataUrl(f)));
+        const datas = await Promise.all(useable.map((f) => readAsDataUrl(f)));
         onChange([...value, ...datas]);
       } finally {
         setUploading(false);
       }
     },
-    [value, onChange, max]
+    [value, onChange, max, setErr]
   );
 
   function onDrop(e: React.DragEvent<HTMLButtonElement>) {
@@ -110,8 +150,13 @@ export function ImageUpload({
       />
 
       <p className="mt-3 text-xs text-fg-subtle">
-        Foto pertama jadi cover. JPG/PNG, maks 2MB per foto. Background netral, cahaya cukup, tunjukkan detail kondisi.
+        Foto pertama jadi cover. JPG/PNG, maks 2&nbsp;MB per foto. Background netral, cahaya cukup, tunjukkan detail kondisi.
       </p>
+      {localErr && (
+        <p role="alert" className="mt-2 rounded-lg border border-flame-400/40 bg-flame-400/10 px-3 py-2 text-xs text-flame-600">
+          {localErr}
+        </p>
+      )}
     </div>
   );
 }

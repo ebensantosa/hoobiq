@@ -20,6 +20,7 @@ export function ListingOwnerMenu({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -33,14 +34,14 @@ export function ListingOwnerMenu({
   async function remove() {
     if (pending) return;
     if (!window.confirm("Hapus listing ini? Tindakan tidak bisa dibatalkan.")) return;
-    setPending(true);
+    setPending(true); setErr(null);
     try {
       await listingsWriteApi.remove(listingId);
       setOpen(false);
       if (onRemoved) onRemoved();
       else router.refresh();
-    } catch {
-      alert("Gagal menghapus listing.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menghapus listing.");
       setPending(false);
     }
   }
@@ -79,6 +80,11 @@ export function ListingOwnerMenu({
           >
             {pending ? "Menghapus…" : "Hapus"}
           </button>
+          {err && (
+            <p role="alert" className="border-t border-rule px-4 py-2 text-[11px] text-flame-600">
+              {err}
+            </p>
+          )}
         </div>
       )}
     </div>

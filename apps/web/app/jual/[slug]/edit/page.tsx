@@ -55,10 +55,10 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
 
   return (
     <AppShell active="Marketplace">
-      <div className="mx-auto max-w-4xl px-6 pb-8 lg:px-10">
-        <header className="border-b border-rule pb-6">
-          <h1 className="text-3xl font-bold text-fg">Edit listing</h1>
-          <p className="mt-2 text-sm text-fg-muted">
+      <div className="mx-auto max-w-5xl px-6 pb-12 lg:px-10">
+        <header className="border-b border-rule pb-8">
+          <h1 className="text-3xl font-bold text-fg md:text-4xl">Edit listing</h1>
+          <p className="mt-3 text-sm leading-relaxed text-fg-muted md:text-base">
             Perubahan akan langsung tampil di marketplace setelah disimpan.
           </p>
         </header>

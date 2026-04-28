@@ -11,6 +11,7 @@ import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { SiteSettingsModule } from "./modules/site-settings/site-settings.module";
 import { CsrfMiddlewareModule } from "./common/csrf/csrf.module";
 import { WishlistModule } from "./modules/wishlist/wishlist.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
@@ -41,6 +42,7 @@ import { HealthModule } from "./modules/health/health.module";
     PaymentsModule,
     WebhooksModule,
     AdminModule,
+    SiteSettingsModule,
     WishlistModule,
     NotificationsModule,
     AddressesModule,

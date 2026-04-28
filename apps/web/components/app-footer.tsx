@@ -1,21 +1,22 @@
 import Link from "next/link";
-import { Logo } from "@hoobiq/ui";
+import { BrandLogo } from "./brand-logo";
+import { getSiteSettings } from "@/lib/site-settings";
 
 /**
  * Compact footer for in-app pages (logged-in shell). The marketing site uses
  * MarketingFooter — this one is intentionally smaller because in-app users
  * don't need the SEO blurb or full nav re-listing.
  */
-export function AppFooter() {
-  const year = new Date().getFullYear();
+export async function AppFooter() {
+  const settings = await getSiteSettings();
   return (
     <footer className="mt-16 border-t border-rule bg-panel/30">
       <div className="mx-auto max-w-[1280px] px-6 py-10 md:px-10">
         <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <Logo size="sm" />
+            <BrandLogo size="sm" />
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-fg-muted">
-              Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merch, komik — aman dengan escrow Hoobiq Pay.
+              Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merch, komik — aman dengan escrow {settings.brandName} Pay.
             </p>
           </div>
 
@@ -44,7 +45,7 @@ export function AppFooter() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-rule pt-6 md:flex-row">
-          <p className="text-xs text-fg-subtle">© {year} Hoobiq · Marketplace kolektor hobi Indonesia</p>
+          <p className="text-xs text-fg-subtle">{settings.footerText}</p>
           <p className="font-mono text-[10px] uppercase tracking-wider text-fg-subtle">
             Made for collectors, by collectors
           </p>

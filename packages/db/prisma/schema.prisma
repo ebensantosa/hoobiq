@@ -592,3 +592,21 @@ model PromoCode {
 
   @@map("promo_codes")
 }
+
+/// Singleton row (id = "singleton") holding admin-editable site branding +
+/// short copy strings. Read by every page render (cached) so the admin can
+/// rebrand without a deploy. copyJson is a flat string→string map keyed by
+/// well-known constants in apps/web/lib/copy/keys.ts.
+model SiteSettings {
+  id             String   @id @default("singleton")
+  brandName      String   @default("Hoobiq") @map("brand_name")
+  logoUrl        String?  @map("logo_url")
+  faviconUrl     String?  @map("favicon_url")
+  primaryColor   String   @default("#FFA552") @map("primary_color")
+  footerText     String   @default("© Hoobiq · Marketplace kolektor Indonesia") @map("footer_text")
+  copyJson       String   @default("{}") @map("copy_json")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  updatedById    String?  @map("updated_by_id")
+
+  @@map("site_settings")
+}

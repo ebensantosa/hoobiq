@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin-shell";
 import { Badge, Card } from "@hoobiq/ui";
 import { serverApi } from "@/lib/server/api";
+import { ListingActions } from "./listing-actions";
 
 export const metadata = { title: "Listing · Admin Hoobiq", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -43,15 +44,16 @@ export default async function AdminListingPage() {
           </div>
         ) : (
           <Card className="mt-6">
-            <div className="grid grid-cols-[2fr_1fr_1fr_120px_80px] gap-4 border-b border-rule px-5 py-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            <div className="grid grid-cols-[2fr_1fr_1fr_120px_60px_180px] gap-4 border-b border-rule px-5 py-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               <span>Judul</span>
               <span>Seller</span>
               <span>Status</span>
               <span className="text-right">Harga</span>
               <span className="text-right">Views</span>
+              <span className="text-right">Aksi</span>
             </div>
             {items.map((l, i) => (
-              <div key={l.id} className={"grid grid-cols-[2fr_1fr_1fr_120px_80px] items-center gap-4 px-5 py-3 text-sm " + (i < items.length - 1 ? "border-b border-rule/60" : "")}>
+              <div key={l.id} className={"grid grid-cols-[2fr_1fr_1fr_120px_60px_180px] items-center gap-4 px-5 py-3 text-sm " + (i < items.length - 1 ? "border-b border-rule/60" : "")}>
                 <div className="min-w-0">
                   <p className="truncate font-medium text-fg">{l.title}</p>
                   <p className="mt-0.5 text-xs text-fg-subtle">{l.category} · {l.condition.replace("_", " ")}</p>
@@ -60,6 +62,7 @@ export default async function AdminListingPage() {
                 <span><Badge tone={modTone[l.moderation] ?? "ghost"} size="xs">{l.moderation}</Badge></span>
                 <span className="text-right font-mono text-fg">Rp {l.priceIdr.toLocaleString("id-ID")}</span>
                 <span className="text-right font-mono text-xs text-fg-muted">{l.views}</span>
+                <ListingActions id={l.id} moderation={l.moderation} />
               </div>
             ))}
           </Card>

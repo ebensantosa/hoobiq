@@ -1,21 +1,24 @@
 import Link from "next/link";
-import { Logo } from "@hoobiq/ui";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { NotificationsBell } from "./notifications-bell";
+import { BrandLogo } from "./brand-logo";
 import { getSessionUser } from "@/lib/server/session";
+import { getSiteSettings } from "@/lib/site-settings";
+import { resolveCopy } from "@/lib/copy/keys";
 
 // Primary navigation (Feeds / Marketplace / Kategori) lives in the sidebar
 // now — top bar focuses on identity, search, and account actions.
 export async function TopNav({ active: _active }: { active?: string }) {
   void _active;
-  const user = await getSessionUser();
+  const [user, settings] = await Promise.all([getSessionUser(), getSiteSettings()]);
+  const t = resolveCopy(settings.copy);
 
   return (
     <header className="header-glow fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
       <div className="mx-auto flex h-20 max-w-[1440px] items-center gap-4 px-6">
-        <Link href={user ? "/marketplace" : "/"} className="shrink-0 inline-flex items-center" aria-label="Hoobiq">
-          <Logo size="md" />
+        <Link href={user ? "/marketplace" : "/"} className="shrink-0 inline-flex items-center" aria-label={settings.brandName}>
+          <BrandLogo size="md" />
         </Link>
 
         {user && (
@@ -33,7 +36,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-subtle"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input
                 name="q"
-                placeholder="Cari kartu, figure, blind box…"
+                placeholder={t("nav.search.placeholder")}
                 className="flex-1 bg-transparent text-fg placeholder:text-fg-subtle focus:outline-none"
               />
               <kbd className="rounded border border-rule bg-canvas px-1.5 py-0.5 font-mono text-[10px] text-fg-muted">↵</kbd>
@@ -65,13 +68,13 @@ export async function TopNav({ active: _active }: { active?: string }) {
           ) : (
             <>
               <Link href="/masuk" className="rounded-lg px-3 py-2 text-sm font-semibold text-fg-muted hover:text-fg">
-                Masuk
+                {t("nav.cta.login")}
               </Link>
               <Link
                 href="/daftar"
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-brand-400 px-4 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-500 hover:shadow-md"
               >
-                Daftar
+                {t("nav.cta.register")}
               </Link>
             </>
           )}

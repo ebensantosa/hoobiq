@@ -4,6 +4,7 @@ import { MarketplaceFilterBar } from "@/components/marketplace-filter-bar";
 import { PageHero } from "@/components/page-hero";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
+import { copyFor } from "@/lib/copy/server";
 import type { ListingSummary } from "@hoobiq/types";
 
 type Category = { slug: string; name: string; level: number; children?: Category[] };
@@ -33,10 +34,11 @@ export default async function MarketplacePage({
   }
   q.set("limit", "24");
 
-  const [data, tree, me] = await Promise.all([
+  const [data, tree, me, t] = await Promise.all([
     serverApi<{ items: ListingSummary[]; nextCursor: string | null }>(`/listings?${q}`),
     serverApi<Category[]>("/categories", { revalidate: 60 }),
     getSessionUser(),
+    copyFor(),
   ]);
   const items = data?.items ?? [];
 
@@ -52,10 +54,10 @@ export default async function MarketplacePage({
       <div className="px-6 pb-8 lg:px-10">
         <PageHero
           eyebrow="Marketplace"
-          title={sp.q ? `Hasil untuk "${sp.q}"` : "Belanja koleksi"}
+          title={sp.q ? `Hasil untuk "${sp.q}"` : t("marketplace.hero.title")}
           subtitle={sp.q
             ? `${filtered.length} listing ditemukan. Semua proteksi Hoobiq Pay.`
-            : "Verified sellers, mint condition, pembayaran aman lewat Hoobiq Pay."}
+            : t("marketplace.hero.subtitle")}
           tone="flame"
           icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 1.5-4h17L22 7"/><path d="M2 7v3a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2V7"/><path d="M4 12v9h16v-9"/></svg>}
         />

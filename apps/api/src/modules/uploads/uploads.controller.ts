@@ -27,7 +27,7 @@ const UploadInput = z.object({
     .regex(/^data:image\/(png|jpe?g|webp|gif);base64,/i, "Harus data:image/* base64."),
 });
 
-const ALLOWED_KINDS = ["listings", "avatars", "evidence", "posts", "misc"] as const;
+const ALLOWED_KINDS = ["listings", "avatars", "evidence", "posts", "branding", "misc"] as const;
 type UploadKind = (typeof ALLOWED_KINDS)[number];
 
 /**

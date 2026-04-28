@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { Avatar, Badge, Card } from "@hoobiq/ui";
 import { serverApi } from "@/lib/server/api";
+import { UserActions } from "./user-actions";
 
 export const metadata = { title: "Pengguna · Admin Hoobiq", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -52,15 +53,15 @@ export default async function AdminUsersPage({
           </div>
         ) : (
           <Card className="mt-6">
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_100px] gap-4 border-b border-rule px-5 py-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            <div className="grid grid-cols-[2fr_1fr_60px_60px_180px] gap-4 border-b border-rule px-5 py-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               <span>Pengguna</span>
               <span>Status</span>
-              <span className="text-right">Level</span>
+              <span className="text-right">Lvl</span>
               <span className="text-right">Trust</span>
               <span className="text-right">Aksi</span>
             </div>
             {items.map((u, i) => (
-              <div key={u.id} className={"grid grid-cols-[2fr_1fr_1fr_1fr_100px] items-center gap-4 px-5 py-3 text-sm " + (i < items.length - 1 ? "border-b border-rule/60" : "")}>
+              <div key={u.id} className={"grid grid-cols-[2fr_1fr_60px_60px_180px] items-center gap-4 px-5 py-3 text-sm " + (i < items.length - 1 ? "border-b border-rule/60" : "")}>
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar letter={u.username[0]} size="sm" />
                   <div className="min-w-0">
@@ -73,9 +74,10 @@ export default async function AdminUsersPage({
                 <span className={"text-right font-mono " + (u.trustScore < 3.5 ? "text-flame-500" : "text-fg")}>
                   {u.trustScore.toFixed(1)}
                 </span>
-                <span className="text-right">
-                  <Link href={`/admin/pengguna/${u.username}`} className="text-xs text-brand-500 hover:underline">Detail →</Link>
-                </span>
+                <div className="flex items-center justify-end gap-3 text-xs">
+                  <Link href={`/admin/pengguna/${u.username}`} className="text-brand-500 hover:underline">Detail</Link>
+                  <UserActions id={u.id} status={u.status} />
+                </div>
               </div>
             ))}
           </Card>

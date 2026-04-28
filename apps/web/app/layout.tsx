@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Nunito, JetBrains_Mono } from "next/font/google";
 import { themeInitScript } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
+import { getSiteSettings } from "@/lib/site-settings";
 import "./globals.css";
 
 // Nunito — rounded, friendly, high-readability sans. Pairs nicely with the
@@ -42,11 +43,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getSiteSettings();
+  // Inject the admin-set primary color as a CSS variable so any element
+  // can opt in via `var(--brand-color)`. The Tailwind brand-* palette is
+  // still wired to its build-time scale; the variable is for one-off
+  // overrides (custom buttons, accents in admin-edited pages).
   return (
     <html
       lang="id"
       className={`${sans.variable} ${mono.variable}`}
+      style={{ ["--brand-color" as string]: settings.primaryColor }}
       // The pre-hydration theme script flips html.classList before React boots,
       // so the html element legitimately differs between SSR and client.
       // suppressHydrationWarning only silences the warning on <html> itself —
@@ -55,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {settings.faviconUrl && <link rel="icon" href={settings.faviconUrl} />}
       </head>
       <body>
         {/* Suspense wrap so NavProgress's useSearchParams doesn't bail out

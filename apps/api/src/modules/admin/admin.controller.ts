@@ -1,10 +1,41 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { z } from "zod";
 import { DisputeDecideInput, type SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { RedisService } from "../../infrastructure/redis/redis.service";
 import { OrdersService } from "../orders/orders.service";
+
+const ListingPatch = z.object({
+  title:       z.string().min(3).max(140).optional(),
+  description: z.string().max(8_000).optional(),
+  priceIdr:    z.number().int().positive().optional(),
+  categoryId:  z.string().min(1).optional(),
+  condition:   z.enum(["MINT", "NEAR_MINT", "GOOD", "USED"]).optional(),
+  moderation:  z.enum(["pending", "active", "hidden", "rejected"]).optional(),
+  isPublished: z.boolean().optional(),
+});
+type ListingPatch = z.infer<typeof ListingPatch>;
+
+const UserPatch = z.object({
+  status: z.enum(["active", "flagged", "suspended"]).optional(),
+  role:   z.enum(["user", "verified", "admin", "ops", "superadmin"]).optional(),
+});
+type UserPatch = z.infer<typeof UserPatch>;
+
+const CategoryUpsert = z.object({
+  slug:     z.string().min(2).max(60).regex(/^[a-z0-9-]+$/),
+  name:     z.string().min(1).max(80),
+  parentId: z.string().nullable().optional(),
+  level:    z.number().int().min(1).max(3).optional(),
+  order:    z.number().int().min(0).max(9999).optional(),
+});
+type CategoryUpsert = z.infer<typeof CategoryUpsert>;
+
+const CategoryPatch = CategoryUpsert.partial();
+type CategoryPatch = z.infer<typeof CategoryPatch>;
 
 /**
  * Admin endpoints — every route is role-gated by @Roles.
@@ -15,8 +46,15 @@ import { OrdersService } from "../orders/orders.service";
 export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly ordersService: OrdersService,
   ) {}
+
+  private async writeAudit(actorId: string, action: string, targetRef: string, meta?: object) {
+    await this.prisma.auditEntry.create({
+      data: { actorId, action, targetRef, metaJson: meta ? JSON.stringify(meta) : null },
+    });
+  }
 
   @Get("overview")
   async overview() {
@@ -254,6 +292,171 @@ export class AdminController {
   }
 
   // (helper at bottom of file)
+
+  /* ------------------------------------------------------------------ */
+  /* Listings — admin can edit moderation, price, basic fields, or wipe */
+  /* ------------------------------------------------------------------ */
+
+  @Patch("listings/:id")
+  async patchListing(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body(new ZodPipe(ListingPatch)) input: ListingPatch,
+  ) {
+    const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        ...(input.title       !== undefined && { title:       input.title }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.priceIdr    !== undefined && { priceCents:  BigInt(input.priceIdr) * 100n }),
+        ...(input.categoryId  !== undefined && { categoryId:  input.categoryId }),
+        ...(input.condition   !== undefined && { condition:   input.condition }),
+        ...(input.moderation  !== undefined && { moderation:  input.moderation }),
+        ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+      },
+      select: { id: true, title: true, moderation: true, isPublished: true, priceCents: true },
+    });
+    await this.writeAudit(user.id, "listing.admin_update", `listing:${id}`, input);
+    return { ok: true, id: updated.id };
+  }
+
+  /** Hard delete — caller asked for permanent. Cascades via FK SET NULL on
+   * orders.listingId would fail here because orders.listingId is NOT NULL,
+   * so guard against deleting listings with existing orders.
+   */
+  @Delete("listings/:id")
+  @HttpCode(204)
+  async deleteListing(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    const orderCount = await this.prisma.order.count({ where: { listingId: id } });
+    if (orderCount > 0) {
+      // Soft-disable instead so historical orders keep their reference.
+      await this.prisma.listing.update({
+        where: { id },
+        data: { isPublished: false, moderation: "hidden", deletedAt: new Date() },
+      });
+      await this.writeAudit(user.id, "listing.soft_delete", `listing:${id}`, { reason: "has_orders", orderCount });
+      return;
+    }
+    await this.prisma.listing.delete({ where: { id } });
+    await this.writeAudit(user.id, "listing.hard_delete", `listing:${id}`);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Users — status (suspend) + role only. No email/password edit.      */
+  /* ------------------------------------------------------------------ */
+
+  @Patch("users/:id")
+  async patchUser(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body(new ZodPipe(UserPatch)) input: UserPatch,
+  ) {
+    if (id === user.id && input.role && input.role !== "admin" && input.role !== "superadmin") {
+      // Prevent locking yourself out by demoting your own admin account.
+      throw new NotFoundException({ code: "self_demote_forbidden", message: "Tidak bisa menurunkan role akunmu sendiri." });
+    }
+    const exists = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "User tidak ditemukan." });
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(input.status !== undefined && { status: input.status }),
+        ...(input.role   !== undefined && { role:   input.role }),
+      },
+    });
+    await this.writeAudit(user.id, "user.admin_update", `user:${id}`, input);
+    return { ok: true };
+  }
+
+  /** Soft-delete only — hard delete would orphan orders, listings, posts. */
+  @Delete("users/:id")
+  @HttpCode(204)
+  async deleteUser(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    if (id === user.id) {
+      throw new NotFoundException({ code: "self_delete_forbidden", message: "Tidak bisa menghapus akunmu sendiri." });
+    }
+    await this.prisma.user.update({
+      where: { id },
+      data: { status: "deleted", deletedAt: new Date() },
+    });
+    await this.writeAudit(user.id, "user.soft_delete", `user:${id}`);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Categories — full CRUD                                              */
+  /* ------------------------------------------------------------------ */
+
+  @Post("categories")
+  async createCategory(
+    @CurrentUser() user: SessionUser,
+    @Body(new ZodPipe(CategoryUpsert)) input: CategoryUpsert,
+  ) {
+    const created = await this.prisma.category.create({
+      data: {
+        slug: input.slug,
+        name: input.name,
+        parentId: input.parentId ?? null,
+        level: input.level ?? (input.parentId ? 2 : 1),
+        order: input.order ?? 0,
+      },
+    });
+    await this.redis.del("categories:tree:v2");
+    await this.writeAudit(user.id, "category.create", `category:${created.id}`, input);
+    return { id: created.id };
+  }
+
+  @Patch("categories/:id")
+  async patchCategory(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body(new ZodPipe(CategoryPatch)) input: CategoryPatch,
+  ) {
+    const exists = await this.prisma.category.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "Kategori tidak ditemukan." });
+    await this.prisma.category.update({ where: { id }, data: input });
+    await this.redis.del("categories:tree:v2");
+    await this.writeAudit(user.id, "category.update", `category:${id}`, input);
+    return { ok: true };
+  }
+
+  @Delete("categories/:id")
+  @HttpCode(204)
+  async deleteCategory(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    const [childCount, listingCount] = await Promise.all([
+      this.prisma.category.count({ where: { parentId: id } }),
+      this.prisma.listing.count({ where: { categoryId: id } }),
+    ]);
+    if (childCount > 0 || listingCount > 0) {
+      throw new NotFoundException({
+        code: "category_in_use",
+        message: `Tidak bisa hapus: ${childCount} sub-kategori dan ${listingCount} listing masih pakai kategori ini.`,
+      });
+    }
+    await this.prisma.category.delete({ where: { id } });
+    await this.redis.del("categories:tree:v2");
+    await this.writeAudit(user.id, "category.delete", `category:${id}`);
+  }
+
+  /** Flat list (no tree) for admin table. */
+  @Get("categories")
+  async listCategories() {
+    const rows = await this.prisma.category.findMany({
+      orderBy: [{ level: "asc" }, { order: "asc" }, { name: "asc" }],
+      include: { parent: { select: { name: true } }, _count: { select: { listings: true, children: true } } },
+    });
+    return {
+      items: rows.map((c) => ({
+        id: c.id, slug: c.slug, name: c.name, level: c.level, order: c.order,
+        parentId: c.parentId, parentName: c.parent?.name ?? null,
+        listingCount: c._count.listings,
+        childCount: c._count.children,
+      })),
+    };
+  }
 
   @Get("webhooks")
   async webhooks() {

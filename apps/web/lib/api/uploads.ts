@@ -8,12 +8,13 @@ import { api } from "./client";
  * http://localhost:4000/uploads/<hex>.<ext>. In production: same contract,
  * different backend (R2/S3) — UI code stays unchanged.
  */
-export async function uploadImage(input: File | string): Promise<string> {
+export async function uploadImage(input: File | string, kind?: "listings" | "avatars" | "evidence" | "posts" | "branding" | "misc"): Promise<string> {
   const dataUrl = typeof input === "string" ? input : await fileToDataUrl(input);
   if (!/^data:image\//i.test(dataUrl)) {
     throw new Error("File harus berupa gambar (PNG/JPG/WebP/GIF).");
   }
-  const res = await api<{ url: string }>("/uploads/image", { method: "POST", body: { dataUrl } });
+  const path = kind ? `/uploads/image/${kind}` : "/uploads/image";
+  const res = await api<{ url: string }>(path, { method: "POST", body: { dataUrl } });
   return res.url;
 }
 

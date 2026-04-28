@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { Avatar, Logo } from "@hoobiq/ui";
+import { Avatar } from "@hoobiq/ui";
 import { ThemeToggle } from "./theme-toggle";
+import { BrandLogo } from "./brand-logo";
+import { getSessionUser } from "@/lib/server/session";
+import { getSiteSettings } from "@/lib/site-settings";
+import { serverApi } from "@/lib/server/api";
 
-type NavItem = { href: string; label: string; badge?: string | number };
+type NavItem = { href: string; label: string; badgeKey?: "disputes" | "reports" | "payouts" };
 
 const nav: { group: string; items: NavItem[] }[] = [
   {
@@ -10,7 +14,7 @@ const nav: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin", label: "Dashboard" },
       { href: "/admin/analitik", label: "Analitik" },
-      { href: "/admin/laporan", label: "Laporan & abuse", badge: 4 },
+      { href: "/admin/laporan", label: "Laporan & abuse", badgeKey: "reports" },
     ],
   },
   {
@@ -18,7 +22,7 @@ const nav: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/listing", label: "Listing" },
       { href: "/admin/transaksi", label: "Transaksi" },
-      { href: "/admin/dispute", label: "Dispute", badge: 7 },
+      { href: "/admin/dispute", label: "Dispute", badgeKey: "disputes" },
       { href: "/admin/kategori", label: "Kategori" },
     ],
   },
@@ -26,7 +30,7 @@ const nav: { group: string; items: NavItem[] }[] = [
     group: "Keuangan",
     items: [
       { href: "/admin/keuangan", label: "Keuangan" },
-      { href: "/admin/payout", label: "Payout", badge: 12 },
+      { href: "/admin/payout", label: "Payout", badgeKey: "payouts" },
       { href: "/admin/promo", label: "Promo & kupon" },
     ],
   },
@@ -48,53 +52,93 @@ const nav: { group: string; items: NavItem[] }[] = [
   },
 ];
 
-export function AdminShell({
+const ROLE_LABEL: Record<string, string> = {
+  superadmin: "Superadmin",
+  admin: "Admin",
+  ops: "Ops",
+};
+
+export async function AdminShell({
   active,
   children,
 }: {
   active?: string;
   children: React.ReactNode;
 }) {
+  // The /admin layout already gates on role; we just read for display.
+  const [user, settings, overview] = await Promise.all([
+    getSessionUser(),
+    getSiteSettings(),
+    serverApi<{ kpi: { openDisputes: number } }>("/admin/overview").catch(() => null),
+  ]);
+
+  const badges = {
+    disputes: overview?.kpi.openDisputes ?? 0,
+    reports: 0,   // wire when /admin/laporan endpoint lands
+    payouts: 0,   // wire when /admin/payout endpoint lands
+  };
+
   return (
     <div className="min-h-screen bg-canvas">
-      <AdminTopBar />
+      <AdminTopBar user={user} brandName={settings.brandName} />
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <AdminSidebar active={active} />
+        <AdminSidebar active={active} badges={badges} />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );
 }
 
-function AdminTopBar() {
+function AdminTopBar({
+  user,
+  brandName,
+}: {
+  user: { username: string; name: string | null; role: string; avatarUrl: string | null } | null;
+  brandName: string;
+}) {
+  const displayName = user?.name?.trim() || user?.username || "—";
+  const initial = (displayName[0] ?? "?").toUpperCase();
+  const roleLabel = user ? (ROLE_LABEL[user.role] ?? user.role) : "Tidak login";
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-rule bg-canvas/90 px-6 backdrop-blur">
-      <Link href="/admin" className="flex items-center gap-3">
-        <Logo size="sm" />
+      <Link href="/admin" className="flex items-center gap-3" aria-label={`${brandName} admin`}>
+        <BrandLogo size="sm" />
         <span className="hidden rounded-full border border-brand-400/40 bg-brand-400/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-brand-400 md:inline">
           Admin
         </span>
       </Link>
 
       <div className="ml-auto flex items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-lg border border-rule bg-panel px-3 py-1.5 text-xs text-fg-muted md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-          Sistem normal · v1.4.2
-        </div>
         <ThemeToggle />
-        <div className="flex items-center gap-2 rounded-lg border border-rule bg-panel px-2 py-1">
-          <Avatar letter="R" size="sm" />
-          <div className="hidden text-xs md:block">
-            <p className="font-medium text-fg">Rina A.</p>
-            <p className="text-fg-subtle">Admin · Trust & Safety</p>
+        {user ? (
+          <div className="flex items-center gap-2 rounded-lg border border-rule bg-panel px-2 py-1">
+            <Avatar letter={initial} size="sm" />
+            <div className="hidden text-xs md:block">
+              <p className="font-medium text-fg">{displayName}</p>
+              <p className="text-fg-subtle">{roleLabel} · @{user.username}</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <Link
+            href="/masuk?next=/admin"
+            className="rounded-lg border border-rule bg-panel px-3 py-1.5 text-xs font-semibold text-fg-muted hover:text-fg"
+          >
+            Masuk
+          </Link>
+        )}
       </div>
     </header>
   );
 }
 
-function AdminSidebar({ active }: { active?: string }) {
+function AdminSidebar({
+  active,
+  badges,
+}: {
+  active?: string;
+  badges: { disputes: number; reports: number; payouts: number };
+}) {
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-rule bg-canvas/50 px-4 py-6 lg:flex">
       {nav.map((g) => (
@@ -105,6 +149,7 @@ function AdminSidebar({ active }: { active?: string }) {
           <ul className="flex flex-col">
             {g.items.map((it) => {
               const isActive = active === it.label;
+              const badge = it.badgeKey ? badges[it.badgeKey] : 0;
               return (
                 <li key={it.href}>
                   <Link
@@ -122,9 +167,9 @@ function AdminSidebar({ active }: { active?: string }) {
                       )}
                       {it.label}
                     </span>
-                    {it.badge != null && (
+                    {badge > 0 && (
                       <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-flame-400/20 px-1.5 text-[10px] font-semibold text-flame-400">
-                        {it.badge}
+                        {badge}
                       </span>
                     )}
                   </Link>

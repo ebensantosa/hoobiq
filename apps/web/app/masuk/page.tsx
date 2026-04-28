@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const sp = useSearchParams();
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -23,7 +24,11 @@ export default function LoginPage() {
           password: String(fd.get("password") ?? ""),
           remember: fd.get("remember") === "on",
         });
-        router.push("/marketplace");
+        // Honor ?next= but only if it's a same-origin path — never echo a
+        // user-controlled absolute URL (open-redirect vector).
+        const raw = sp.get("next");
+        const dest = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/marketplace";
+        router.push(dest);
         router.refresh();
       } catch (e) {
         setErr(e instanceof ApiError ? e.message : "Tidak bisa terhubung ke server.");

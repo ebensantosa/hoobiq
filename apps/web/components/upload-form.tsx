@@ -3,9 +3,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input, Label, Textarea } from "@hoobiq/ui";
 import { ImageUpload } from "./image-upload";
+import { CourierPicker } from "./courier-picker";
+import { DestinationPicker, type Destination } from "./destination-picker";
 import { listingsWriteApi } from "@/lib/api/listings-write";
 import { uploadImages } from "@/lib/api/uploads";
 import { ApiError } from "@/lib/api/client";
+import type { CreateListingInput as CreateListingPayload } from "@hoobiq/types";
 
 type Node = {
   id: string;
@@ -27,6 +30,8 @@ export type UploadFormExisting = {
   condition: typeof conditions[number];
   images: string[];
   categoryId: string;
+  couriers?: string[];
+  origin?: Destination | null;
 };
 
 export function UploadForm({ tree, existing }: { tree: Node[]; existing?: UploadFormExisting }) {
@@ -39,6 +44,8 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [condition, setCondition] = React.useState<typeof conditions[number]>(existing?.condition ?? "MINT");
   const [images, setImages] = React.useState<string[]>(existing?.images ?? []);
+  const [couriers, setCouriers] = React.useState<string[]>(existing?.couriers ?? []);
+  const [origin, setOrigin] = React.useState<Destination | null>(existing?.origin ?? null);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,6 +70,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           categoryId:   String(fd.get("categoryId")  ?? ""),
           images: finalImages,
           weightGrams:  weight,
+          // Cast — CourierPicker emits validated codes from its own list, but
+          // its state is typed as string[] for ergonomics; the API zod parses it.
+          couriers: couriers as CreateListingPayload["couriers"],
+          originSubdistrictId: origin?.id ?? null,
         };
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
@@ -146,6 +157,25 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
 
             <Field label="Deskripsi" hint="Sebutkan asal-usul, kondisi spesifik, packing, dan kebijakan pengiriman/return" error={fieldErrors.description}>
               <Textarea name="description" rows={5} required minLength={20} maxLength={4000} defaultValue={existing?.description} />
+            </Field>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="space-y-5 p-6">
+            <div>
+              <Label>Pengiriman</Label>
+              <p className="mt-1 text-xs text-fg-subtle">Pilih ekspedisi yang biasa kamu pakai. Pembeli tinggal pilih dari daftar ini saat checkout.</p>
+            </div>
+            <Field label="Lokasi pickup (origin)" hint="Cari kelurahan/kecamatan tempat kamu kirim paket. Dipakai untuk hitung ongkir.">
+              <DestinationPicker
+                value={origin}
+                onChange={setOrigin}
+                placeholder="Cari kecamatan/kelurahan kamu…"
+              />
+            </Field>
+            <Field label="Ekspedisi yang didukung" hint="Centang yang biasa kamu pakai. Minimal 1 supaya checkout bisa hitung ongkir.">
+              <CourierPicker value={couriers} onChange={setCouriers} />
             </Field>
           </div>
         </Card>

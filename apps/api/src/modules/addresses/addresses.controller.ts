@@ -13,6 +13,10 @@ const AddressInput = z.object({
   city: z.string().min(2).max(64),
   province: z.string().min(2).max(64),
   postal: z.string().min(4).max(10),
+  // RajaOngkir/Komerce subdistrict id — set by destination picker on frontend.
+  // Optional so legacy addresses still validate; checkout will surface a
+  // clear error if the buyer tries to use one missing this.
+  subdistrictId: z.number().int().positive().nullable().optional(),
   primary: z.boolean().default(false),
 });
 type AddressInput = z.infer<typeof AddressInput>;

@@ -15,6 +15,7 @@ type Address = {
   city: string;
   province: string;
   postalCode: string;
+  subdistrictId: number | null;
   primary: boolean;
 };
 
@@ -28,16 +29,18 @@ type Listing = {
   stock: number;
   category: { name: string; slug: string };
   seller: { username: string; city: string | null; trustScore: number };
+  weightGrams: number;
+  couriers: string[];
+  originSubdistrictId: number | null;
 };
 
-type CourierCode = "jne-reg" | "jnt" | "sicepat" | "gosend";
-
-const COURIERS: Array<{ code: CourierCode; name: string; price: number; eta: string }> = [
-  { code: "jne-reg",  name: "JNE REG",        price: 18_000, eta: "2–3 hari" },
-  { code: "jnt",      name: "J&T Express",    price: 25_000, eta: "1–2 hari" },
-  { code: "sicepat",  name: "SiCepat REG",    price: 22_000, eta: "2–3 hari" },
-  { code: "gosend",   name: "GoSend Same Day", price: 48_000, eta: "Hari ini · Jabodetabek" },
-];
+type CostOption = {
+  courier: string;
+  service: string;
+  description: string;
+  cost: number;
+  etd: string;
+};
 
 const PLATFORM_FEE_BPS = 200; // 2%
 const PAY_FEE_BPS = 100;      // 1%
@@ -55,24 +58,71 @@ export function CheckoutForm({
   const [addressId, setAddressId] = React.useState<string | null>(
     addresses.find((a) => a.primary)?.id ?? addresses[0]?.id ?? null
   );
-  const [courier, setCourier] = React.useState<CourierCode>("jne-reg");
   const [insurance, setInsurance] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
 
+  // Real ongkir from RajaOngkir/Komerce. Fetched whenever buyer changes
+  // address — listing.couriers, listing.originSubdistrictId, and
+  // address.subdistrictId all need to be set or we surface a clear message
+  // instead of falling back to fake numbers.
+  const [costOptions, setCostOptions] = React.useState<CostOption[]>([]);
+  const [costLoading, setCostLoading] = React.useState(false);
+  const [costErr, setCostErr] = React.useState<string | null>(null);
+  const [pickedCourier, setPickedCourier] = React.useState<string | null>(null);
+
+  const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
+
+  React.useEffect(() => {
+    setCostErr(null); setCostOptions([]); setPickedCourier(null);
+    if (!selectedAddress) return;
+    if (listing.couriers.length === 0) {
+      setCostErr("Seller belum konfigurasi ekspedisi untuk listing ini.");
+      return;
+    }
+    if (!listing.originSubdistrictId) {
+      setCostErr("Seller belum set lokasi pickup. Hubungi seller.");
+      return;
+    }
+    if (!selectedAddress.subdistrictId) {
+      setCostErr("Alamat ini belum punya kelurahan/kecamatan. Edit alamat dulu.");
+      return;
+    }
+    setCostLoading(true);
+    api<{ items: CostOption[] }>("/shipping/cost", {
+      method: "POST",
+      body: {
+        originId: listing.originSubdistrictId,
+        destinationId: selectedAddress.subdistrictId,
+        weightGrams: Math.max(100, listing.weightGrams * qty),
+        couriers: listing.couriers,
+      },
+    })
+      .then((res) => {
+        setCostOptions(res.items);
+        if (res.items[0]) setPickedCourier(`${res.items[0].courier}-${res.items[0].service}`);
+      })
+      .catch((e) => setCostErr(e instanceof Error ? e.message : "Gagal hitung ongkir."))
+      .finally(() => setCostLoading(false));
+  }, [addressId, listing.couriers, listing.originSubdistrictId, listing.weightGrams, qty, selectedAddress]);
+
+  const selectedCost = costOptions.find((o) => `${o.courier}-${o.service}` === pickedCourier) ?? null;
+
   const subtotal     = listing.priceIdr * qty;
-  const shippingIdr  = COURIERS.find((c) => c.code === courier)?.price ?? 0;
+  const shippingIdr  = selectedCost?.cost ?? 0;
   const platformFee  = Math.round((subtotal * PLATFORM_FEE_BPS) / 10_000);
   const payFee       = Math.round((subtotal * PAY_FEE_BPS) / 10_000);
   const insuranceIdr = insurance ? INSURANCE_FLAT_IDR : 0;
   const total        = subtotal + shippingIdr + platformFee + payFee + insuranceIdr;
 
-  const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
-
   async function submit() {
     if (pending) return;
     if (!addressId) {
       setErr("Pilih atau tambah alamat dulu.");
+      return;
+    }
+    if (!selectedCost) {
+      setErr(costErr ?? "Pilih ekspedisi dulu.");
       return;
     }
     setErr(null);
@@ -84,7 +134,8 @@ export function CheckoutForm({
           listingId: listing.id,
           qty,
           addressId,
-          courierCode: courier,
+          courierCode: `${selectedCost.courier}-${selectedCost.service.toLowerCase()}`,
+          shippingCents: selectedCost.cost * 100,
           insurance,
         },
       });
@@ -197,28 +248,39 @@ export function CheckoutForm({
           )}
         </Section>
 
-        {/* Shipping */}
+        {/* Shipping — real ongkir from RajaOngkir/Komerce */}
         <Section title="Metode pengiriman">
-          <div className="flex flex-col gap-3">
-            {COURIERS.map((c) => (
-              <Card key={c.code} className={courier === c.code ? "border-brand-400 bg-brand-400/5" : ""}>
-                <label className="flex cursor-pointer items-center gap-4 p-4">
-                  <input
-                    type="radio"
-                    name="ship"
-                    checked={courier === c.code}
-                    onChange={() => setCourier(c.code)}
-                    className="h-4 w-4 accent-brand-400"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-fg">{c.name}</p>
-                    <p className="mt-0.5 text-xs text-fg-muted">{c.eta}</p>
-                  </div>
-                  <p className="font-mono text-sm text-fg">Rp {c.price.toLocaleString("id-ID")}</p>
-                </label>
-              </Card>
-            ))}
-          </div>
+          {costLoading ? (
+            <Card><div className="p-5 text-center text-sm text-fg-muted">Menghitung ongkir…</div></Card>
+          ) : costErr ? (
+            <Card><div className="p-5 text-center text-sm text-flame-600">{costErr}</div></Card>
+          ) : costOptions.length === 0 ? (
+            <Card><div className="p-5 text-center text-sm text-fg-muted">Pilih alamat dulu untuk hitung ongkir.</div></Card>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {costOptions.map((c) => {
+                const id = `${c.courier}-${c.service}`;
+                return (
+                  <Card key={id} className={pickedCourier === id ? "border-brand-400 bg-brand-400/5" : ""}>
+                    <label className="flex cursor-pointer items-center gap-4 p-4">
+                      <input
+                        type="radio"
+                        name="ship"
+                        checked={pickedCourier === id}
+                        onChange={() => setPickedCourier(id)}
+                        className="h-4 w-4 accent-brand-400"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-fg uppercase">{c.courier} · {c.service}</p>
+                        <p className="mt-0.5 text-xs text-fg-muted">{c.description} · {c.etd} hari</p>
+                      </div>
+                      <p className="font-mono text-sm text-fg">Rp {c.cost.toLocaleString("id-ID")}</p>
+                    </label>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
         {/* Insurance */}
@@ -266,7 +328,7 @@ export function CheckoutForm({
             <h3 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Ringkasan</h3>
             <dl className="mt-4 flex flex-col gap-3 text-sm">
               <Row label={`Subtotal${qty > 1 ? ` (×${qty})` : ""}`} value={`Rp ${subtotal.toLocaleString("id-ID")}`} />
-              <Row label={`Ongkir ${COURIERS.find((c) => c.code === courier)?.name}`} value={`Rp ${shippingIdr.toLocaleString("id-ID")}`} />
+              <Row label={`Ongkir${selectedCost ? ` ${selectedCost.courier.toUpperCase()} ${selectedCost.service}` : ""}`} value={`Rp ${shippingIdr.toLocaleString("id-ID")}`} />
               <Row label="Biaya platform (2%)" value={`Rp ${platformFee.toLocaleString("id-ID")}`} />
               <Row label="Biaya Hoobiq Pay (1%)" value={`Rp ${payFee.toLocaleString("id-ID")}`} />
               {insuranceIdr > 0 && <Row label="Asuransi" value={`Rp ${insuranceIdr.toLocaleString("id-ID")}`} />}

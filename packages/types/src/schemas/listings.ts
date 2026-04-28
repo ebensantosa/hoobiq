@@ -25,6 +25,8 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   description: z.string(),
   stock: z.number(),
   weightGrams: z.number(),
+  couriers: z.array(z.string()).default([]),
+  originSubdistrictId: z.number().int().nullable().optional(),
   category: z.object({
     id: z.string(),
     slug: z.string(),
@@ -80,6 +82,11 @@ export const CreateListingInput = z.object({
     .min(1)
     .max(8),
   weightGrams: z.number().int().min(10).max(50_000).default(500),
+  // Shipping (RajaOngkir/Komerce). couriers is the set the seller will accept;
+  // originSubdistrictId is the Komerce id of the seller's pickup point. Both
+  // optional on create — listing falls back to "hubungi seller" until set.
+  couriers: z.array(z.enum(["jne", "pos", "tiki", "sicepat", "jnt", "anteraja", "ninja", "wahana", "ide"])).max(9).default([]),
+  originSubdistrictId: z.number().int().positive().nullable().optional(),
 });
 export type CreateListingInput = z.infer<typeof CreateListingInput>;
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, Badge, Card } from "@hoobiq/ui";
 import { OrderActions } from "@/components/order-actions";
+import { TrackingTimeline } from "@/components/tracking-timeline";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -190,6 +191,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 </ol>
               </div>
             </Card>
+
+            {/* Tracking — live updates from RajaOngkir/Komerce when resi is set */}
+            {o.trackingNumber && (
+              <TrackingTimeline courier={o.courierCode} awb={o.trackingNumber} />
+            )}
 
             {/* Item */}
             <Card>

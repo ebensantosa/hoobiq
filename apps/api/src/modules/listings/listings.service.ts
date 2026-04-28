@@ -241,6 +241,8 @@ export class ListingsService {
         condition: input.condition,
         imagesJson: JSON.stringify(input.images),
         weightGrams: input.weightGrams,
+        couriersJson: JSON.stringify(input.couriers ?? []),
+        ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
         isPublished: false,
         moderation: "pending",
       },
@@ -262,6 +264,10 @@ export class ListingsService {
     if (input.images !== undefined) {
       data.imagesJson = JSON.stringify(input.images);
       delete data.images;
+    }
+    if (input.couriers !== undefined) {
+      data.couriersJson = JSON.stringify(input.couriers);
+      delete data.couriers;
     }
 
     const updated = await this.prisma.listing.update({ where: { id }, data });
@@ -343,13 +349,18 @@ function toSummary(l: Row) {
 
 function toDetail(l: Row & {
   description: string; stock: number; weightGrams: number;
+  couriersJson?: string; originSubdistrictId?: number | null;
   category: { id: string; slug: string; name: string };
 }) {
+  let couriers: string[] = [];
+  try { const v = JSON.parse(l.couriersJson ?? "[]"); if (Array.isArray(v)) couriers = v.filter((s) => typeof s === "string"); } catch { /* fall through */ }
   return {
     ...toSummary(l),
     description: l.description,
     stock: l.stock,
     weightGrams: l.weightGrams,
+    couriers,
+    originSubdistrictId: l.originSubdistrictId ?? null,
     category: l.category,
   };
 }

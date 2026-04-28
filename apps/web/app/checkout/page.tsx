@@ -18,6 +18,7 @@ type Address = {
   city: string;
   province: string;
   postalCode: string;
+  subdistrictId: number | null;
   primary: boolean;
 };
 
@@ -46,9 +47,16 @@ export default async function CheckoutPage({
     );
   }
 
+  // API returns raw Prisma Address shape (name, line, postal); CheckoutForm
+  // expects recipient/line1/postalCode. Normalize at the boundary.
+  type RawAddress = {
+    id: string; label: string; name: string; phone: string;
+    line: string; city: string; province: string; postal: string;
+    subdistrictId: number | null; primary: boolean;
+  };
   const [listing, addressesRes] = await Promise.all([
     serverApi<ListingDetail>(`/listings/${encodeURIComponent(listingId)}`),
-    serverApi<{ items: Address[] }>("/addresses"),
+    serverApi<{ items: RawAddress[] }>("/addresses"),
   ]);
 
   if (!listing) {
@@ -77,7 +85,19 @@ export default async function CheckoutPage({
     );
   }
 
-  const addresses = addressesRes?.items ?? [];
+  const addresses: Address[] = (addressesRes?.items ?? []).map((a) => ({
+    id: a.id,
+    label: a.label,
+    recipient: a.name,
+    phone: a.phone,
+    line1: a.line,
+    line2: null,
+    city: a.city,
+    province: a.province,
+    postalCode: a.postal,
+    subdistrictId: a.subdistrictId,
+    primary: a.primary,
+  }));
 
   return (
     <AppShell active="Marketplace">
@@ -101,6 +121,9 @@ export default async function CheckoutPage({
             stock: listing.stock,
             category: listing.category,
             seller: listing.seller,
+            weightGrams: listing.weightGrams,
+            couriers: listing.couriers ?? [],
+            originSubdistrictId: listing.originSubdistrictId ?? null,
           }}
           qty={qty}
           addresses={addresses}

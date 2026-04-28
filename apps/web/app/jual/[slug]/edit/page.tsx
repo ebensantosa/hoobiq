@@ -43,6 +43,13 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
     condition: listing.condition,
     images: listing.images,
     categoryId: listing.category.id,
+    couriers: listing.couriers ?? [],
+    // Origin label isn't persisted — just the subdistrict id. Show "(tersimpan)"
+    // placeholder so the seller can either keep or repick. Repicking gives us
+    // a fresh Destination object with the label.
+    origin: listing.originSubdistrictId
+      ? { id: listing.originSubdistrictId, label: "(lokasi tersimpan)", city: "", province: "", postalCode: "" }
+      : null,
   };
 
   return (

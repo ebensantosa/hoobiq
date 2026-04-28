@@ -37,7 +37,7 @@ export default function CheckoutSuccessPage() {
             </div>
             <div className="flex items-center justify-between p-5">
               <span className="text-sm text-fg-muted">Status</span>
-              <Badge tone="mint" size="sm">Dana ditahan</Badge>
+              <Badge tone="mint" size="sm">Pembayaran aman</Badge>
             </div>
           </div>
         </Card>

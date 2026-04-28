@@ -69,10 +69,10 @@ export default function KetentuanPage() {
           heading: "3. Transaksi & Hoobiq Pay",
           body: (
             <>
-              <SubHead>Escrow wajib</SubHead>
+              <SubHead>Pembayaran wajib via Hoobiq Pay</SubHead>
               <Para>
-                Semua transaksi di atas Rp 100.000 wajib melalui Hoobiq Pay. Dana pembeli
-                ditahan oleh mitra pembayaran kami (Midtrans) sampai salah satu terjadi:
+                Semua transaksi di atas Rp 100.000 wajib melalui Hoobiq Pay. Pembayaran pembeli
+                diamankan oleh mitra pembayaran kami (Midtrans) sampai salah satu terjadi:
                 (a) pembeli konfirmasi barang diterima, atau (b) 7 hari setelah status{" "}
                 <code>delivered</code> dari kurir — mana yang lebih dulu.
               </Para>
@@ -127,8 +127,8 @@ export default function KetentuanPage() {
           body: (
             <>
               <Para>
-                Pembeli boleh mengajukan dispute dalam 72 jam setelah barang diterima.
-                Selama dispute aktif, dana tetap ditahan di escrow.
+                Pembeli boleh mengajukan dispute setelah barang diterima jika tidak sesuai
+                deskripsi. Selama dispute aktif, pembayaran tetap diamankan di Hoobiq Pay.
               </Para>
               <SubHead>Bukti yang dibutuhkan</SubHead>
               <Bullets

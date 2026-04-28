@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Logo } from "@hoobiq/ui";
 
 /**
  * Marketing footer — multi-column with descriptive text, category links,
@@ -14,14 +13,12 @@ export function MarketingFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand & description */}
           <div className="max-w-sm">
-            <Logo size="sm" />
-            <p className="mt-5 text-sm leading-relaxed text-fg-muted">
+            <p className="text-sm leading-relaxed text-fg-muted">
               Hoobiq adalah marketplace dan komunitas kolektor hobi Indonesia.
               Beli &amp; jual <strong className="text-fg">trading cards</strong>,{" "}
               <strong className="text-fg">action figure</strong>,{" "}
               <strong className="text-fg">blind box</strong>, merchandise, dan
-              komik dengan transaksi aman lewat Hoobiq Pay — dana ditahan
-              sampai barang diterima.
+              komik dengan pembayaran aman lewat Hoobiq Pay.
             </p>
             <SocialRow />
           </div>
@@ -56,9 +53,9 @@ export function MarketingFooter() {
 
         {/* Trust strip */}
         <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-rule bg-canvas px-5 py-4 text-xs text-fg-muted">
-          <TrustItem icon="shield">Hoobiq Pay · escrow 72 jam</TrustItem>
+          <TrustItem icon="shield">Pembayaran aman lewat Hoobiq Pay</TrustItem>
           <TrustItem icon="check">Verified seller</TrustItem>
-          <TrustItem icon="refresh">Refund otomatis</TrustItem>
+          <TrustItem icon="refresh">Refund dijamin</TrustItem>
           <TrustItem icon="lock">UU PDP No. 27/2022</TrustItem>
         </div>
 

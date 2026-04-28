@@ -43,7 +43,7 @@ export class ListingsService {
         deletedAt: null,
         isPublished: true,
         moderation: "active",
-        ...(input.q && { title: { contains: input.q } }),
+        ...(input.q && { title: { contains: input.q, mode: "insensitive" as const } }),
         ...(categoryIds && { categoryId: { in: categoryIds } }),
         ...(input.condition && { condition: input.condition }),
         ...(input.minPrice !== undefined && { priceCents: { gte: BigInt(input.minPrice) * CENTS_PER_RUPIAH } }),
@@ -118,7 +118,7 @@ export class ListingsService {
         deletedAt: null,
         isPublished: true,
         moderation: "active",
-        ...(input.q && { title: { contains: input.q } }),
+        ...(input.q && { title: { contains: input.q, mode: "insensitive" as const } }),
         ...(categoryIds && { categoryId: { in: categoryIds } }),
       } as const;
 

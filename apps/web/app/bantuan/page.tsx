@@ -126,7 +126,7 @@ const sections: Section[] = [
         q: "Kenapa harus bayar lewat Hoobiq Pay, nggak bisa transfer langsung?",
         a: (
           <>
-            Hoobiq Pay adalah escrow — dana kamu ditahan sampai barang diterima
+            Hoobiq Pay melindungi pembayaran kamu sampai barang diterima
             dengan kondisi sesuai deskripsi. Transfer langsung ke seller tidak
             kami dukung dan kamu kehilangan semua perlindungan kalau terjadi
             masalah. Seller yang memaksa transfer langsung bisa dilaporkan ke{" "}
@@ -193,7 +193,7 @@ const sections: Section[] = [
           <>
             Jangan buka paket sebelum direkam. Rekam video unboxing utuh (dari
             memegang paket dari kurir sampai barang keluar), lalu buka dispute
-            di halaman transaksi dalam 72 jam setelah status <em>delivered</em>.
+            di halaman transaksi setelah status <em>delivered</em>.
             Dana tidak akan cair ke seller selama dispute aktif.
           </>
         ),

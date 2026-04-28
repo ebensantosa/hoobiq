@@ -38,8 +38,8 @@ export default function TentangPage() {
             <>
               <SubHead>Transaksi, bukan harapan</SubHead>
               <Para>
-                Setiap pembelian di atas Rp 100.000 wajib lewat Hoobiq Pay. Dana ditahan
-                sampai pembeli konfirmasi barang diterima. Tidak ada lagi "transfer dulu,
+                Setiap pembelian di atas Rp 100.000 wajib lewat Hoobiq Pay. Pembayaran
+                aman sampai pembeli konfirmasi barang diterima. Tidak ada lagi "transfer dulu,
                 barang belakangan".
               </Para>
               <SubHead>Reputasi di atas follower</SubHead>

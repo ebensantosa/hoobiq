@@ -87,7 +87,7 @@ export default async function CheckoutPage({
         </span>
         <h1 className="mt-2 text-3xl font-bold text-fg">Selesaikan pembelian.</h1>
         <p className="mt-2 text-sm text-fg-muted">
-          Dana ditahan di escrow sampai kamu konfirmasi barang diterima.
+          Pembayaran kamu aman lewat Hoobiq Pay sampai barang diterima dengan baik.
         </p>
 
         <CheckoutForm

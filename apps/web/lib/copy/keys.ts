@@ -42,9 +42,9 @@ export const COPY_KEYS = {
   "nav.search.placeholder":     "Cari kartu, figure, blind box…",
 
   // Trust badges (used in checkout, listing detail)
-  "trust.escrow":               "Pembayaran ditahan sampai barang sampai.",
+  "trust.escrow":               "Pembayaran aman lewat Hoobiq Pay sampai barang diterima.",
   "trust.verified":             "Verified seller — KTP & rekening dicek.",
-  "trust.dispute":              "Dispute 72 jam, refund dijamin kalau barang tidak sesuai.",
+  "trust.dispute":              "Refund dijamin kalau barang tidak sesuai deskripsi.",
 
   // Empty states
   "empty.marketplace":          "Belum ada listing yang cocok. Coba ubah filter.",

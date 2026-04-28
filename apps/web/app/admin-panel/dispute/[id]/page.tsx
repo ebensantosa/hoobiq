@@ -16,7 +16,7 @@ export default async function AdminDisputeDetailPage({ params }: { params: Promi
     <AdminShell active="Dispute">
       <div className="px-8 py-8">
         <nav className="mb-6 text-xs text-fg-subtle">
-          <Link href="/admin/dispute" className="hover:text-fg">Dispute</Link>
+          <Link href="/admin-panel/dispute" className="hover:text-fg">Dispute</Link>
           <span className="mx-2">/</span>
           <span>#{id}</span>
         </nav>

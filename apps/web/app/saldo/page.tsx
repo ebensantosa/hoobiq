@@ -62,7 +62,7 @@ export default async function SaldoPage() {
                 Dalam escrow
               </p>
               <p className="mt-3 text-3xl font-bold text-fg">Rp {escrow.toLocaleString("id-ID")}</p>
-              <p className="mt-2 text-xs text-fg-muted">Dana yang ditahan menunggu konfirmasi pembeli.</p>
+              <p className="mt-2 text-xs text-fg-muted">Dana yang sedang menunggu konfirmasi pembeli.</p>
             </div>
           </Card>
         </div>

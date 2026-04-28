@@ -179,8 +179,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 <span className="text-brand-400">◆</span> Proteksi Hoobiq Pay
               </p>
               <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-fg-muted">
-                <li>Dana ditahan 72 jam setelah barang diterima</li>
-                <li>Refund otomatis kalau tidak sesuai deskripsi</li>
+                <li>Pembayaran aman sampai barang diterima dengan baik</li>
+                <li>Refund dijamin kalau barang tidak sesuai deskripsi</li>
                 <li>Asuransi paket opsional saat checkout</li>
               </ul>
             </div>

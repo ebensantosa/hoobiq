@@ -144,9 +144,9 @@ export default function AdminKeuanganPage() {
               <div className="p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Quick links</h2>
                 <ul className="mt-3 flex flex-col gap-1 text-sm">
-                  <QuickLink href="/admin/payout" label="Antrian payout" badge="12" />
+                  <QuickLink href="/admin-panel/payout" label="Antrian payout" badge="12" />
                   <QuickLink href="https://dashboard.midtrans.com" label="Dashboard Midtrans" external />
-                  <QuickLink href="/admin/webhook" label="Log webhook Midtrans" />
+                  <QuickLink href="/admin-panel/webhook" label="Log webhook Midtrans" />
                   <QuickLink href="/admin/audit" label="Audit transaksi finansial" />
                 </ul>
               </div>

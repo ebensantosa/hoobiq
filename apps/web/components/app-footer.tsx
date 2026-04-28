@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { BrandLogo } from "./brand-logo";
 import { getSiteSettings } from "@/lib/site-settings";
 
 /**
@@ -14,9 +13,9 @@ export async function AppFooter() {
       <div className="mx-auto max-w-[1280px] px-6 py-10 md:px-10">
         <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <BrandLogo size="sm" />
+            <p className="text-sm font-bold text-fg">{settings.brandName}</p>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-fg-muted">
-              Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merch, komik — aman dengan escrow {settings.brandName} Pay.
+              Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merch, komik — pembayaran aman lewat {settings.brandName} Pay.
             </p>
           </div>
 

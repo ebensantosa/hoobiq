@@ -274,7 +274,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <div className="rounded-2xl border border-rule p-5 text-sm">
               <p className="font-medium text-fg">Ada masalah dengan pesanan?</p>
               <p className="mt-1 text-fg-muted">
-                Kamu punya waktu 72 jam setelah barang diterima untuk membuka dispute.
+                Buka dispute jika barang tidak sesuai deskripsi atau bermasalah saat diterima.
               </p>
               <Link href="/bantuan#dispute" className="mt-3 inline-block text-brand-400 hover:underline">
                 Cara buka dispute →

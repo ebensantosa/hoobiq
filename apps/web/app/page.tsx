@@ -1,25 +1,55 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Badge, Button, Card, Logo } from "@hoobiq/ui";
+import { Card } from "@hoobiq/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketingFooter } from "@/components/marketing-footer";
-import { CardArt, pickArt, type CardArtVariant } from "@/components/card-art";
+import { ListingCard } from "@/components/listing-card";
+import { BrandLogo } from "@/components/brand-logo";
+import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
+import { serverApi } from "@/lib/server/api";
+import { copyFor } from "@/lib/copy/server";
+import type { ListingSummary } from "@hoobiq/types";
+
+type Post = {
+  id: string;
+  body: string;
+  cover: string | null;
+  likes: number;
+  author: { username: string; level: number };
+};
+
+type Category = { slug: string; name: string; listingCount: number; children?: Category[] };
+
+export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  // Authenticated users land on the marketplace, not the marketing page.
   const user = await getSessionUser();
   if (user) redirect("/marketplace");
+
+  // All marketing data is real — no hardcoded listings/posts/counts. If a
+  // fetch fails the section just renders empty/skipped rather than crash.
+  const [listingsRes, postsRes, tree, t] = await Promise.all([
+    serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=12"),
+    serverApi<{ items: Post[] }>("/posts?limit=3"),
+    serverApi<Category[]>("/categories", { revalidate: 60 }),
+    copyFor(),
+  ]);
+  const listings = listingsRes?.items ?? [];
+  const posts    = postsRes?.items ?? [];
+  const heroPicks = listings.slice(0, 4);
+  const trending  = listings.slice(0, 8);
 
   return (
     <main className="min-h-screen pt-16">
       <Nav />
-      <Hero />
-      <Marquee />
-      <Trending />
-      <CommunityPreview />
+      <Hero picks={heroPicks} t={t} />
+      <LatestStrip items={listings.slice(0, 12)} />
+      {tree && tree.length > 0 && <CategoryStrip cats={tree} />}
+      <Trending items={trending} />
+      {posts.length > 0 && <CommunityPreview posts={posts} />}
       <BottomCTA />
-      <Footer />
+      <MarketingFooter />
     </main>
   );
 }
@@ -31,7 +61,7 @@ function Nav() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
       <div className="mx-auto flex h-20 max-w-[1280px] items-center gap-8 px-6 md:px-10">
         <Link href="/" className="shrink-0">
-          <Logo size="md" />
+          <BrandLogo size="md" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
           <Link href="/marketplace" className="hover:text-fg">Marketplace</Link>
@@ -57,8 +87,8 @@ function Nav() {
 
 /* ---------------- Hero ---------------- */
 
-function Hero() {
-  const chips = ["Charizard", "Luffy Leader", "Labubu", "Nendoroid", "Genshin"];
+function Hero({ picks, t }: { picks: ListingSummary[]; t: (k: import("@/lib/copy/keys").CopyKey) => string }) {
+  const chips = ["Charizard", "Luffy", "Labubu", "Nendoroid", "Genshin"];
   return (
     <section className="mx-auto grid max-w-[1280px] items-start gap-10 px-6 pb-8 pt-10 md:grid-cols-[1.05fr_1fr] md:gap-14 md:px-10 md:pb-12 md:pt-14">
       <div>
@@ -68,12 +98,12 @@ function Hero() {
           koleksi hobi kamu, <span className="text-brand-400">aman.</span>
         </h1>
         <p className="mt-4 max-w-xl text-sm text-fg-muted md:text-base">
-          Cari kartu langka, trade figure, pamer blind box. Transaksi aman lewat
+          Cari kartu langka, trade figure, pamer blind box. Pembayaran aman lewat
           Hoobiq&nbsp;Pay.
         </p>
 
         <div className="mt-6">
-          <SearchBar />
+          <SearchBar placeholder={t("nav.search.placeholder")} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-xs text-fg-subtle">Populer:</span>
             {chips.map((c) => (
@@ -89,93 +119,68 @@ function Hero() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-fg-muted">
-          <Trust icon="shield">Dana aman Hoobiq Pay</Trust>
+          <Trust icon="shield">Pembayaran aman lewat Hoobiq Pay</Trust>
           <Trust icon="check">Seller terverifikasi</Trust>
-          <Trust icon="refund">Refund otomatis 72 jam</Trust>
+          <Trust icon="refund">Refund dijamin Hoobiq</Trust>
         </div>
       </div>
 
-      <HeroShowcase />
+      <HeroShowcase picks={picks} />
     </section>
   );
 }
 
-function HeroShowcase() {
-  const cards: ShowcaseCardProps[] = [
-    { t: "Dragon Foil v2",      sub: "TCG · Holo edition",   p: "Rp 4.250.000", cond: "mint", art: "flame",   float: "animate-float"   },
-    { t: "Storm Bringer 1/7",   sub: "Scale figure",          p: "Rp 1.250.000", cond: "mint", art: "thunder", float: "animate-float-3" },
-    { t: "Pirate Captain",      sub: "TCG · Parallel rare",   p: "Rp 850.000",   cond: "near", art: "ocean",   float: "animate-float-2" },
-    { t: "Pop Monsters · Chase", sub: "Blind box · Series 3", p: "Rp 680.000",   cond: "near", art: "bubble",  float: "animate-float-4" },
-  ];
+function HeroShowcase({ picks }: { picks: ListingSummary[] }) {
+  if (picks.length === 0) return <div />;
+  const floats = ["animate-float", "animate-float-3", "animate-float-2", "animate-float-4"];
   return (
     <div className="relative mx-auto w-full max-w-[360px]">
       <div className="pointer-events-none absolute inset-6 rounded-[48px] bg-brand-soft blur-3xl opacity-70" />
       <div className="relative grid grid-cols-2 gap-3">
         <div className="relative z-10 flex flex-col gap-3">
-          <ShowcaseCard {...cards[0]} />
-          <ShowcaseCard {...cards[1]} />
+          {picks[0] && <ShowcaseCard l={picks[0]} float={floats[0]} />}
+          {picks[1] && <ShowcaseCard l={picks[1]} float={floats[1]} />}
         </div>
         <div className="relative z-20 mt-6 flex -translate-x-5 flex-col gap-3">
-          <ShowcaseCard {...cards[2]} />
-          <ShowcaseCard {...cards[3]} />
+          {picks[2] && <ShowcaseCard l={picks[2]} float={floats[2]} />}
+          {picks[3] && <ShowcaseCard l={picks[3]} float={floats[3]} />}
         </div>
       </div>
     </div>
   );
 }
 
-type ShowcaseCardProps = {
-  t: string;
-  sub?: string;
-  p: string;
-  cond: "mint" | "near";
-  art: CardArtVariant;
-  float: string;
-};
-
-function ShowcaseCard({ t, p, cond, art, float }: ShowcaseCardProps) {
+function ShowcaseCard({ l, float }: { l: ListingSummary; float: string }) {
   return (
-    <div
-      className={
-        "overflow-hidden rounded-xl border border-rule bg-panel shadow-gallery " + float
-      }
+    <Link
+      href={`/listing/${l.slug}`}
+      className={"overflow-hidden rounded-xl border border-rule bg-panel shadow-gallery " + float}
     >
       <div className="relative aspect-[4/3] overflow-hidden">
-        <CardArt variant={art} />
-        <span
-          className={
-            "absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider backdrop-blur " +
-            (cond === "mint"
-              ? "bg-white/85 text-brand-500 border border-brand-400/40"
-              : "bg-white/85 text-fg-muted border border-rule")
-          }
-        >
-          {cond === "mint" ? "Mint" : "Near Mint"}
+        {l.cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={l.cover} alt={l.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <CardArt variant={pickArt(l.slug)} />
+        )}
+        <span className="absolute left-1.5 top-1.5 rounded-full border border-rule bg-white/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-fg-muted backdrop-blur">
+          {l.condition === "MINT" ? "Mint" : l.condition.replace("_", " ")}
         </span>
-        {/* corner shine — tiny premium touch */}
         <span className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white/30 to-transparent mix-blend-overlay" />
       </div>
       <div className="px-2.5 py-2">
-        <p className="truncate text-[11px] font-semibold text-fg">{t}</p>
-        <p className="mt-0.5 text-[11px] font-bold text-brand-500">{p}</p>
+        <p className="truncate text-[11px] font-semibold text-fg">{l.title}</p>
+        <p className="mt-0.5 text-[11px] font-bold text-brand-500">Rp {l.priceIdr.toLocaleString("id-ID")}</p>
       </div>
-    </div>
+    </Link>
   );
 }
 
-/* ---------------- Marquee strip ---------------- */
+/* ---------------- Latest strip ---------------- */
 
-function Marquee() {
-  const items = [
-    { t: "Charizard VMAX Rainbow", p: "Rp 4.250.000" },
-    { t: "Luffy Leader Parallel", p: "Rp 850.000" },
-    { t: "Raiden Shogun 1/7", p: "Rp 1.250.000" },
-    { t: "Labubu Monsters S3", p: "Rp 680.000" },
-    { t: "Pikachu Illustrator", p: "Rp 2.800.000" },
-    { t: "Nendoroid Nakano Miku", p: "Rp 980.000" },
-    { t: "HSR Acheron Lightcone", p: "Rp 320.000" },
-    { t: "Chainsaw Man Vol. 1", p: "Rp 450.000" },
-  ];
+function LatestStrip({ items }: { items: ListingSummary[] }) {
+  if (items.length === 0) return null;
+  // Loop the array once so the marquee animation has continuous content.
   const loop = [...items, ...items];
   return (
     <section className="border-y border-rule bg-panel/40 py-8">
@@ -186,8 +191,8 @@ function Marquee() {
               <span className="absolute h-2 w-2 animate-ping rounded-full bg-brand-400 opacity-75" />
               <span className="relative h-2 w-2 rounded-full bg-brand-400" />
             </span>
-            <span className="font-semibold text-fg">Baru masuk</span>
-            <span className="text-fg-subtle">refresh tiap jam</span>
+            <span className="font-semibold text-fg">Listing terbaru</span>
+            <span className="text-fg-subtle">langsung dari seller</span>
           </div>
           <Link href="/marketplace" className="hidden text-sm text-fg-muted hover:text-fg md:inline">
             Semua listing →
@@ -197,18 +202,24 @@ function Marquee() {
         <div className="mask-fade-x relative overflow-hidden">
           <div className="flex w-max gap-3 animate-marquee">
             {loop.map((it, i) => (
-              <div
-                key={i}
-                className="flex w-60 shrink-0 items-center gap-3 rounded-xl border border-rule bg-panel px-3 py-2.5"
+              <Link
+                key={`${it.id}-${i}`}
+                href={`/listing/${it.slug}`}
+                className="flex w-60 shrink-0 items-center gap-3 rounded-xl border border-rule bg-panel px-3 py-2.5 transition-colors hover:border-brand-400/60"
               >
                 <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-panel-2">
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-400/25 via-ultra-400/20 to-flame-400/25" />
+                  {it.cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <CardArt variant={pickArt(it.slug)} />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-fg">{it.t}</p>
-                  <p className="text-xs font-semibold text-brand-400">{it.p}</p>
+                  <p className="truncate text-sm font-medium text-fg">{it.title}</p>
+                  <p className="text-xs font-semibold text-brand-400">Rp {it.priceIdr.toLocaleString("id-ID")}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -253,9 +264,14 @@ function Trust({ icon, children }: { icon: "shield" | "check" | "refund"; childr
   );
 }
 
-function SearchBar() {
+/**
+ * Plain HTML form action="/marketplace" with input name="q" — the browser
+ * handles submit, navigates to /marketplace?q=… which the server-rendered
+ * marketplace page reads via searchParams.q. No client JS required.
+ */
+function SearchBar({ placeholder }: { placeholder: string }) {
   return (
-    <form className="flex h-14 items-center gap-2 rounded-2xl border border-rule bg-panel px-3 shadow-gallery">
+    <form action="/marketplace" method="get" className="flex h-14 items-center gap-2 rounded-2xl border border-rule bg-panel px-3 shadow-gallery">
       <svg
         width="20"
         height="20"
@@ -272,7 +288,8 @@ function SearchBar() {
       </svg>
       <input
         type="search"
-        placeholder="Cari kartu, figure, blind box…"
+        name="q"
+        placeholder={placeholder}
         className="flex-1 bg-transparent px-2 text-base text-fg placeholder:text-fg-subtle focus:outline-none"
       />
       <button
@@ -287,30 +304,23 @@ function SearchBar() {
 
 /* ---------------- Category strip ---------------- */
 
-function CategoryStrip() {
-  const cats = [
-    { name: "Trading Cards", count: "3.420 listing", href: "/kategori/cards" },
-    { name: "Action Figure", count: "1.120 listing", href: "/kategori/figure" },
-    { name: "Blind Box", count: "680 listing", href: "/kategori/blindbox" },
-    { name: "Merchandise", count: "420 listing", href: "/kategori/merch" },
-    { name: "Komik", count: "310 listing", href: "/kategori/komik" },
-  ];
+function CategoryStrip({ cats }: { cats: Category[] }) {
+  // Top-level categories with real listing counts from the categories tree.
+  const top = cats.slice(0, 6);
   return (
     <section className="mx-auto max-w-[1280px] px-6 pb-14 md:px-10">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        {cats.map((c) => (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        {top.map((c) => (
           <Link
-            key={c.name}
-            href={c.href}
+            key={c.slug}
+            href={`/kategori/${c.slug}`}
             className="group flex items-center justify-between rounded-2xl border border-rule bg-panel/60 p-4 transition-colors hover:border-brand-400/50 hover:bg-panel"
           >
-            <div>
-              <p className="text-sm font-semibold text-fg">{c.name}</p>
-              <p className="mt-0.5 text-xs text-fg-subtle">{c.count}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-fg">{c.name}</p>
+              <p className="mt-0.5 text-xs text-fg-subtle">{c.listingCount.toLocaleString("id-ID")} listing</p>
             </div>
-            <span className="text-fg-subtle transition-colors group-hover:text-brand-400">
-              →
-            </span>
+            <span className="text-fg-subtle transition-colors group-hover:text-brand-400">→</span>
           </Link>
         ))}
       </div>
@@ -320,28 +330,8 @@ function CategoryStrip() {
 
 /* ---------------- Trending listings ---------------- */
 
-type Listing = {
-  t: string;
-  seller: string;
-  city: string;
-  price: string;
-  rating: string;
-  cond: "mint" | "near";
-  boosted?: boolean;
-};
-
-const trending: Listing[] = [
-  { t: "Charizard VMAX Rainbow Rare · PSA 10", seller: "adityacollects", city: "Jakarta", price: "Rp 4.250.000", rating: "4.9", cond: "mint" },
-  { t: "One Piece OP01 Luffy Leader Parallel", seller: "opccollector", city: "Bandung", price: "Rp 850.000", rating: "4.8", cond: "near", boosted: true },
-  { t: "Genshin Raiden Shogun Apex 1/7", seller: "figurehunt", city: "Surabaya", price: "Rp 1.250.000", rating: "4.9", cond: "mint" },
-  { t: "Pop Mart Labubu Monsters Series 3", seller: "blindboxid", city: "Jakarta", price: "Rp 680.000", rating: "4.7", cond: "near" },
-  { t: "Pikachu Illustrator Reprint Promo", seller: "pokemonid", city: "Jakarta", price: "Rp 2.800.000", rating: "5.0", cond: "mint", boosted: true },
-  { t: "Nendoroid Nakano Miku Full Box", seller: "nendohunt", city: "Malang", price: "Rp 980.000", rating: "4.7", cond: "near" },
-  { t: "HSR Acheron Lightcone Full Set", seller: "hsrfan", city: "Yogyakarta", price: "Rp 320.000", rating: "4.6", cond: "near" },
-  { t: "Chainsaw Man Vol. 1 First Print JP", seller: "komikpop", city: "Bandung", price: "Rp 450.000", rating: "4.8", cond: "near" },
-];
-
-function Trending() {
+function Trending({ items }: { items: ListingSummary[] }) {
+  if (items.length === 0) return null;
   return (
     <section className="mx-auto max-w-[1280px] px-6 pb-16 pt-20 md:px-10">
       <div className="mb-6 flex items-end justify-between">
@@ -360,9 +350,11 @@ function Trending() {
         </Link>
       </div>
 
+      {/* Reuse the same ListingCard the logged-in marketplace uses, so the
+          design stays in sync (cover, condition badge, seller, price). */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {trending.map((l) => (
-          <ProductCard key={l.t} l={l} />
+        {items.map((l) => (
+          <ListingCard key={l.id} l={l} />
         ))}
       </div>
 
@@ -375,87 +367,47 @@ function Trending() {
   );
 }
 
-function ProductCard({ l }: { l: Listing }) {
-  return (
-    <Link
-      href="/listing/abc"
-      className="group block overflow-hidden rounded-2xl border border-rule bg-panel/70 transition-colors hover:border-brand-400/50"
-    >
-      <div className="relative aspect-square overflow-hidden bg-panel-2">
-        <CardArt variant={pickArt(l.t)} />
-        <span className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white/20 to-transparent mix-blend-overlay" />
-        <div className="absolute left-3 top-3 flex gap-2">
-          <Badge tone={l.cond === "mint" ? "mint" : "near"} size="xs">
-            {l.cond === "mint" ? "MINT" : "NEAR MINT"}
-          </Badge>
-          {l.boosted && <Badge tone="crim" size="xs">BOOSTED</Badge>}
-        </div>
-      </div>
-      <div className="p-4">
-        <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-fg">
-          {l.t}
-        </p>
-        <p className="mt-1 text-xs text-fg-subtle">
-          @{l.seller} · {l.city}
-        </p>
-        <div className="mt-3 flex items-center justify-between">
-          <p className="text-base font-bold text-fg">{l.price}</p>
-          <span className="text-xs text-fg-muted">★ {l.rating}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 /* ---------------- Community preview ---------------- */
 
-function CommunityPreview() {
-  const posts = [
-    { u: "adityacollects", lv: 14, body: "Finally! Charizard VMAX Rainbow Rare, PSA 10 sampe juga.", likes: 124 },
-    { u: "figurehunt", lv: 22, body: "Raiden Shogun 1/7 scale Apex baru sampe. Packaging mint.", likes: 203 },
-    { u: "blindboxid", lv: 11, body: "Pull rate weekend — 3 rare dari 1 case Labubu.", likes: 67 },
-  ];
+function CommunityPreview({ posts }: { posts: Post[] }) {
   return (
     <section className="border-t border-rule bg-panel/30">
       <div className="mx-auto max-w-[1280px] px-6 py-16 md:px-10">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-start">
           <div>
             <h2 className="text-2xl font-bold text-fg md:text-3xl">
-              Komunitas yang beneran paham hobinya.
+              Jelajahi koleksi terbaru dari kolektor terverifikasi.
             </h2>
             <p className="mt-3 text-fg-muted">
-              Bukan cuma jualan. Pamer pull rate, review grading, diskusi sub-seri
-              — 1.420 kolektor aktif tiap minggu.
+              Pamer pull rate, review grading, diskusi sub-seri — semua dari
+              kolektor yang aktif setiap minggu.
             </p>
             <div className="mt-6 space-y-4 text-sm">
-              <Perk title="Aman via Hoobiq Pay" body="Dana ditahan 72 jam. Refund otomatis kalau barang nggak sesuai." />
+              <Perk title="Aman via Hoobiq Pay" body="Pembayaran aman sampai barang diterima dengan baik." />
               <Perk title="Display case" body="Badge dari trade & kontribusi. Reputasi kamu ikut ke mana aja." />
               <Perk title="Feeds terkurasi" body="Post terorganisir sampai level sub-seri, bukan timeline acak." />
-            </div>
-            <div className="mt-8 flex gap-3">
-              <Link href="/feeds">
-                <Button variant="primary" size="md">Buka feeds</Button>
-              </Link>
-              <Link href="/marketplace">
-                <Button variant="outline" size="md">Lihat marketplace</Button>
-              </Link>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((p) => (
-              <Card key={p.u} className="overflow-hidden">
+              <Card key={p.id} className="overflow-hidden">
                 <div className="relative aspect-[4/3] overflow-hidden bg-panel-2">
-                  <CardArt variant={pickArt(p.u)} />
+                  {p.cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <CardArt variant={pickArt(p.author.username)} />
+                  )}
                 </div>
                 <div className="p-4">
                   <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                    @{p.u}
+                    @{p.author.username}
                     <span className="rounded-full bg-flame-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-flame-400">
-                      LV {p.lv}
+                      LV {p.author.level}
                     </span>
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-fg-muted">
                     {p.body}
                   </p>
                   <p className="mt-3 text-xs text-fg-subtle">♥ {p.likes}</p>
@@ -492,8 +444,7 @@ function BottomCTA() {
             Gabung gratis, mulai hari ini.
           </h2>
           <p className="mt-2 text-fg-muted">
-            1.000 member pertama dapat Early Member badge + 100 EXP. Sudah 742
-            yang klaim.
+            Daftar dalam 30 detik. Tidak ada biaya untuk lihat-lihat atau bikin akun.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -514,7 +465,3 @@ function BottomCTA() {
     </section>
   );
 }
-
-/* ---------------- Footer ---------------- */
-
-function Footer() { return <MarketingFooter />; }

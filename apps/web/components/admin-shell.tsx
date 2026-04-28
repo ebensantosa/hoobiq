@@ -12,42 +12,42 @@ const nav: { group: string; items: NavItem[] }[] = [
   {
     group: "Overview",
     items: [
-      { href: "/admin", label: "Dashboard" },
-      { href: "/admin/analitik", label: "Analitik" },
-      { href: "/admin/laporan", label: "Laporan & abuse", badgeKey: "reports" },
+      { href: "/admin-panel", label: "Dashboard" },
+      { href: "/admin-panel/analitik", label: "Analitik" },
+      { href: "/admin-panel/laporan", label: "Laporan & abuse", badgeKey: "reports" },
     ],
   },
   {
     group: "Marketplace",
     items: [
-      { href: "/admin/listing", label: "Listing" },
-      { href: "/admin/transaksi", label: "Transaksi" },
-      { href: "/admin/dispute", label: "Dispute", badgeKey: "disputes" },
-      { href: "/admin/kategori", label: "Kategori" },
+      { href: "/admin-panel/listing", label: "Listing" },
+      { href: "/admin-panel/transaksi", label: "Transaksi" },
+      { href: "/admin-panel/dispute", label: "Dispute", badgeKey: "disputes" },
+      { href: "/admin-panel/kategori", label: "Kategori" },
     ],
   },
   {
     group: "Keuangan",
     items: [
-      { href: "/admin/keuangan", label: "Keuangan" },
-      { href: "/admin/payout", label: "Payout", badgeKey: "payouts" },
-      { href: "/admin/promo", label: "Promo & kupon" },
+      { href: "/admin-panel/keuangan", label: "Keuangan" },
+      { href: "/admin-panel/payout", label: "Payout", badgeKey: "payouts" },
+      { href: "/admin-panel/promo", label: "Promo & kupon" },
     ],
   },
   {
     group: "Komunitas",
     items: [
-      { href: "/admin/pengguna", label: "Pengguna" },
-      { href: "/admin/moderasi", label: "Moderasi feed" },
-      { href: "/admin/broadcast", label: "Broadcast" },
+      { href: "/admin-panel/pengguna", label: "Pengguna" },
+      { href: "/admin-panel/moderasi", label: "Moderasi feed" },
+      { href: "/admin-panel/broadcast", label: "Broadcast" },
     ],
   },
   {
     group: "Sistem",
     items: [
-      { href: "/admin/pengaturan", label: "Pengaturan" },
-      { href: "/admin/webhook", label: "Webhook" },
-      { href: "/admin/audit", label: "Audit log" },
+      { href: "/admin-panel/pengaturan", label: "Pengaturan" },
+      { href: "/admin-panel/webhook", label: "Webhook" },
+      { href: "/admin-panel/audit", label: "Audit log" },
     ],
   },
 ];
@@ -102,7 +102,7 @@ function AdminTopBar({
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-rule bg-canvas/90 px-6 backdrop-blur">
-      <Link href="/admin" className="flex items-center gap-3" aria-label={`${brandName} admin`}>
+      <Link href="/admin-panel" className="flex items-center gap-3" aria-label={`${brandName} admin`}>
         <BrandLogo size="sm" />
         <span className="hidden rounded-full border border-brand-400/40 bg-brand-400/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-brand-400 md:inline">
           Admin
@@ -121,7 +121,7 @@ function AdminTopBar({
           </div>
         ) : (
           <Link
-            href="/masuk?next=/admin"
+            href="/masuk?next=/admin-panel"
             className="rounded-lg border border-rule bg-panel px-3 py-1.5 text-xs font-semibold text-fg-muted hover:text-fg"
           >
             Masuk
@@ -183,7 +183,7 @@ function AdminSidebar({
       <div className="mt-auto rounded-xl border border-rule bg-panel p-4">
         <p className="text-xs text-fg-muted">
           Semua tindakan di panel ini masuk ke{" "}
-          <Link href="/admin/audit" className="text-brand-400 hover:underline">
+          <Link href="/admin-panel/audit" className="text-brand-400 hover:underline">
             audit log
           </Link>
           .

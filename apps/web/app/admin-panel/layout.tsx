@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const user = await getSessionUser();
 
   if (!user) {
-    redirect("/masuk?next=/admin");
+    redirect("/masuk?next=/admin-panel");
   }
 
   if (!ADMIN_ROLES.has(user.role)) {

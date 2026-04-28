@@ -278,10 +278,10 @@ export function CheckoutForm({
 
             <div className="mt-5 rounded-xl border border-brand-400/30 bg-brand-400/5 p-4">
               <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                <span className="text-brand-400">◆</span> Dana ditahan 72 jam
+                <span className="text-brand-400">◆</span> Pembayaran aman lewat Hoobiq Pay
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-fg-muted">
-                Hoobiq Pay menahan dana sampai kamu konfirmasi barang diterima. Klaim refund otomatis kalau tidak sesuai.
+                Pembayaran kamu aman sampai barang diterima. Klaim refund otomatis kalau barang tidak sesuai.
               </p>
             </div>
 

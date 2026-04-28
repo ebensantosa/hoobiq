@@ -17,7 +17,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
     <AdminShell active="Laporan & abuse">
       <div className="px-8 py-8">
         <nav className="mb-6 text-xs text-fg-subtle">
-          <Link href="/admin/laporan" className="hover:text-fg">Laporan</Link>
+          <Link href="/admin-panel/laporan" className="hover:text-fg">Laporan</Link>
           <span className="mx-2">/</span>
           <span>#{id}</span>
         </nav>
@@ -113,7 +113,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
                   <Kv k="Multi-akun"    v={<span className="font-mono text-flame-400">3 IP sama</span>} />
                   <Kv k="Umur akun"     v="2 hari" />
                 </dl>
-                <Link href="/admin/pengguna/spamseller88" className="mt-4 inline-block text-xs text-brand-400 hover:underline">
+                <Link href="/admin-panel/pengguna/spamseller88" className="mt-4 inline-block text-xs text-brand-400 hover:underline">
                   Buka profil lengkap →
                 </Link>
               </div>

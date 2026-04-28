@@ -17,6 +17,10 @@ export const PasswordSchema = z
 export const RegisterInput = z.object({
   username: UsernameSchema,
   email: z.string().email().max(160).toLowerCase().trim(),
+  // Required at signup — Komerce Payment + receipts both need a real
+  // phone, and asking once at signup is less friction than blocking
+  // mid-checkout. Loose pattern: any 8–32 digits/+/spaces accepted.
+  phone: z.string().trim().min(8, "Minimal 8 digit").max(32).regex(/^[+\d\s-]+$/, "Hanya angka, spasi, +, atau -"),
   password: PasswordSchema,
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "Harus setuju ketentuan" }) }),
 });

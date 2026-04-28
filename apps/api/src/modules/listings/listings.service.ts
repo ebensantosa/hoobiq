@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { ListingSearchInput, CreateListingInput, UpdateListingInput } from "@hoobiq/types";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { RedisService } from "../../infrastructure/redis/redis.service";
@@ -237,6 +237,20 @@ export class ListingsService {
   }
 
   async create(sellerId: string, input: CreateListingInput) {
+    // Daily anti-spam cap. Most legitimate sellers post 1–2 listings per
+    // day; accounts blasting 20+ are almost always reposters or scammers.
+    // Cap is per-rolling-24h, not midnight-reset, so it's harder to game.
+    const since = new Date(Date.now() - 24 * 3600 * 1000);
+    const todays = await this.prisma.listing.count({
+      where: { sellerId, createdAt: { gte: since }, deletedAt: null },
+    });
+    const DAILY_LISTING_LIMIT = 5;
+    if (todays >= DAILY_LISTING_LIMIT) {
+      throw new BadRequestException({
+        code: "rate_limit_listing",
+        message: `Batas ${DAILY_LISTING_LIMIT} listing per hari. Coba lagi besok.`,
+      });
+    }
     const slug = await this.uniqueSlug(input.title);
     const listing = await this.prisma.listing.create({
       data: {

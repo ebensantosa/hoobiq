@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import type { SessionUser } from "@hoobiq/types";
 import { Public } from "../../common/decorators/public.decorator";
@@ -84,6 +84,20 @@ export class PostsController {
     @CurrentUser() user: SessionUser,
     @Body(new ZodPipe(CreatePost)) body: z.infer<typeof CreatePost>
   ) {
+    // Daily post cap. Per-rolling-24h to discourage burst spam. 10 is
+    // generous for active users (1 post per 2.4h) but blocks the
+    // notification-spamming patterns we'd otherwise see.
+    const since = new Date(Date.now() - 24 * 3600 * 1000);
+    const todays = await this.prisma.post.count({
+      where: { authorId: user.id, createdAt: { gte: since }, deletedAt: null },
+    });
+    const DAILY_POST_LIMIT = 10;
+    if (todays >= DAILY_POST_LIMIT) {
+      throw new BadRequestException({
+        code: "rate_limit_post",
+        message: `Batas ${DAILY_POST_LIMIT} post per hari. Coba lagi besok.`,
+      });
+    }
     const post = await this.prisma.post.create({
       data: {
         authorId: user.id,

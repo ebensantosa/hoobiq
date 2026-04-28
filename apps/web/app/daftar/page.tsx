@@ -24,6 +24,7 @@ export default function RegisterPage() {
         await authApi.register({
           username: String(fd.get("username") ?? "").trim(),
           email: String(fd.get("email") ?? "").trim(),
+          phone: String(fd.get("phone") ?? "").trim(),
           password: String(fd.get("password") ?? ""),
           acceptTerms: true,
         });
@@ -74,6 +75,11 @@ export default function RegisterPage() {
 
         <Field label="Email" error={fieldErrors.email}>
           <Input type="email" name="email" autoComplete="email" placeholder="nama@hoobiq.id" required />
+        </Field>
+
+        <Field label="Nomor HP" error={fieldErrors.phone}>
+          <Input type="tel" name="phone" autoComplete="tel" placeholder="0812-xxxx-xxxx" minLength={8} maxLength={32} required />
+          <p className="text-[11px] text-fg-subtle">Dipakai untuk receipt pembayaran & verifikasi keamanan.</p>
         </Field>
 
         <Field label="Password" error={fieldErrors.password}>

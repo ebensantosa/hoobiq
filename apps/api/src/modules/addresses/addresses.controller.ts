@@ -37,6 +37,15 @@ export class AddressesController {
   @Post()
   @HttpCode(201)
   async create(@CurrentUser() user: SessionUser, @Body(new ZodPipe(AddressInput)) body: AddressInput) {
+    // Hard cap at 3 saved addresses per user. Anti-spam + keeps the
+    // checkout selector tidy.
+    const existing = await this.prisma.address.count({ where: { userId: user.id } });
+    if (existing >= 3) {
+      throw new BadRequestException({
+        code: "address_limit",
+        message: "Maksimum 3 alamat tersimpan. Hapus alamat lama dulu untuk tambah yang baru.",
+      });
+    }
     if (body.primary) {
       await this.prisma.address.updateMany({
         where: { userId: user.id, primary: true },

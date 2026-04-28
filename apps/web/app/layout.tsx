@@ -53,7 +53,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="id"
       className={`${sans.variable} ${mono.variable}`}
-      style={{ ["--brand-color" as string]: settings.primaryColor }}
       // The pre-hydration theme script flips html.classList before React boots,
       // so the html element legitimately differs between SSR and client.
       // suppressHydrationWarning only silences the warning on <html> itself —
@@ -64,7 +63,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         {settings.faviconUrl && <link rel="icon" href={settings.faviconUrl} />}
       </head>
-      <body>
+      {/* Inject the admin-set primary color on body (not html) — the theme
+          init script mutates html before hydration which can race with React
+          reconciling style attributes. body is untouched until hydration. */}
+      <body style={{ ["--brand-color" as string]: settings.primaryColor }}>
         {/* Suspense wrap so NavProgress's useSearchParams doesn't bail out
             the whole tree to client-side rendering. */}
         <Suspense fallback={null}>

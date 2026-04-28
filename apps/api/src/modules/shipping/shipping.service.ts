@@ -77,14 +77,33 @@ export class ShippingService {
     }
 
     const res = await fetch(url, { method, headers, body });
+    const text = await res.text();
     if (!res.ok) {
-      this.log.warn(`Komerce ${method} ${path} → ${res.status}`);
+      // Log the actual response body so we can tell which Komerce error
+      // class fired (auth, quota, payload, dsb.). Trim to avoid blowing
+      // up logs if upstream returns a giant HTML page on outages.
+      this.log.warn(`Komerce ${method} ${path} → ${res.status}: ${text.slice(0, 240)}`);
+      let upstreamMsg = `Komerce HTTP ${res.status}`;
+      try {
+        const j = JSON.parse(text);
+        if (j?.meta?.message) upstreamMsg = `${upstreamMsg} — ${j.meta.message}`;
+        else if (j?.message)  upstreamMsg = `${upstreamMsg} — ${j.message}`;
+      } catch { /* not json */ }
       throw new BadRequestException({
         code: "shipping_upstream_error",
-        message: "Layanan ekspedisi sedang bermasalah. Coba lagi nanti.",
+        message: `Layanan ekspedisi bermasalah: ${upstreamMsg}`,
       });
     }
-    const json = await res.json() as { meta?: { code: number; message: string }; data?: unknown };
+    let json: { meta?: { code: number; message: string }; data?: unknown };
+    try {
+      json = JSON.parse(text);
+    } catch {
+      this.log.warn(`Komerce ${method} ${path} returned non-JSON: ${text.slice(0, 240)}`);
+      throw new BadRequestException({
+        code: "shipping_bad_response",
+        message: "Layanan ekspedisi balas response tidak valid.",
+      });
+    }
     if (json.meta && json.meta.code !== 200) {
       throw new BadRequestException({
         code: "shipping_bad_request",

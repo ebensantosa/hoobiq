@@ -80,15 +80,13 @@ export function AddressManager({ initial }: { initial: Address[] }) {
             </div>
             <Field
               label="Kelurahan / Kecamatan"
-              hint="Cari nama kelurahan kamu — kota, provinsi, dan kode pos akan terisi otomatis. Wajib supaya checkout bisa hitung ongkir."
+              hint="Cari nama kelurahan kamu — kota, provinsi, dan kode pos akan terisi otomatis. Kalau pencarian bermasalah, isi manual di bawah."
             >
               <DestinationPicker
                 value={
                   editing.data.subdistrictId
                     ? {
                         id: editing.data.subdistrictId,
-                        // We only persist the id, not the original label, so
-                        // edits show a placeholder until the user re-picks.
                         label: editing.data.city
                           ? `${editing.data.city}, ${editing.data.province}`
                           : "(lokasi tersimpan)",
@@ -119,6 +117,37 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                 </p>
               )}
             </Field>
+
+            {/* Manual fallback — always editable so users can still save when
+                Komerce search is down or returns no match. If filled in
+                manually (no subdistrictId), checkout falls back to a
+                city-level ongkir estimate instead of failing. */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field label="Kota / kabupaten">
+                <Input
+                  value={editing.data.city}
+                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, city: e.target.value, subdistrictId: null } })}
+                  placeholder="Jakarta Selatan"
+                  required minLength={2} maxLength={64}
+                />
+              </Field>
+              <Field label="Provinsi">
+                <Input
+                  value={editing.data.province}
+                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, province: e.target.value, subdistrictId: null } })}
+                  placeholder="DKI Jakarta"
+                  required minLength={2} maxLength={64}
+                />
+              </Field>
+              <Field label="Kode pos">
+                <Input
+                  value={editing.data.postal}
+                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, postal: e.target.value, subdistrictId: null } })}
+                  placeholder="12190"
+                  required minLength={4} maxLength={10}
+                />
+              </Field>
+            </div>
             <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW">
               <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} />
             </Field>

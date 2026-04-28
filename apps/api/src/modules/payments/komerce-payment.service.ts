@@ -125,16 +125,17 @@ export class KomercePaymentService {
     const base = (isQris ? env.KOMERCE_QRISLY_BASE_URL : env.KOMERCE_PAYMENT_BASE_URL).replace(/\/$/, "");
     const path = "/user/payment/create";
 
-    // Map our internal method to Komerce's payment_type literal. Per the
-    // /user/methods endpoint these are: "va" (virtual account), "ewallet",
-    // "qris" — NOT the "bank_transfer" string the sample request showed.
+    // Komerce uses TWO different vocabularies:
+    //   GET /user/methods returns category buckets: "va" / "ewallet" / "qris".
+    //   POST /user/payment/create wants the parent payment_type, which for
+    //   VA is "bank_transfer". This mismatch is documented at rajaongkir.com.
     const payment_type =
-      req.method === "va"      ? "va" :
+      req.method === "va"      ? "bank_transfer" :
       req.method === "ewallet" ? "ewallet" :
                                  "qris";
 
-    // bank_code in the methods list is uppercase (BCA, BNI, MANDIRI). Komerce
-    // is case-sensitive on channel_code, so always upper-case before sending.
+    // bank_code in /methods is UPPERCASE (BCA, BNI, MANDIRI). Komerce is
+    // case-sensitive on channel_code → upper-case defensively.
     const channelCode = req.channel?.toUpperCase();
 
     const body = JSON.stringify({
@@ -146,7 +147,9 @@ export class KomercePaymentService {
       items: req.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.priceIdr })),
       expiry_duration: 24 * 3600,                            // 24h to pay (matches our auto-cancel window)
       callback_url: req.notifyUrl,
-      callback_api_key: req.callbackKey,
+      // Note the casing — Komerce docs spell this exactly as
+      // "callback_API_KEY", not "callback_api_key". Don't normalize.
+      callback_API_KEY: req.callbackKey,
     });
 
     let res: Response;
@@ -210,6 +213,48 @@ export class KomercePaymentService {
       qrImageUrl: d.qr_image_url,
       expiresAt: d.expired_at ?? d.expires_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
     };
+  }
+
+  /**
+   * Poll Komerce for charge status. Used as a fallback if the webhook
+   * doesn't arrive (network blip, dev environment without public callback).
+   * Returns the raw status string (e.g. "paid", "expired", "pending").
+   */
+  async getStatus(paymentId: string): Promise<{ status: string; raw: unknown }> {
+    const key = env.KOMERCE_PAYMENT_API_KEY;
+    if (!key) throw new ServiceUnavailableException({ code: "payment_not_configured", message: "Pembayaran belum dikonfigurasi." });
+    const base = env.KOMERCE_PAYMENT_BASE_URL.replace(/\/$/, "");
+    const res = await fetch(`${base}/user/payment/status/${encodeURIComponent(paymentId)}`, {
+      headers: { "x-api-key": key },
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new BadRequestException({
+        code: "payment_upstream_error",
+        message: `Komerce HTTP ${res.status}: ${text.slice(0, 200)}`,
+      });
+    }
+    const json = JSON.parse(text) as { data?: { status?: string } & Record<string, unknown> };
+    return { status: json.data?.status ?? "unknown", raw: json.data };
+  }
+
+  /** Cancel a pending charge. Useful when the buyer abandons checkout. */
+  async cancel(paymentId: string, reason: string): Promise<void> {
+    const key = env.KOMERCE_PAYMENT_API_KEY;
+    if (!key) throw new ServiceUnavailableException({ code: "payment_not_configured", message: "Pembayaran belum dikonfigurasi." });
+    const base = env.KOMERCE_PAYMENT_BASE_URL.replace(/\/$/, "");
+    const res = await fetch(`${base}/user/payment/cancel`, {
+      method: "POST",
+      headers: { "x-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ payment_id: paymentId, reason }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new BadRequestException({
+        code: "payment_upstream_error",
+        message: `Komerce cancel HTTP ${res.status}: ${text.slice(0, 200)}`,
+      });
+    }
   }
 
   /**

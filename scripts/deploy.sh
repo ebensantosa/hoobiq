@@ -44,7 +44,23 @@ if command -v pg_dump >/dev/null && [[ -z "${SKIP_BACKUP:-}" ]]; then
   bash "$APP_DIR/scripts/backup.sh" --no-upload --output "$BACKUP_PATH" || warn "Backup failed, continuing"
 fi
 
-# 3. Install + build -------------------------------------------------------
+# 3. Validate critical env in apps/api/.env before spending time on a build
+# we'd just have to roll back. Mirrors the zod schema in apps/api/src/config/env.ts.
+API_ENV="$APP_DIR/apps/api/.env"
+[[ -f "$API_ENV" ]] || die "apps/api/.env missing — copy from .env.production.example"
+check_env_min_len() {
+  local key="$1" min="$2"
+  local val
+  val="$(grep -E "^${key}=" "$API_ENV" | tail -n1 | cut -d= -f2-)"
+  val="${val%\"}"; val="${val#\"}"; val="${val%\'}"; val="${val#\'}"
+  if [[ ${#val} -lt $min ]]; then
+    die "$key in apps/api/.env is ${#val} chars, need ≥ $min. Generate with: openssl rand -hex 32"
+  fi
+}
+check_env_min_len SESSION_SECRET 32
+check_env_min_len CSRF_SECRET 32
+check_env_min_len PASSWORD_PEPPER 16
+
 log "npm install (root + workspaces)…"
 # --include=dev to ensure typescript / nest CLI are present for the build —
 # pm2 will run the compiled dist/ output so we don't ship devDeps to runtime.

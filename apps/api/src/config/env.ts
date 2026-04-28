@@ -2,7 +2,10 @@ import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
 
 // Load .env as early as possible — before any env access below.
-loadDotenv();
+// override:true so the on-disk .env is the source of truth even when the
+// process inherits stale values from pm2's saved dump (otherwise updating
+// .env + `pm2 reload` silently keeps the old value).
+loadDotenv({ override: true });
 
 /**
  * All env vars validated at boot. Missing or invalid → crash with a helpful

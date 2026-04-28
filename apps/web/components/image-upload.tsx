@@ -72,7 +72,11 @@ export function ImageUpload({
 
       setUploading(true);
       try {
-        const datas = await Promise.all(useable.map((f) => readAsDataUrl(f)));
+        // Compress in the browser BEFORE encoding to data URL — same bytes
+        // are about to be base64'd and POSTed, so saving 1.5MB per photo
+        // here saves 2MB on the wire.
+        const compressed = await Promise.all(useable.map(compressImage));
+        const datas = await Promise.all(compressed.map((f) => readAsDataUrl(f)));
         onChange([...value, ...datas]);
       } finally {
         setUploading(false);
@@ -202,6 +206,60 @@ function Spinner() {
       <path fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3z"/>
     </svg>
   );
+}
+
+/**
+ * Downscale + JPEG re-encode in the browser before we ever touch the network.
+ * For most product photos this drops a 2MB camera snap to ~300–500KB with
+ * no visible quality loss in a marketplace card — that's a 4–6× cut on
+ * upload bytes (and the server's base64 decode work).
+ *
+ * Pipeline:
+ *   File → Image element → canvas (max 1600px long edge) → toBlob(jpeg, 0.82) → File
+ *
+ * If anything goes wrong (browser without canvas.toBlob, decode failure)
+ * we fall through to the original file — slow path still works.
+ */
+const MAX_EDGE = 1600;
+const JPEG_QUALITY = 0.82;
+
+async function compressImage(file: File): Promise<File> {
+  // Already small enough — skip the round trip through canvas. Anything
+  // under ~600KB usually re-encodes BIGGER than the original.
+  if (file.size < 600 * 1024) return file;
+
+  try {
+    const dataUrl = await readAsDataUrl(file);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("decode failed"));
+      el.src = dataUrl;
+    });
+
+    const { width: w0, height: h0 } = img;
+    const scale = Math.min(1, MAX_EDGE / Math.max(w0, h0));
+    const w = Math.round(w0 * scale);
+    const h = Math.round(h0 * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY)
+    );
+    if (!blob || blob.size >= file.size) return file;  // re-encode made it bigger? keep original
+
+    // Replace extension with .jpg for clarity at the storage layer.
+    const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+  } catch {
+    return file;
+  }
 }
 
 function readAsDataUrl(file: File): Promise<string> {

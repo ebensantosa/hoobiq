@@ -12,6 +12,8 @@ const nextConfig = {
       { protocol: "https", hostname: "cdn.hoobiq.com" },
       // R2 default subdomain (fallback if custom domain not set)
       { protocol: "https", hostname: "*.r2.dev" },
+      // Production API host — uploads served by Nest static middleware
+      { protocol: "https", hostname: "api.hoobiq.com" },
       // Local API (dev) — uploaded files served from apps/api/public/uploads/
       { protocol: "http", hostname: "localhost" },
       { protocol: "http", hostname: "127.0.0.1" },

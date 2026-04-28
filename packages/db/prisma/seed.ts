@@ -118,27 +118,35 @@ async function main() {
   }
 
   /* ---------- Listings ---------- */
-  const samples: Array<{ slug: string; title: string; price: number; cond: string; cat: string; desc: string }> = [
-    { slug: "charizard-vmax-rainbow-rare-psa-10", title: "Charizard VMAX Rainbow Rare · PSA 10", price: 4_250_000, cond: "MINT",      cat: pokemon.id,  desc: "Kartu original dari booster box Crown Zenith. PSA slab tersegel, grading 10. Packaging double box + bubble." },
-    { slug: "pikachu-illustrator-reprint-promo",  title: "Pikachu Illustrator Reprint Promo",     price: 2_800_000, cond: "MINT",      cat: pokemon.id,  desc: "Reprint resmi Pokémon Center. Sealed dari booster, langsung sleeve + top loader." },
-    { slug: "mew-ex-full-art-151",                title: "Mew ex Full Art · 151",                  price:   520_000, cond: "NEAR_MINT", cat: pokemon.id,  desc: "Pulled minggu lalu, langsung di-sleeve. Centering bagus, edge clean." },
-    { slug: "luffy-leader-parallel-op01",         title: "One Piece OP01 Luffy Leader Parallel",   price:   850_000, cond: "NEAR_MINT", cat: onepiece.id, desc: "Parallel art rare dari OP01. Ada minor scratch di sisi belakang, foto detail by request." },
-    { slug: "raiden-shogun-apex-1-7",             title: "Genshin Raiden Shogun Apex 1/7",          price: 1_250_000, cond: "MINT",      cat: genshin.id,  desc: "Box mint, figure belum dikeluarkan. Inner box + plastik utuh. COA included." },
-    { slug: "labubu-monsters-s3-chase",           title: "Pop Mart Labubu Monsters S3 · Chase",     price:   680_000, cond: "NEAR_MINT", cat: popmart.id,  desc: "Chase variant, blind box opened tapi figure mint. Bag inner masih ada." },
-    { slug: "chainsaw-man-vol-1-first-print",     title: "Chainsaw Man Vol. 1 First Print JP",      price:   450_000, cond: "NEAR_MINT", cat: manga.id,    desc: "First print Jepang 2018. Spine clean, no creases. Susah ketemu. Kirim aman + plastik." },
-    { slug: "lugia-v-alt-art-silver-tempest",     title: "Lugia V Alt Art · Silver Tempest",        price: 1_250_000, cond: "MINT",      cat: pokemon.id,  desc: "Pull from box sendiri, langsung sleeve. Centering OK, no whitening." },
-    { slug: "hsr-acheron-lightcone-set",          title: "HSR Acheron Lightcone Full Set",          price:   320_000, cond: "NEAR_MINT", cat: figure.id,   desc: "Acrylic + lightcone replica. Full set, no missing pieces. Shipping safe." },
-    { slug: "nendoroid-nakano-miku",              title: "Nendoroid Nakano Miku Full Box",          price:   980_000, cond: "NEAR_MINT", cat: figure.id,   desc: "Box opened sekali, inside mint. Semua face plate + accessory complete." },
+  // Image files live in apps/api/public/uploads/ and are served absolute via
+  // PUBLIC_API_BASE (e.g. https://api.hoobiq.com/uploads/x.jpg in prod, or
+  // http://localhost:4000/uploads/x.jpg in dev). Same files in both envs.
+  const apiBase = (process.env.PUBLIC_API_BASE ?? `http://localhost:${process.env.PORT ?? 4000}`).replace(/\/$/, "");
+  const img = (file: string) => `${apiBase}/uploads/${file}`;
+  const samples: Array<{ slug: string; title: string; price: number; cond: string; cat: string; desc: string; image: string }> = [
+    { slug: "charizard-vmax-rainbow-rare-psa-10", title: "Charizard VMAX Rainbow Rare · PSA 10", price: 4_250_000, cond: "MINT",      cat: pokemon.id,  image: "charizard-vmax.jpg",   desc: "Kartu original dari booster box Crown Zenith. PSA slab tersegel, grading 10. Packaging double box + bubble." },
+    { slug: "pikachu-illustrator-reprint-promo",  title: "Pikachu Illustrator Reprint Promo",     price: 2_800_000, cond: "MINT",      cat: pokemon.id,  image: "pikachu-promo.jpg",    desc: "Reprint resmi Pokémon Center. Sealed dari booster, langsung sleeve + top loader." },
+    { slug: "mew-ex-full-art-151",                title: "Mew ex Full Art · 151",                  price:   520_000, cond: "NEAR_MINT", cat: pokemon.id,  image: "mew-ex.jpg",           desc: "Pulled minggu lalu, langsung di-sleeve. Centering bagus, edge clean." },
+    { slug: "luffy-leader-parallel-op01",         title: "One Piece OP01 Luffy Leader Parallel",   price:   850_000, cond: "NEAR_MINT", cat: onepiece.id, image: "luffy-leader.jpg",     desc: "Parallel art rare dari OP01. Ada minor scratch di sisi belakang, foto detail by request." },
+    { slug: "raiden-shogun-apex-1-7",             title: "Genshin Raiden Shogun Apex 1/7",          price: 1_250_000, cond: "MINT",      cat: genshin.id,  image: "hutao-figure.jpg",     desc: "Box mint, figure belum dikeluarkan. Inner box + plastik utuh. COA included." },
+    { slug: "labubu-monsters-s3-chase",           title: "Pop Mart Labubu Monsters S3 · Chase",     price:   680_000, cond: "NEAR_MINT", cat: popmart.id,  image: "labubu-s3-chase.jpg",  desc: "Chase variant, blind box opened tapi figure mint. Bag inner masih ada." },
+    { slug: "chainsaw-man-vol-1-first-print",     title: "Chainsaw Man Vol. 1 First Print JP",      price:   450_000, cond: "NEAR_MINT", cat: manga.id,    image: "chainsaw-vol1.jpg",    desc: "First print Jepang 2018. Spine clean, no creases. Susah ketemu. Kirim aman + plastik." },
+    { slug: "lugia-v-alt-art-silver-tempest",     title: "Lugia V Alt Art · Silver Tempest",        price: 1_250_000, cond: "MINT",      cat: pokemon.id,  image: "lugia-altart.jpg",     desc: "Pull from box sendiri, langsung sleeve. Centering OK, no whitening." },
+    { slug: "hsr-acheron-lightcone-set",          title: "HSR Acheron Lightcone Full Set",          price:   320_000, cond: "NEAR_MINT", cat: figure.id,   image: "hsr-acheron.jpg",      desc: "Acrylic + lightcone replica. Full set, no missing pieces. Shipping safe." },
+    { slug: "nendoroid-nakano-miku",              title: "Nendoroid Nakano Miku Full Box",          price:   980_000, cond: "NEAR_MINT", cat: figure.id,   image: "miku-nendoroid.jpg",   desc: "Box opened sekali, inside mint. Semua face plate + accessory complete." },
   ];
   for (const s of samples) {
+    const imagesJson = JSON.stringify([img(s.image)]);
     await prisma.listing.upsert({
       where: { slug: s.slug },
-      update: {},
+      // update too — re-seeding heals listings whose image URLs were stale
+      // (e.g. if PUBLIC_API_BASE changed between envs).
+      update: { imagesJson },
       create: {
         slug: s.slug, sellerId: aditya.id, categoryId: s.cat,
         title: s.title, description: s.desc,
         priceCents: BigInt(s.price) * 100n,
-        condition: s.cond, imagesJson: "[]",
+        condition: s.cond, imagesJson,
         isPublished: true, moderation: "active",
         views: Math.floor(Math.random() * 600) + 50,
       },

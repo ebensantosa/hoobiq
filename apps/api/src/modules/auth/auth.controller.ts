@@ -29,6 +29,10 @@ const COOKIE_OPTIONS = {
   secure: env.NODE_ENV === "production",
   path: "/",
   maxAge: env.SESSION_TTL_DAYS * 86_400_000,
+  // In prod, web (hoobiq.com) and api (api.hoobiq.com) are different hosts;
+  // setting domain to ".hoobiq.com" makes the cookie visible to both so
+  // Next SSR can read the session via next/headers.
+  ...(env.SESSION_COOKIE_DOMAIN ? { domain: env.SESSION_COOKIE_DOMAIN } : {}),
 };
 
 @Controller("auth")

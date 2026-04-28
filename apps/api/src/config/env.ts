@@ -20,6 +20,11 @@ const schema = z.object({
 
   // Auth
   SESSION_COOKIE_NAME: z.string().default("hbq_session"),
+  // Optional cookie domain — set to ".hoobiq.com" in production so the session
+  // cookie set by api.hoobiq.com is also visible to the web app at hoobiq.com
+  // (Next.js SSR reads it via next/headers cookies()). Leave unset in local
+  // dev — host-only cookie on localhost is correct.
+  SESSION_COOKIE_DOMAIN: z.string().optional(),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be ≥ 32 chars"),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   PASSWORD_PEPPER: z.string().min(16, "PASSWORD_PEPPER must be ≥ 16 chars"),

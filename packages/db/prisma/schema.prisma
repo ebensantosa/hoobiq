@@ -83,6 +83,10 @@ model Address {
   city      String
   province  String
   postal    String
+  // RajaOngkir/Komerce subdistrict id — populated when buyer picks an
+  // address via the destination autocomplete. Required for accurate ongkir
+  // calculation; if missing, checkout falls back to a city-level estimate.
+  subdistrictId Int? @map("subdistrict_id")
   primary   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -139,6 +143,15 @@ model Listing {
   condition    String
   imagesJson   String    @default("[]") @map("images_json")
   weightGrams  Int       @default(500) @map("weight_grams")
+  // Seller-selected couriers this listing can be shipped via. JSON array of
+  // courier codes ("jne", "jnt", ...) — kept as JSON string for SQLite/Postgres
+  // portability. Empty/missing = no couriers configured (checkout will tell
+  // the buyer to ask the seller).
+  couriersJson String    @default("[]") @map("couriers_json")
+  // RajaOngkir/Komerce subdistrict id of the seller's origin warehouse. Used
+  // by /shipping/cost — if null we fall back to the seller's primary address
+  // city, which is fuzzier and may overshoot ongkir.
+  originSubdistrictId Int? @map("origin_subdistrict_id")
   boostedUntil DateTime? @map("boosted_until")
   views        Int       @default(0)
   isPublished  Boolean   @default(false) @map("is_published")

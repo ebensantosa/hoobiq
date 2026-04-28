@@ -253,8 +253,12 @@ export class ListingsService {
         couriersJson: JSON.stringify(input.couriers ?? []),
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
         tradeable: input.tradeable ?? false,
-        isPublished: false,
-        moderation: "pending",
+        // Auto-publish on create. We don't have a moderator workforce or
+        // automated review pipeline yet, and the previous "pending" default
+        // meant new listings were invisible until an admin manually flipped
+        // them — most never did. Admin can still hide via /admin-panel/listing.
+        isPublished: true,
+        moderation: "active",
       },
     });
     await this.redis.invalidate("listings:search:*");

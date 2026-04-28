@@ -5,8 +5,9 @@ import { Button, Card, Input, Label, Textarea } from "@hoobiq/ui";
 import { ImageUpload } from "./image-upload";
 import { CourierPicker } from "./courier-picker";
 import { DestinationPicker, type Destination } from "./destination-picker";
+import { Spinner } from "./spinner";
 import { listingsWriteApi } from "@/lib/api/listings-write";
-import { uploadImages } from "@/lib/api/uploads";
+import { uploadImage } from "@/lib/api/uploads";
 import { ApiError } from "@/lib/api/client";
 import type { CreateListingInput as CreateListingPayload } from "@hoobiq/types";
 
@@ -105,6 +106,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   const [touched, setTouched] = React.useState<Partial<Record<FieldKey, boolean>>>({});
   const [submitErr, setSubmitErr] = React.useState<string | null>(null);
   const [pending, start] = React.useTransition();
+  // Progress feedback during the multi-step submit so users know we're
+  // doing something. Two stages: uploading images (with a count), then
+  // creating the listing record.
+  const [progress, setProgress] = React.useState<{ stage: "idle" | "images" | "save"; done: number; total: number }>({ stage: "idle", done: 0, total: 0 });
 
   const liveErrors = React.useMemo(() => validate(state, images, condition), [state, images, condition]);
   const showErr = (k: FieldKey) => (touched[k] || submitErr ? liveErrors[k] : undefined);
@@ -129,8 +134,26 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
 
     start(async () => {
       try {
+        // Already-hosted URLs pass through unchanged; only data: URLs need
+        // to actually round-trip to the server. Show a real "X of Y" count
+        // so a slow upload doesn't feel frozen.
         const uploadable = images.filter((s) => /^https?:\/\//.test(s) || s.startsWith("data:"));
-        const finalImages = await uploadImages(uploadable);
+        const toUpload = uploadable.filter((s) => s.startsWith("data:"));
+        const passthrough = uploadable.filter((s) => !s.startsWith("data:"));
+
+        setProgress({ stage: "images", done: 0, total: toUpload.length });
+        const uploaded: string[] = [];
+        // Sequential, one-at-a-time, so the counter ticks up. Parallel
+        // would finish a touch faster but the progress feedback would
+        // jump from 0 to N in one frame and feel just as opaque.
+        for (let i = 0; i < toUpload.length; i++) {
+          const url = await uploadImage(toUpload[i]!);
+          uploaded.push(url);
+          setProgress({ stage: "images", done: i + 1, total: toUpload.length });
+        }
+        const finalImages = [...passthrough, ...uploaded];
+
+        setProgress({ stage: "save", done: 0, total: 0 });
         const payload = {
           title:       state.title.trim(),
           description: state.description.trim(),
@@ -147,8 +170,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
           : await listingsWriteApi.create(payload);
+        setProgress({ stage: "idle", done: 0, total: 0 });
         router.push(`/listing/${res.slug}`);
       } catch (e) {
+        setProgress({ stage: "idle", done: 0, total: 0 });
         // Surface server validation errors in the same inline slots — never
         // throw an alert. ApiError.details (when present) maps zod paths to
         // human messages we can attach to fields.
@@ -305,11 +330,26 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
       )}
 
       <div className="sticky bottom-4 z-20 flex items-center justify-end gap-3 rounded-2xl border border-rule bg-canvas/85 px-4 py-3 shadow-lg backdrop-blur">
-        <p className="mr-auto text-xs text-fg-subtle">
-          {isValid ? "Siap dipublish" : "Lengkapi field merah dulu"}
+        <p className="mr-auto flex items-center gap-2 text-xs text-fg-subtle">
+          {progress.stage === "images" ? (
+            <>
+              <Spinner size={12} />
+              <span>Mengunggah foto {progress.done} / {progress.total}…</span>
+            </>
+          ) : progress.stage === "save" ? (
+            <>
+              <Spinner size={12} />
+              <span>{existing ? "Menyimpan perubahan…" : "Membuat listing…"}</span>
+            </>
+          ) : (
+            <span>{isValid ? "Siap dipublish" : "Lengkapi field merah dulu"}</span>
+          )}
         </p>
         <Button type="submit" variant="primary" size="md" disabled={pending || !isValid}>
-          {pending ? "Memproses…" : existing ? "Simpan perubahan" : "Publish listing"}
+          {pending && <Spinner size={14} />}
+          <span className={pending ? "ml-2" : ""}>
+            {pending ? "Memproses…" : existing ? "Simpan perubahan" : "Publish listing"}
+          </span>
         </Button>
       </div>
     </form>

@@ -113,6 +113,11 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                   })
                 }
               />
+              {editing.data.subdistrictId && editing.data.city && (
+                <p className="rounded-lg bg-mint-400/10 px-3 py-2 text-xs text-mint-600">
+                  ✓ {editing.data.city}, {editing.data.province} · {editing.data.postal}
+                </p>
+              )}
             </Field>
             <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW">
               <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} />

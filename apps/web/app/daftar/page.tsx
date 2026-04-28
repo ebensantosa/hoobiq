@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Badge, Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
+import { Spinner } from "@/components/spinner";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
@@ -95,7 +96,8 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <Button type="submit" variant="primary" size="lg" className="mt-2 w-full" disabled={pending}>
+        <Button type="submit" variant="primary" size="lg" className="mt-2 w-full inline-flex items-center justify-center gap-2" disabled={pending}>
+          {pending && <Spinner size={16} />}
           {pending ? "Membuat akun…" : "Buat akun"}
         </Button>
       </form>

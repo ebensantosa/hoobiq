@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, useTransition } from "react";
 import { Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
+import { Spinner } from "@/components/spinner";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
@@ -88,7 +89,8 @@ function LoginPageInner() {
           </div>
         )}
 
-        <Button type="submit" variant="primary" size="lg" className="mt-2 w-full" disabled={pending}>
+        <Button type="submit" variant="primary" size="lg" className="mt-2 w-full inline-flex items-center justify-center gap-2" disabled={pending}>
+          {pending && <Spinner size={16} />}
           {pending ? "Memproses…" : "Masuk"}
         </Button>
       </form>

@@ -31,6 +31,7 @@ export function DestinationPicker({
   const [q, setQ] = React.useState(value?.label ?? "");
   const [items, setItems] = React.useState<Destination[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -51,14 +52,18 @@ export function DestinationPicker({
       return;
     }
     if (value && trimmed === value.label) return;     // user just typed the selected label back — no fetch
-    setLoading(true);
+    setLoading(true); setErr(null);
     const id = setTimeout(async () => {
       try {
         const res = await api<{ items: Destination[] }>(`/shipping/destinations?q=${encodeURIComponent(trimmed)}&limit=10`);
         setItems(res.items);
         setOpen(true);
-      } catch {
+      } catch (e) {
         setItems([]);
+        setOpen(true);
+        // Surface the upstream message instead of silent empty list. Most
+        // common: Komerce/RajaOngkir API key not configured (503).
+        setErr(e instanceof Error ? e.message : "Gagal memuat lokasi.");
       } finally {
         setLoading(false);
       }
@@ -97,10 +102,18 @@ export function DestinationPicker({
           ✕
         </button>
       )}
-      {open && (items.length > 0 || loading) && (
+      {open && (items.length > 0 || loading || err) && (
         <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-rule bg-panel shadow-lg">
           {loading && <div className="px-3 py-2 text-xs text-fg-subtle">Mencari…</div>}
-          {!loading && items.map((d) => (
+          {!loading && err && (
+            <div className="px-3 py-2 text-xs text-flame-600">
+              {err}
+            </div>
+          )}
+          {!loading && !err && items.length === 0 && (
+            <div className="px-3 py-2 text-xs text-fg-subtle">Tidak ada hasil. Coba kata kunci lain.</div>
+          )}
+          {!loading && !err && items.map((d) => (
             <button
               key={d.id}
               type="button"

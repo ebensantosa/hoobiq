@@ -40,6 +40,10 @@ const schema = z.object({
   MIDTRANS_SIGNATURE_KEY: z.string().optional(),
   KOMERCE_API_KEY: z.string().optional(),
   KOMERCE_WEBHOOK_SECRET: z.string().optional(),
+  // Komerce Payment + QRISLY — separate keys per Komerce dashboard product.
+  // Both optional; checkout falls back to Midtrans if unset.
+  KOMERCE_PAYMENT_API_KEY: z.string().optional(),
+  KOMERCE_QRISLY_API_KEY: z.string().optional(),
 
   // Public base URL the API uses to construct absolute URLs for uploaded
   // files. Defaults to http://localhost:<port>; set in production to the

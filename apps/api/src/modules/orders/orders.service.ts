@@ -56,7 +56,10 @@ export class OrdersService {
     if (!buyer || listing.sellerId === buyerId) throw new BadRequestException({ code: "self_purchase", message: "Tidak bisa membeli listing sendiri." });
 
     const subtotal = listing.priceCents * BigInt(input.qty);
-    const shipping = 18_000n * CENTS_PER_RUPIAH;
+    // Use the quote the buyer saw at checkout (already calculated against
+    // their subdistrict via Komerce). Falls back to the legacy 18k flat
+    // for old clients that don't send shippingCents yet.
+    const shipping = input.shippingCents > 0 ? BigInt(input.shippingCents) : 18_000n * CENTS_PER_RUPIAH;
     const platformFee = (subtotal * PLATFORM_FEE_BPS) / 10_000n;
     const payFee = (subtotal * PAY_FEE_BPS) / 10_000n;
     const insurance = input.insurance ? 15_000n * CENTS_PER_RUPIAH : 0n;

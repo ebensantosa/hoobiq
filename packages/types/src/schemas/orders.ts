@@ -79,7 +79,15 @@ export const CheckoutInput = z.object({
   listingId: z.string().cuid(),
   qty: z.number().int().min(1).max(10).default(1),
   addressId: z.string().cuid(),
-  courierCode: z.enum(["jne-reg", "jnt", "sicepat", "gosend"]),
+  // Now driven by Komerce — courier+service codes are dynamic
+  // (e.g. "jne-reg", "sicepat-best", "anteraja-reg"). Validate as a small
+  // free-form string instead of enum.
+  courierCode: z.string().min(2).max(40),
+  // Komerce-quoted shipping in cents (rupiah * 100). Client passes the
+  // exact figure shown to the buyer at checkout — server uses it as-is
+  // so the user pays what they saw. For MVP we trust the client; a future
+  // tightening would re-quote server-side and clamp to ±5% of submitted.
+  shippingCents: z.number().int().min(0).max(10_000_000_00).default(0),
   insurance: z.boolean().default(false),
   promoCode: z.string().max(32).optional(),
 });

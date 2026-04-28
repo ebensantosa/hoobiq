@@ -118,17 +118,29 @@ export class ShippingService {
     if (!query || query.trim().length < 3) return [];
     const key = `shipping:dest:${query.toLowerCase()}:${limit}`;
     return this.redis.cached(key, 3600, async () => {
-      const rows = await this.call<Array<{
-        id: number; label: string; subdistrict_name: string; district_name: string;
-        city_name: string; province_name: string; zip_code: string;
-      }>>("GET", "/destination/domestic-destination", { search: query, limit });
-      return rows.map((r) => ({
-        id: r.id,
-        label: r.label,
-        city: r.city_name,
-        province: r.province_name,
-        postalCode: r.zip_code,
-      }));
+      try {
+        const rows = await this.call<Array<{
+          id: number; label: string; subdistrict_name: string; district_name: string;
+          city_name: string; province_name: string; zip_code: string;
+        }>>("GET", "/destination/domestic-destination", { search: query, limit });
+        return rows.map((r) => ({
+          id: r.id,
+          label: r.label,
+          city: r.city_name,
+          province: r.province_name,
+          postalCode: r.zip_code,
+        }));
+      } catch (e) {
+        // Komerce returns 404 / "not found" while the user is still typing
+        // a partial query (e.g. "wedarijaks" before "wedarijaksa"). That's
+        // not a real error — surface as an empty list so the dropdown shows
+        // "no results yet" instead of a red error banner.
+        if (e instanceof BadRequestException) {
+          const msg = (e.getResponse() as { message?: string })?.message ?? "";
+          if (/HTTP 404|not found/i.test(msg)) return [];
+        }
+        throw e;
+      }
     });
   }
 

@@ -1,30 +1,41 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
-import { Avatar, Badge, Button, Card } from "@hoobiq/ui";
+import { Avatar, Badge, Card } from "@hoobiq/ui";
+import { serverApi } from "@/lib/server/api";
 
 export const metadata = { title: "Detail pengguna · Admin Hoobiq", robots: { index: false } };
+export const dynamic = "force-dynamic";
 
-const actions = [
-  { by: "Rina A.", what: "Menyetujui verifikasi KTP", when: "12 Mei 2025 14:22" },
-  { by: "Budi P.", what: "Menandai listing #1204 perlu review (foto buram)", when: "18 Mei 2025 09:10" },
-  { by: "System",  what: "Trust Score naik 4.7 → 4.9", when: "02 Sep 2025" },
-  { by: "Rina A.", what: "Membalas tiket bantuan #8821", when: "14 Mar 2026" },
-];
+type AdminUser = {
+  id: string;
+  username: string;
+  email: string;
+  name: string | null;
+  city: string | null;
+  role: string;
+  status: string;
+  trustScore: number;
+  level: number;
+  createdAt: string;
+};
 
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  const u = {
-    username,
-    name: "Aditya Kurniawan",
-    email: "aditya@gmail.com",
-    phone: "+62 812-3456-7890",
-    city: "Jakarta Selatan",
-    joined: "12 Mei 2025",
-    ktp: "verified",
-    role: "verified" as const,
-    ip: "180.244.120.42",
-    device: "MacBook Pro · Chrome 126",
-  };
+  const data = await serverApi<{ items: AdminUser[] }>(`/admin/users?q=${encodeURIComponent(username)}`);
+  const u = data?.items.find((x) => x.username === username) ?? null;
+
+  if (!u) {
+    return (
+      <AdminShell active="Pengguna">
+        <div className="px-8 py-12 text-center">
+          <p className="text-sm text-fg-muted">User @{username} tidak ditemukan.</p>
+          <Link href="/admin-panel/pengguna" className="mt-4 inline-block text-sm text-brand-400 hover:underline">
+            ← Kembali ke daftar pengguna
+          </Link>
+        </div>
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell active="Pengguna">
@@ -37,24 +48,18 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-6">
           <div className="flex items-start gap-4">
-            <Avatar letter={u.username[0]} size="xl" ring />
+            <Avatar letter={u.username[0]?.toUpperCase() ?? "?"} size="xl" ring />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-fg">{u.name}</h1>
-                <Badge tone="mint" size="sm">Aktif</Badge>
-                <Badge tone="ghost" size="sm">Verified Seller</Badge>
+                <h1 className="text-2xl font-bold text-fg">{u.name ?? `@${u.username}`}</h1>
+                <Badge tone={u.status === "active" ? "mint" : "crim"} size="sm">{u.status}</Badge>
+                <Badge tone="ghost" size="sm">{u.role}</Badge>
               </div>
               <p className="mt-1 text-sm text-fg-muted">
-                @{u.username} · gabung {u.joined} · {u.city}
+                @{u.username} · gabung {new Date(u.createdAt).toLocaleDateString("id-ID")}
+                {u.city ? ` · ${u.city}` : ""}
               </p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">Kirim pesan admin</Button>
-            <Button variant="outline" size="sm">Reset password paksa</Button>
-            <button className="inline-flex h-9 items-center rounded-lg border border-crim-400/50 bg-crim-400/10 px-3 text-sm font-medium text-crim-400 hover:bg-crim-400/20">
-              Suspend akun
-            </button>
           </div>
         </div>
 
@@ -67,9 +72,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 </h3>
                 <dl className="mt-4 flex flex-col gap-3 text-sm">
                   <Kv k="Email" v={u.email} />
-                  <Kv k="Telepon" v={u.phone} />
-                  <Kv k="Alamat terdaftar" v="Jl. Kemang Raya No. 42B, Jakarta Selatan" />
-                  <Kv k="Verifikasi KTP" v={<Badge tone="mint" size="xs">Terverifikasi</Badge>} />
+                  <Kv k="Username" v={`@${u.username}`} />
+                  <Kv k="Role" v={<Badge tone="ghost" size="xs">{u.role}</Badge>} />
+                  <Kv k="Status" v={<Badge tone={u.status === "active" ? "mint" : "crim"} size="xs">{u.status}</Badge>} />
                 </dl>
               </div>
             </Card>
@@ -77,30 +82,19 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
             <Card>
               <div className="p-5">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-                  Risk signals
+                  Reputasi
                 </h3>
                 <dl className="mt-4 flex flex-col gap-3 text-sm">
-                  <Kv k="Trust Score" v={<span className="font-mono text-fg">4.9 / 5</span>} />
-                  <Kv k="Dispute rate" v={<span className="font-mono text-brand-400">0.7%</span>} />
-                  <Kv k="Chargeback rate" v={<span className="font-mono text-brand-400">0.0%</span>} />
-                  <Kv k="Multi-akun detected" v={<Badge tone="mint" size="xs">Tidak</Badge>} />
-                  <Kv k="Last IP" v={<span className="font-mono text-xs text-fg-muted">{u.ip}</span>} />
-                  <Kv k="Last device" v={<span className="text-xs text-fg-muted">{u.device}</span>} />
+                  <Kv k="Trust Score" v={<span className={"font-mono " + (u.trustScore < 3.5 ? "text-flame-500" : "text-fg")}>{u.trustScore.toFixed(1)} / 5</span>} />
+                  <Kv k="Level" v={<span className="font-mono text-fg">{u.level}</span>} />
                 </dl>
               </div>
             </Card>
 
-            <Card>
-              <div className="p-5">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-                  Statistik
-                </h3>
-                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <Mini label="Listing aktif" value="12" />
-                  <Mini label="Trade selesai" value="142" />
-                  <Mini label="Rating rata-rata" value="4.9★" />
-                  <Mini label="GMV seumur hidup" value="Rp 218jt" />
-                </div>
+            <Card className="border-rule">
+              <div className="p-5 text-xs text-fg-muted">
+                Aksi (suspend/role/hapus) ada di kolom <Link href="/admin-panel/pengguna" className="text-brand-400 hover:underline">daftar pengguna</Link>.
+                Detail risk signal (dispute rate, multi-akun, IP) belum di-track — akan muncul setelah modul fraud detection di-wire.
               </div>
             </Card>
           </aside>
@@ -108,42 +102,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section>
             <h2 className="text-xl font-semibold text-fg">Riwayat tindakan admin</h2>
             <p className="mt-1 text-sm text-fg-muted">
-              Semua aksi admin terhadap akun ini. Tidak bisa dihapus.
+              Lihat di <Link href={`/admin-panel/audit`} className="text-brand-400 hover:underline">audit log</Link> dan filter berdasarkan target <code className="font-mono">user:{u.id}</code>.
             </p>
-            <Card className="mt-4">
-              {actions.map((a, i) => (
-                <div
-                  key={i}
-                  className={
-                    "flex items-start gap-3 px-5 py-4 " +
-                    (i < actions.length - 1 ? "border-b border-rule/60" : "")
-                  }
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
-                  <div className="flex-1">
-                    <p className="text-sm text-fg">
-                      <b>{a.by}</b>{" "}
-                      <span className="text-fg-muted">· {a.what}</span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-fg-subtle">{a.when}</p>
-                  </div>
-                </div>
-              ))}
-            </Card>
-
-            <h2 className="mt-8 text-xl font-semibold text-fg">Catatan internal</h2>
-            <Card className="mt-4">
-              <div className="p-5">
-                <textarea
-                  rows={4}
-                  placeholder="Catatan hanya terlihat oleh admin. Contoh: konteks verifikasi, korespondensi via email support, dll."
-                  className="w-full rounded-lg border border-rule bg-canvas px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand-400/60 focus:outline-none"
-                />
-                <div className="mt-3 flex justify-end">
-                  <Button variant="primary" size="sm">Simpan catatan</Button>
-                </div>
-              </div>
-            </Card>
           </section>
         </div>
       </div>
@@ -156,15 +116,6 @@ function Kv({ k, v }: { k: string; v: React.ReactNode }) {
     <div className="flex items-center justify-between gap-3">
       <dt className="text-fg-muted">{k}</dt>
       <dd className="text-fg">{v}</dd>
-    </div>
-  );
-}
-
-function Mini({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-fg-subtle">{label}</p>
-      <p className="mt-0.5 font-semibold text-fg">{value}</p>
     </div>
   );
 }

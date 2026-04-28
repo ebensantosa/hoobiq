@@ -9,6 +9,9 @@ export type Address = {
   city: string;
   province: string;
   postal: string;
+  // RajaOngkir/Komerce subdistrict id — required for accurate ongkir at
+  // checkout. Optional here for legacy rows; checkout warns if missing.
+  subdistrictId: number | null;
   primary: boolean;
 };
 

@@ -3,9 +3,11 @@ import * as React from "react";
 import { Badge, Button, Card, Input, Label } from "@hoobiq/ui";
 import { addressesApi, type Address, type AddressInput } from "@/lib/api/addresses";
 import { ApiError } from "@/lib/api/client";
+import { DestinationPicker, type Destination } from "./destination-picker";
 
 const empty: AddressInput = {
   label: "Rumah", name: "", phone: "", line: "", city: "", province: "", postal: "",
+  subdistrictId: null,
   primary: false,
 };
 
@@ -75,11 +77,44 @@ export function AddressManager({ initial }: { initial: Address[] }) {
               <Field label="Label"><Input value={editing.data.label} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, label: e.target.value } })} required maxLength={32} /></Field>
               <Field label="Nama penerima"><Input value={editing.data.name} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, name: e.target.value } })} required minLength={2} maxLength={120} /></Field>
               <Field label="No. HP"><Input value={editing.data.phone} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, phone: e.target.value } })} required minLength={8} maxLength={32} /></Field>
-              <Field label="Kode pos"><Input value={editing.data.postal} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, postal: e.target.value } })} required minLength={4} maxLength={10} /></Field>
-              <Field label="Kota" hint="Kota / kabupaten"><Input value={editing.data.city} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, city: e.target.value } })} required minLength={2} maxLength={64} /></Field>
-              <Field label="Provinsi"><Input value={editing.data.province} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, province: e.target.value } })} required minLength={2} maxLength={64} /></Field>
             </div>
-            <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW, kelurahan">
+            <Field
+              label="Kelurahan / Kecamatan"
+              hint="Cari nama kelurahan kamu — kota, provinsi, dan kode pos akan terisi otomatis. Wajib supaya checkout bisa hitung ongkir."
+            >
+              <DestinationPicker
+                value={
+                  editing.data.subdistrictId
+                    ? {
+                        id: editing.data.subdistrictId,
+                        // We only persist the id, not the original label, so
+                        // edits show a placeholder until the user re-picks.
+                        label: editing.data.city
+                          ? `${editing.data.city}, ${editing.data.province}`
+                          : "(lokasi tersimpan)",
+                        city: editing.data.city,
+                        province: editing.data.province,
+                        postalCode: editing.data.postal,
+                      }
+                    : null
+                }
+                onChange={(d: Destination | null) =>
+                  setEditing({
+                    ...editing,
+                    data: d
+                      ? {
+                          ...editing.data,
+                          subdistrictId: d.id,
+                          city: d.city,
+                          province: d.province,
+                          postal: d.postalCode,
+                        }
+                      : { ...editing.data, subdistrictId: null },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW">
               <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} />
             </Field>
             <label className="flex items-center gap-2 text-sm text-fg-muted">

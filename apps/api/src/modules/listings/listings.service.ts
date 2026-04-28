@@ -243,6 +243,7 @@ export class ListingsService {
         weightGrams: input.weightGrams,
         couriersJson: JSON.stringify(input.couriers ?? []),
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
+        tradeable: input.tradeable ?? false,
         isPublished: false,
         moderation: "pending",
       },
@@ -349,7 +350,7 @@ function toSummary(l: Row) {
 
 function toDetail(l: Row & {
   description: string; stock: number; weightGrams: number;
-  couriersJson?: string; originSubdistrictId?: number | null;
+  couriersJson?: string; originSubdistrictId?: number | null; tradeable?: boolean;
   category: { id: string; slug: string; name: string };
 }) {
   let couriers: string[] = [];
@@ -361,6 +362,7 @@ function toDetail(l: Row & {
     weightGrams: l.weightGrams,
     couriers,
     originSubdistrictId: l.originSubdistrictId ?? null,
+    tradeable: l.tradeable ?? false,
     category: l.category,
   };
 }

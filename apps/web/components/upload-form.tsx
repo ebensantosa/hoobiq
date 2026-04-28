@@ -32,6 +32,7 @@ export type UploadFormExisting = {
   categoryId: string;
   couriers?: string[];
   origin?: Destination | null;
+  tradeable?: boolean;
 };
 
 export function UploadForm({ tree, existing }: { tree: Node[]; existing?: UploadFormExisting }) {
@@ -46,6 +47,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   const [images, setImages] = React.useState<string[]>(existing?.images ?? []);
   const [couriers, setCouriers] = React.useState<string[]>(existing?.couriers ?? []);
   const [origin, setOrigin] = React.useState<Destination | null>(existing?.origin ?? null);
+  const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? false);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,6 +76,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           // its state is typed as string[] for ergonomics; the API zod parses it.
           couriers: couriers as CreateListingPayload["couriers"],
           originSubdistrictId: origin?.id ?? null,
+          tradeable,
         };
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
@@ -177,6 +180,27 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
             <Field label="Ekspedisi yang didukung" hint="Centang yang biasa kamu pakai. Minimal 1 supaya checkout bisa hitung ongkir.">
               <CourierPicker value={couriers} onChange={setCouriers} />
             </Field>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="space-y-4 p-6">
+            <div>
+              <Label>Trade</Label>
+              <p className="mt-1 text-xs text-fg-subtle">
+                Aktifkan kalau barang ini juga mau ditukar (bukan cuma dijual). Akan muncul di /trades — user lain bisa swipe kanan untuk minat tukar.
+              </p>
+            </div>
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={tradeable}
+                onChange={(e) => setTradeable(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span className="relative inline-block h-5 w-9 rounded-full bg-panel-2 transition-colors peer-checked:bg-brand-400 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />
+              <span className="text-sm text-fg">{tradeable ? "Tersedia untuk trade" : "Hanya untuk dijual"}</span>
+            </label>
           </div>
         </Card>
 

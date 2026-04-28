@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
 const CENTS_PER_RUPIAH = 100n;
-const DEFAULT_DECK_SIZE = 12;
+const DEFAULT_DECK_SIZE = 20;
 
 export type ListingMini = {
   id: string;
@@ -23,180 +23,202 @@ export type CounterpartyMini = {
   trades: { completed: number; rating: number | null };
 };
 
-export type TradeMatch = {
-  /** Stable composite key for swipe state. */
+export type TradeCard = {
+  /** Stable key the client uses to track swipe state. */
   matchKey: string;
-  give: ListingMini;
-  get:  ListingMini;
-  counterparty: CounterpartyMini;
-  /** 0..1, simple bidirectional fit score */
-  score: number;
+  /** The item being swiped on (someone else's listing flagged tradeable). */
+  listing: ListingMini;
+  owner: CounterpartyMini;
 };
+
+export type SwipeResult =
+  | { matched: false }
+  | {
+      matched: true;
+      proposalId: string;
+      give: ListingMini;     // user picked this from their own tradeable items
+      get: ListingMini;
+      counterparty: { username: string; name: string | null };
+    };
 
 @Injectable()
 export class TradesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Build a deck of trade matches for `userId`.
+   * Tinder-style deck: every published listing flagged tradeable, owned by
+   * someone other than the viewer, that the viewer hasn't already swiped.
    *
-   * Two-sided match logic:
-   *   1. Find listings in MY wishlist (owned by other users) — these are the
-   *      "you get" side.
-   *   2. For each candidate seller, look at THEIR wishlist for any of MY
-   *      published listings — that becomes the "you give" side.
-   *   3. Cartesian product per pair, filter out previously passed pairs and
-   *      pairs that already have an open proposal in either direction.
-   *
-   * The query stays modest because each user's wishlist is bounded; we cap
-   * candidates per "you get" listing at 5 and total deck at 12.
+   * Match logic isn't computed here; it fires on right-swipe in `swipe()`.
    */
-  async deck(userId: string, limit = DEFAULT_DECK_SIZE): Promise<TradeMatch[]> {
-    // Step 1 — what I want, that exists as a real for-sale listing
-    const myWish = await this.prisma.wishlistItem.findMany({
+  async deck(userId: string, limit = DEFAULT_DECK_SIZE): Promise<TradeCard[]> {
+    const swiped = await this.prisma.tradeSwipe.findMany({
       where: { userId },
-      include: {
-        listing: {
-          include: {
-            seller: {
-              select: {
-                id: true, username: true, name: true, avatarUrl: true, city: true,
-                trustScore: true, level: true,
-              },
-            },
-            category: { select: { id: true, slug: true, name: true } },
-          },
-        },
-      },
-      take: 50,
+      select: { targetListingId: true },
     });
+    const skip = new Set(swiped.map((s) => s.targetListingId));
 
-    const wantedListings = myWish
-      .map((w) => w.listing)
-      .filter((l) => l && !l.deletedAt && l.isPublished && l.moderation === "active" && l.sellerId !== userId);
-
-    if (wantedListings.length === 0) return [];
-
-    // Step 2 — my listings that are tradeable
-    const myListings = await this.prisma.listing.findMany({
+    const rows = await this.prisma.listing.findMany({
       where: {
-        sellerId: userId,
+        tradeable: true,
         deletedAt: null,
         isPublished: true,
         moderation: "active",
-        stock: { gt: 0 },
+        sellerId: { not: userId },
+        id: { notIn: Array.from(skip) },
       },
-      take: 30,
-    });
-    if (myListings.length === 0) return [];
-    const myListingIds = myListings.map((l) => l.id);
-
-    // Step 3 — for each candidate seller, what of mine they wishlist
-    const candidateIds = Array.from(new Set(wantedListings.map((l) => l.sellerId)));
-    const theirWish = await this.prisma.wishlistItem.findMany({
-      where: {
-        userId: { in: candidateIds },
-        listingId: { in: myListingIds },
-      },
-      select: { userId: true, listingId: true },
-    });
-    if (theirWish.length === 0) return [];
-
-    // Map: candidateId → list of my listingIds they want
-    const wantsFromMe = new Map<string, string[]>();
-    for (const w of theirWish) {
-      const arr = wantsFromMe.get(w.userId) ?? [];
-      arr.push(w.listingId);
-      wantsFromMe.set(w.userId, arr);
-    }
-    const myListingById = new Map(myListings.map((l) => [l.id, l] as const));
-
-    // Filter out previously passed pairs and proposals already in flight
-    const [passes, openProposals] = await Promise.all([
-      this.prisma.tradePass.findMany({
-        where: { userId },
-        select: { fromListingId: true, toListingId: true },
-      }),
-      this.prisma.tradeProposal.findMany({
-        where: {
-          status: "pending",
-          OR: [{ fromUserId: userId }, { toUserId: userId }],
+      orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      include: {
+        seller: {
+          select: {
+            id: true, username: true, name: true, avatarUrl: true, city: true,
+            trustScore: true, level: true,
+          },
         },
-        select: { fromListingId: true, toListingId: true },
-      }),
-    ]);
-    const skip = new Set<string>();
-    for (const p of passes) skip.add(`${p.fromListingId}:${p.toListingId}`);
-    for (const p of openProposals) {
-      skip.add(`${p.fromListingId}:${p.toListingId}`);
-      skip.add(`${p.toListingId}:${p.fromListingId}`);
-    }
+      },
+    });
 
-    // Trade-history lookup for counterparty rating display
+    if (rows.length === 0) return [];
+
+    // Trade-history lookup for "X trade selesai" badge on each card.
+    const sellerIds = Array.from(new Set(rows.map((r) => r.sellerId)));
     const historyCounts = await this.prisma.tradeProposal.groupBy({
       by: ["fromUserId"],
-      where: { fromUserId: { in: candidateIds }, status: "accepted" },
+      where: { fromUserId: { in: sellerIds }, status: "accepted" },
       _count: { _all: true },
     });
     const historyMap = new Map(historyCounts.map((h) => [h.fromUserId, h._count._all]));
 
-    // Step 4 — assemble matches
-    const matches: TradeMatch[] = [];
-    for (const wanted of wantedListings) {
-      const theyWant = wantsFromMe.get(wanted.sellerId);
-      if (!theyWant || theyWant.length === 0) continue;
-
-      // Pick up to 2 of my listings per "you get" to avoid one prolific
-      // partner monopolizing the deck
-      for (const myId of theyWant.slice(0, 2)) {
-        const mine = myListingById.get(myId);
-        if (!mine) continue;
-        const key = `${mine.id}:${wanted.id}`;
-        if (skip.has(key)) continue;
-
-        matches.push({
-          matchKey: key,
-          give: toListingMini(mine),
-          get:  toListingMini(wanted),
-          counterparty: {
-            username:   wanted.seller.username,
-            name:       wanted.seller.name,
-            avatarUrl:  wanted.seller.avatarUrl,
-            city:       wanted.seller.city,
-            trustScore: Number(wanted.seller.trustScore),
-            level:      wanted.seller.level,
-            trades: {
-              completed: historyMap.get(wanted.sellerId) ?? 0,
-              rating: null, // wire when ratings model lands
-            },
-          },
-          score: scoreFit(mine.priceCents, wanted.priceCents, Number(wanted.seller.trustScore)),
-        });
-        skip.add(key);
-        if (matches.length >= limit) break;
-      }
-      if (matches.length >= limit) break;
-    }
-
-    // Best fit first
-    matches.sort((a, b) => b.score - a.score);
-    return matches;
+    return rows.map((l) => ({
+      matchKey: l.id,
+      listing: toListingMini(l),
+      owner: {
+        username:   l.seller.username,
+        name:       l.seller.name,
+        avatarUrl:  l.seller.avatarUrl,
+        city:       l.seller.city,
+        trustScore: Number(l.seller.trustScore),
+        level:      l.seller.level,
+        trades: { completed: historyMap.get(l.sellerId) ?? 0, rating: null },
+      },
+    }));
   }
 
-  async pass(userId: string, fromListingId: string, toListingId: string) {
+  /**
+   * Record a swipe. Right-swipes trigger a mutual-interest check:
+   * if the target owner has previously right-swiped any of OUR tradeable
+   * listings, we have a match. We auto-create a TradeProposal so the
+   * conversation moves out of the deck and into the proposal inbox.
+   *
+   * The tradeable listing of OURS that gets paired is the one the target
+   * owner expressed interest in earliest (deterministic + reproducible).
+   */
+  async swipe(userId: string, targetListingId: string, direction: "right" | "left"): Promise<SwipeResult> {
     const target = await this.prisma.listing.findUnique({
-      where: { id: toListingId },
-      select: { sellerId: true },
+      where: { id: targetListingId },
+      select: { id: true, sellerId: true, tradeable: true, deletedAt: true, isPublished: true, moderation: true },
     });
-    if (!target) {
+    if (!target || target.deletedAt) {
       throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
     }
-    await this.prisma.tradePass.upsert({
-      where: { userId_fromListingId_toListingId: { userId, fromListingId, toListingId } },
-      create: { userId, candidateUserId: target.sellerId, fromListingId, toListingId },
-      update: {},
+    if (target.sellerId === userId) {
+      throw new ForbiddenException({ code: "self_swipe", message: "Tidak bisa swipe listing sendiri." });
+    }
+    if (!target.tradeable || !target.isPublished || target.moderation !== "active") {
+      throw new ForbiddenException({ code: "not_tradeable", message: "Listing ini tidak available untuk trade." });
+    }
+
+    await this.prisma.tradeSwipe.upsert({
+      where: { userId_targetListingId: { userId, targetListingId } },
+      create: { userId, targetListingId, targetOwnerId: target.sellerId, direction },
+      update: { direction },
     });
-    return { ok: true as const };
+
+    if (direction !== "right") return { matched: false };
+
+    // Mutual check — has the target owner right-swiped any of MY tradeable
+    // listings that's still live?
+    const reverse = await this.prisma.tradeSwipe.findFirst({
+      where: {
+        userId: target.sellerId,
+        targetOwnerId: userId,
+        direction: "right",
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!reverse) return { matched: false };
+
+    // Verify both listings are still tradeable + active before pairing — one
+    // could have been pulled or sold while we were swiping.
+    const [give, get] = await Promise.all([
+      this.prisma.listing.findFirst({
+        where: {
+          id: reverse.targetListingId, sellerId: userId,
+          tradeable: true, isPublished: true, moderation: "active", deletedAt: null,
+        },
+      }),
+      this.prisma.listing.findUnique({ where: { id: targetListingId } }),
+    ]);
+    if (!give || !get) return { matched: false };
+
+    // Don't double-create a proposal if one is already pending for this pair.
+    const existing = await this.prisma.tradeProposal.findFirst({
+      where: {
+        status: "pending",
+        OR: [
+          { fromListingId: give.id, toListingId: get.id },
+          { fromListingId: get.id, toListingId: give.id },
+        ],
+      },
+    });
+
+    let proposal = existing;
+    if (!proposal) {
+      proposal = await this.prisma.tradeProposal.create({
+        data: {
+          fromUserId: userId,
+          toUserId: target.sellerId,
+          fromListingId: give.id,
+          toListingId: get.id,
+          message: null,
+        },
+      });
+      // Notify both sides of the auto-match.
+      await Promise.all([
+        this.prisma.notification.create({
+          data: {
+            userId: target.sellerId,
+            kind: "trade_match",
+            title: "Match trade!",
+            body: `Kalian saling tertarik. Buka proposal untuk kirim & terima.`,
+            dataJson: JSON.stringify({ proposalId: proposal.id }),
+          },
+        }).catch(() => undefined),
+        this.prisma.notification.create({
+          data: {
+            userId,
+            kind: "trade_match",
+            title: "Match trade!",
+            body: `Kalian saling tertarik. Buka proposal untuk kirim & terima.`,
+            dataJson: JSON.stringify({ proposalId: proposal.id }),
+          },
+        }).catch(() => undefined),
+      ]);
+    }
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: target.sellerId },
+      select: { username: true, name: true },
+    });
+
+    return {
+      matched: true,
+      proposalId: proposal.id,
+      give: toListingMini(give),
+      get: toListingMini(get),
+      counterparty: { username: owner?.username ?? "", name: owner?.name ?? null },
+    };
   }
 
   async propose(userId: string, input: { fromListingId: string; toListingId: string; message?: string }) {
@@ -224,7 +246,6 @@ export class TradesService {
       },
     });
 
-    // Notify the recipient. Don't await failure — DB row is the source of truth.
     this.prisma.notification.create({
       data: {
         userId: theirs.sellerId,
@@ -257,7 +278,6 @@ export class TradesService {
       data: { status, respondedAt: new Date() },
     });
 
-    // Notify the other party
     const otherUserId = userId === p.fromUserId ? p.toUserId : p.fromUserId;
     const verb = status === "accepted" ? "menerima" : status === "declined" ? "menolak" : "membatalkan";
     this.prisma.notification.create({
@@ -309,18 +329,4 @@ function toListingMini(l: {
     cover,
     condition: l.condition,
   };
-}
-
-/**
- * Fit score in [0, 1]:
- *   - price parity 70% (closer values = higher)
- *   - trust 30%
- */
-function scoreFit(givePriceCents: bigint, getPriceCents: bigint, trust: number): number {
-  const give = Number(givePriceCents);
-  const get  = Number(getPriceCents);
-  if (give <= 0 || get <= 0) return trust / 100;
-  const ratio = Math.min(give, get) / Math.max(give, get);
-  const trustNorm = Math.max(0, Math.min(1, trust / 100));
-  return ratio * 0.7 + trustNorm * 0.3;
 }

@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api/client";
-import { ManualTradeModal } from "./manual-trade-modal";
 
 const ACCENT = "#7F77DD"; // Trade Match purple — distinct from marketplace pink
 
@@ -26,13 +25,22 @@ export type CounterpartyMini = {
   trades: { completed: number; rating: number | null };
 };
 
-export type TradeMatch = {
+/** One card in the swipe deck — a single tradeable listing owned by someone else. */
+export type TradeCard = {
   matchKey: string;
-  give: ListingMini;
-  get: ListingMini;
-  counterparty: CounterpartyMini;
-  score: number;
+  listing: ListingMini;
+  owner: CounterpartyMini;
 };
+
+type SwipeResponse =
+  | { matched: false }
+  | {
+      matched: true;
+      proposalId: string;
+      give: ListingMini;
+      get: ListingMini;
+      counterparty: { username: string; name: string | null };
+    };
 
 const fmtIdr = (n: number) =>
   n >= 1_000_000 ? `Rp ${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}jt`
@@ -40,17 +48,26 @@ const fmtIdr = (n: number) =>
     : `Rp ${n.toLocaleString("id-ID")}`;
 
 /**
- * Tinder-style trade match deck. Top card is draggable; release past a
- * threshold commits left/right. Buttons mirror the gesture for keyboard /
- * non-touch users.
+ * Tinder-style trade deck. Each card is a single tradeable listing from
+ * another user. Swipe right = "interested" — server checks if the owner
+ * has previously right-swiped any of OUR tradeable listings; if so, an
+ * auto-match fires and a TradeProposal is created server-side. Buyer
+ * jumps to the proposal page to confirm shipping.
  */
-export function TradeDeck({ initial, targetUsername = null }: { initial: TradeMatch[]; targetUsername?: string | null }) {
-  const [deck, setDeck] = useState(initial);
-  const [exiting, setExiting] = useState<{ key: string; dir: "left" | "right" } | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+export function TradeDeck({
+  initial,
+  targetUsername = null,
+}: {
+  initial: TradeCard[];
+  targetUsername?: string | null;
+}) {
+  const [deck, setDeck]     = useState(initial);
+  const [exiting, setExit]  = useState<{ key: string; dir: "left" | "right" } | null>(null);
+  const [toast, setToast]   = useState<string | null>(null);
+  const [matchModal, setMatchModal] = useState<SwipeResponse extends infer T ? T : never | null>(null as never);
 
-  const top = deck[0];
-  const next = deck[1];
+  const top   = deck[0];
+  const next  = deck[1];
   const after = deck[2];
 
   function showToast(msg: string) {
@@ -60,29 +77,24 @@ export function TradeDeck({ initial, targetUsername = null }: { initial: TradeMa
 
   async function commit(dir: "left" | "right") {
     if (!top || exiting) return;
-    setExiting({ key: top.matchKey, dir });
-    // Animate out, then drop the card and fire the API call
-    setTimeout(async () => {
-      const consumed = top;
-      setDeck((d) => d.slice(1));
-      setExiting(null);
+    setExit({ key: top.matchKey, dir });
+    const consumed = top;
 
+    setTimeout(async () => {
+      setDeck((d) => d.slice(1));
+      setExit(null);
       try {
-        if (dir === "left") {
-          await api("/trades/pass", {
-            method: "POST",
-            body: { fromListingId: consumed.give.id, toListingId: consumed.get.id },
-          });
-        } else {
-          await api("/trades", {
-            method: "POST",
-            body: { fromListingId: consumed.give.id, toListingId: consumed.get.id },
-          });
-          showToast(`Proposal terkirim ke @${consumed.counterparty.username}`);
+        const res = await api<SwipeResponse>("/trades/swipe", {
+          method: "POST",
+          body: { listingId: consumed.listing.id, direction: dir },
+        });
+        if (dir === "right" && res.matched) {
+          setMatchModal(res);
+        } else if (dir === "right") {
+          showToast(`Disukai. Tunggu @${consumed.owner.username} balas swipe.`);
         }
-      } catch (err) {
-        // Soft fail — UI already advanced. Surface as a toast.
-        showToast(dir === "right" ? "Gagal kirim proposal — coba lagi nanti." : "");
+      } catch {
+        if (dir === "right") showToast("Gagal swipe — coba lagi.");
       }
     }, 280);
   }
@@ -94,60 +106,57 @@ export function TradeDeck({ initial, targetUsername = null }: { initial: TradeMa
   return (
     <div className="relative">
       <div className="relative mx-auto h-[560px] w-full max-w-[420px] select-none">
-        {after  && <CardShell key={after.matchKey}  match={after}  depth={2} />}
-        {next   && <CardShell key={next.matchKey}   match={next}   depth={1} />}
-        {top    && (
+        {after && <CardShell key={after.matchKey} card={after} depth={2} />}
+        {next  && <CardShell key={next.matchKey}  card={next}  depth={1} />}
+        {top   && (
           <SwipeableCard
             key={top.matchKey}
-            match={top}
+            card={top}
             forceExit={exiting?.key === top.matchKey ? exiting.dir : null}
             onCommit={commit}
           />
         )}
       </div>
 
-      {/* Action bar */}
       <div className="mt-6 flex items-center justify-center gap-5">
         <ActionButton
           aria-label="Lewati"
           onClick={() => commit("left")}
           variant="pass"
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          }
+          icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>}
         />
         <Link
-          href={top ? `/u/${top.counterparty.username}` : "#"}
+          href={top ? `/u/${top.owner.username}` : "#"}
           className="grid h-12 w-12 place-items-center rounded-full border border-rule bg-panel text-fg-muted transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           style={{ ["--accent" as string]: ACCENT }}
           aria-label="Lihat profil"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+            <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
           </svg>
         </Link>
         <ActionButton
-          aria-label="Propose trade"
+          aria-label="Tertarik"
           onClick={() => commit("right")}
           variant="propose"
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 10l5-5 5 5M7 14l5 5 5-5" />
-            </svg>
-          }
+          icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
         />
       </div>
 
-      {/* Toast */}
       {toast && (
-        <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-fg px-4 py-2.5 text-sm font-semibold text-canvas shadow-lg"
-        >
+        <div role="status" className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-fg px-4 py-2.5 text-sm font-semibold text-canvas shadow-lg">
           {toast}
         </div>
+      )}
+
+      {matchModal && matchModal.matched && (
+        <MatchModal
+          give={matchModal.give}
+          get={matchModal.get}
+          counterparty={matchModal.counterparty}
+          proposalId={matchModal.proposalId}
+          onClose={() => setMatchModal(null as never)}
+        />
       )}
     </div>
   );
@@ -156,11 +165,11 @@ export function TradeDeck({ initial, targetUsername = null }: { initial: TradeMa
 /* ---------------------------------------------------------- swipeable card */
 
 function SwipeableCard({
-  match,
+  card,
   forceExit,
   onCommit,
 }: {
-  match: TradeMatch;
+  card: TradeCard;
   forceExit: "left" | "right" | null;
   onCommit: (dir: "left" | "right") => void;
 }) {
@@ -175,23 +184,20 @@ function SwipeableCard({
     setDragging(true);
     cardRef.current?.setPointerCapture(e.pointerId);
   }
-
   function onPointerMove(e: React.PointerEvent) {
     if (!startRef.current) return;
     setDrag({ x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y });
   }
-
   function onPointerUp() {
     if (!startRef.current) return;
     const threshold = 110;
-    if (drag.x >  threshold) onCommit("right");
+    if      (drag.x >  threshold) onCommit("right");
     else if (drag.x < -threshold) onCommit("left");
     else setDrag({ x: 0, y: 0 });
     startRef.current = null;
     setDragging(false);
   }
 
-  // Translate + rotate based on drag, or full exit when committing
   const rotate = drag.x * 0.06;
   const isExit = !!forceExit;
   const exitX = forceExit === "right" ? 600 : forceExit === "left" ? -600 : 0;
@@ -199,9 +205,8 @@ function SwipeableCard({
     ? `translate(${exitX}px, 40px) rotate(${forceExit === "right" ? 18 : -18}deg)`
     : `translate(${drag.x}px, ${drag.y * 0.4}px) rotate(${rotate}deg)`;
 
-  // Stamp opacity follows drag intensity
-  const proposeOpacity = Math.max(0, Math.min(1, drag.x / 110));
-  const passOpacity    = Math.max(0, Math.min(1, -drag.x / 110));
+  const likeOpacity = Math.max(0, Math.min(1, drag.x / 110));
+  const passOpacity = Math.max(0, Math.min(1, -drag.x / 110));
 
   return (
     <div
@@ -217,13 +222,12 @@ function SwipeableCard({
         zIndex: 3,
       }}
     >
-      <CardBody match={match} stampPropose={proposeOpacity} stampPass={passOpacity} />
+      <CardBody card={card} stampLike={likeOpacity} stampPass={passOpacity} />
     </div>
   );
 }
 
-function CardShell({ match, depth }: { match: TradeMatch; depth: 1 | 2 }) {
-  // Stacked cards behind the top one — small offset + slight scale, no interaction
+function CardShell({ card, depth }: { card: TradeCard; depth: 1 | 2 }) {
   const scale = depth === 1 ? 0.96 : 0.92;
   const top   = depth === 1 ? 12   : 24;
   return (
@@ -235,23 +239,24 @@ function CardShell({ match, depth }: { match: TradeMatch; depth: 1 | 2 }) {
         opacity:   depth === 1 ? 0.85 : 0.6,
       }}
     >
-      <CardBody match={match} stampPropose={0} stampPass={0} muted />
+      <CardBody card={card} stampLike={0} stampPass={0} muted />
     </div>
   );
 }
 
 function CardBody({
-  match,
-  stampPropose,
+  card,
+  stampLike,
   stampPass,
   muted,
 }: {
-  match: TradeMatch;
-  stampPropose: number;
+  card: TradeCard;
+  stampLike: number;
   stampPass: number;
   muted?: boolean;
 }) {
-  const cp = match.counterparty;
+  const o = card.owner;
+  const l = card.listing;
   return (
     <div
       className={
@@ -261,11 +266,10 @@ function CardBody({
       }
       style={{ ["--accent" as string]: ACCENT }}
     >
-      {/* Stamps */}
-      <Stamp text="PROPOSE" tone="accent" opacity={stampPropose} side="left" />
-      <Stamp text="PASS"    tone="muted"  opacity={stampPass}    side="right" />
+      <Stamp text="MAU"  tone="accent" opacity={stampLike} side="left" />
+      <Stamp text="LEWAT" tone="muted" opacity={stampPass} side="right" />
 
-      {/* Counterparty header */}
+      {/* Owner header */}
       <div
         className="flex items-center gap-3 border-b px-5 py-4"
         style={{
@@ -274,91 +278,54 @@ function CardBody({
         }}
       >
         <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-panel-2 font-bold text-fg-muted">
-          {cp.avatarUrl ? (
+          {o.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cp.avatarUrl} alt="" className="h-full w-full object-cover" />
+            <img src={o.avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            (cp.name ?? cp.username)[0]?.toUpperCase()
+            (o.name ?? o.username)[0]?.toUpperCase()
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-fg">{cp.name ?? `@${cp.username}`}</p>
+          <p className="truncate text-sm font-bold text-fg">{o.name ?? `@${o.username}`}</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-fg-muted">
-            <span>@{cp.username}</span>
-            {cp.city && <span>· {cp.city}</span>}
-            <span
-              className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white"
-              style={{ background: ACCENT }}
-            >
-              LV {cp.level}
+            <span>@{o.username}</span>
+            {o.city && <span>· {o.city}</span>}
+            <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white" style={{ background: ACCENT }}>
+              LV {o.level}
             </span>
           </p>
         </div>
       </div>
 
-      {/* Reputation strip */}
       <div className="grid grid-cols-3 divide-x divide-rule border-b border-rule bg-canvas/40 text-center">
-        <Stat value={cp.trustScore.toFixed(1)} label="Trust" />
-        <Stat value={cp.trades.completed.toLocaleString("id-ID")} label="Trade" />
-        <Stat value={cp.trades.rating != null ? `${cp.trades.rating.toFixed(1)}★` : "—"} label="Rating" />
+        <Stat value={o.trustScore.toFixed(1)} label="Trust" />
+        <Stat value={o.trades.completed.toLocaleString("id-ID")} label="Trade" />
+        <Stat value={o.trades.rating != null ? `${o.trades.rating.toFixed(1)}★` : "—"} label="Rating" />
       </div>
 
-      {/* Trade body */}
-      <div className="flex flex-col gap-3 p-5">
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: ACCENT }}>
-          Match · fit {Math.round(match.score * 100)}%
-        </p>
-
-        <ItemRow label="Kamu kasih" listing={match.give} tone="give" />
-
-        <div className="flex items-center gap-3 px-1">
-          <span className="h-px flex-1 bg-rule" />
-          <span
-            className="grid h-9 w-9 place-items-center rounded-full text-white"
-            style={{ background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)` }}
-            aria-hidden
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 10l5-5 5 5M7 14l5 5 5-5" />
-            </svg>
-          </span>
-          <span className="h-px flex-1 bg-rule" />
-        </div>
-
-        <ItemRow label="Kamu dapet" listing={match.get} tone="get" />
-      </div>
-    </div>
-  );
-}
-
-function ItemRow({ label, listing, tone }: { label: string; listing: ListingMini; tone: "give" | "get" }) {
-  return (
-    <div
-      className="flex gap-3 rounded-2xl border p-3"
-      style={{
-        borderColor: tone === "get" ? `${ACCENT}55` : "rgb(0 0 0 / 0.08)",
-        background:  tone === "get" ? `${ACCENT}0F` : "transparent",
-      }}
-    >
-      <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-panel-2">
-        {listing.cover ? (
+      {/* Big listing image */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-panel-2">
+        {l.cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={listing.cover} alt="" className="h-full w-full object-cover" draggable={false} />
+          <img src={l.cover} alt="" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         ) : (
-          <span className="font-mono text-xs text-fg-subtle">No img</span>
+          <div className="absolute inset-0 grid place-items-center text-fg-subtle">
+            <span className="font-mono text-xs">No image</span>
+          </div>
         )}
+        <span
+          className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fg"
+        >
+          {l.condition.replace("_", " ")}
+        </span>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
-          {label}
+
+      <div className="flex flex-col gap-1.5 p-5">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: ACCENT }}>
+          Available untuk trade
         </p>
-        <p className="line-clamp-2 text-sm font-bold text-fg">{listing.title}</p>
-        <p className="mt-0.5 flex items-center gap-2 text-xs text-fg-muted">
-          <span className="font-mono font-semibold text-fg">{fmtIdr(listing.priceIdr)}</span>
-          <span className="rounded-md bg-fg/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest">
-            {listing.condition}
-          </span>
-        </p>
+        <p className="line-clamp-2 text-base font-bold text-fg">{l.title}</p>
+        <p className="font-mono text-sm font-semibold text-fg">{fmtIdr(l.priceIdr)}</p>
       </div>
     </div>
   );
@@ -402,32 +369,27 @@ function ActionButton({
   onClick: () => void;
   variant: "pass" | "propose";
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const styles = variant === "propose"
-    ? { background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)`, color: "#fff", boxShadow: "0 12px 28px -8px rgba(127, 119, 221, 0.65)" }
-    : undefined;
+  const base =
+    "grid h-14 w-14 place-items-center rounded-full transition-all hover:scale-110 active:scale-95 shadow-md";
+  const variantClass =
+    variant === "propose"
+      ? "text-white"
+      : "border border-rule bg-panel text-fg-muted hover:bg-panel-2";
   return (
     <button
-      type="button"
-      onClick={onClick}
-      className={
-        "grid h-14 w-14 place-items-center rounded-full transition-transform hover:scale-105 active:scale-95 " +
-        (variant === "propose"
-          ? ""
-          : "border border-rule bg-panel text-fg-muted hover:text-fg")
-      }
-      style={styles}
       {...rest}
+      onClick={onClick}
+      className={`${base} ${variantClass}`}
+      style={variant === "propose" ? { background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)` } : undefined}
     >
       {icon}
     </button>
   );
 }
 
+/* ---------------------------------------------------------------- empty + match */
+
 function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }) {
-  // Manual proposal lets users start a trade even when neither side has
-  // wishlist'd the other — the algorithmic match is too strict for early
-  // users with thin wishlists / collections.
-  const [manualOpen, setManualOpen] = useState(false);
   return (
     <div
       className="mx-auto flex max-w-[420px] flex-col items-center rounded-3xl border border-dashed p-10 text-center"
@@ -442,62 +404,98 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
         </svg>
       </span>
       <h3 className="mt-4 text-lg font-bold text-fg">
-        {targetUsername ? `Belum ada match otomatis dengan @${targetUsername}` : "Deck habis untuk sekarang"}
+        {targetUsername ? `Belum ada barang trade dari @${targetUsername}` : "Deck habis"}
       </h3>
       <p className="mt-2 max-w-xs text-sm text-fg-muted">
         {targetUsername
-          ? "Match otomatis butuh wishlist dua arah. Tetap bisa propose tukar manual — pilih barang kamu & barangnya langsung."
-          : "Tambahin item ke wishlist atau publish lebih banyak listing — match otomatis dihitung dari kecocokan dua arah."}
+          ? "User ini belum menandai listing-nya tradeable. Tambahin barang kamu sendiri ke trade pool — siapa tahu mereka mau."
+          : "Belum ada listing tradeable dari user lain. Coba lagi nanti, atau tandai barang kamu sendiri tradeable supaya kamu masuk pool."}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
-        {targetUsername ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setManualOpen(true)}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
-              style={{ background: ACCENT }}
-            >
-              Propose tukar manual
-            </button>
-            <Link
-              href={`/dm?to=${encodeURIComponent(targetUsername)}`}
-              className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
-            >
-              Kirim pesan
-            </Link>
-            <Link
-              href={`/u/${encodeURIComponent(targetUsername)}`}
-              className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
-            >
-              Lihat profil
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link
-              href="/wishlist"
-              className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
-            >
-              Wishlist
-            </Link>
-            <Link
-              href="/jual"
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
-              style={{ background: ACCENT }}
-            >
-              Tambah listing
-            </Link>
-          </>
+        <Link
+          href="/jual"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
+          style={{ background: ACCENT }}
+        >
+          Tandai listing tradeable
+        </Link>
+        {targetUsername && (
+          <Link
+            href={`/u/${encodeURIComponent(targetUsername)}`}
+            className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
+          >
+            Lihat profil
+          </Link>
         )}
       </div>
-      {targetUsername && (
-        <ManualTradeModal
-          open={manualOpen}
-          onClose={() => setManualOpen(false)}
-          targetUsername={targetUsername}
-        />
-      )}
+    </div>
+  );
+}
+
+function MatchModal({
+  give, get, counterparty, proposalId, onClose,
+}: {
+  give: ListingMini;
+  get: ListingMini;
+  counterparty: { username: string; name: string | null };
+  proposalId: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="relative w-full max-w-md overflow-hidden rounded-3xl border bg-canvas shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        style={{ borderColor: `${ACCENT}55` }}
+      >
+        <div
+          className="px-6 py-8 text-center text-white"
+          style={{ background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)` }}
+        >
+          <p className="font-mono text-xs uppercase tracking-[0.3em] opacity-90">It's a match!</p>
+          <h2 className="mt-2 text-3xl font-extrabold">🎉 Match!</h2>
+          <p className="mt-1 text-sm opacity-90">
+            Kamu dan @{counterparty.username} saling tertarik.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 p-5">
+          <MatchPreview label="Kamu kasih" l={give} />
+          <MatchPreview label="Kamu dapet" l={get} />
+        </div>
+
+        <div className="flex gap-3 border-t border-rule px-5 py-4">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-rule px-4 py-2.5 text-sm font-semibold text-fg-muted hover:bg-panel-2"
+          >
+            Lanjut swipe
+          </button>
+          <Link
+            href={`/trades?proposal=${encodeURIComponent(proposalId)}`}
+            className="flex-1 rounded-lg px-4 py-2.5 text-center text-sm font-semibold text-white"
+            style={{ background: ACCENT }}
+          >
+            Buka proposal
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatchPreview({ label, l }: { label: string; l: ListingMini }) {
+  return (
+    <div className="rounded-xl border border-rule bg-panel p-3">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-fg-subtle">{label}</p>
+      <div className="mt-2 aspect-square overflow-hidden rounded-lg bg-panel-2">
+        {l.cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={l.cover} alt="" className="h-full w-full object-cover" />
+        ) : null}
+      </div>
+      <p className="mt-2 line-clamp-2 text-xs font-semibold text-fg">{l.title}</p>
+      <p className="mt-0.5 font-mono text-[11px] text-fg-muted">{fmtIdr(l.priceIdr)}</p>
     </div>
   );
 }

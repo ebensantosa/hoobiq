@@ -27,6 +27,7 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   weightGrams: z.number(),
   couriers: z.array(z.string()).default([]),
   originSubdistrictId: z.number().int().nullable().optional(),
+  tradeable: z.boolean().default(false).optional(),
   category: z.object({
     id: z.string(),
     slug: z.string(),
@@ -87,6 +88,9 @@ export const CreateListingInput = z.object({
   // optional on create — listing falls back to "hubungi seller" until set.
   couriers: z.array(z.enum(["jne", "pos", "tiki", "sicepat", "jnt", "anteraja", "ninja", "wahana", "ide"])).max(9).default([]),
   originSubdistrictId: z.number().int().positive().nullable().optional(),
+  // Owner flags this listing as available for trade. When true the listing
+  // appears in /trades deck for everyone — buyers can still purchase normally.
+  tradeable: z.boolean().default(false),
 });
 export type CreateListingInput = z.infer<typeof CreateListingInput>;
 

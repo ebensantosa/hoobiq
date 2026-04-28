@@ -143,6 +143,10 @@ model Listing {
   condition    String
   imagesJson   String    @default("[]") @map("images_json")
   weightGrams  Int       @default(500) @map("weight_grams")
+  // Owner has flagged this item as available for trade. When true the
+  // listing surfaces in /trades deck for everyone (not just wishlist
+  // matches). Doesn't disable purchase — buyers can still checkout normally.
+  tradeable    Boolean   @default(false)
   // Seller-selected couriers this listing can be shipped via. JSON array of
   // courier codes ("jne", "jnt", ...) — kept as JSON string for SQLite/Postgres
   // portability. Empty/missing = no couriers configured (checkout will tell
@@ -578,6 +582,7 @@ model TradeProposal {
 }
 
 /// Swipe-left memory so the same candidate doesn't reappear in the deck.
+/// Legacy from the wishlist-match flow; kept for back-compat only.
 model TradePass {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
@@ -589,6 +594,25 @@ model TradePass {
   @@unique([userId, fromListingId, toListingId])
   @@index([userId, createdAt])
   @@map("trade_passes")
+}
+
+/// Tinder-style swipe state. One row per (swiper, target listing) pair.
+/// direction = "right" (interested) | "left" (pass). Right-swipes are the
+/// signal we use to detect a mutual-interest match in TradesService.
+model TradeSwipe {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  targetListingId String   @map("target_listing_id")
+  // Owner of the targeted listing — denormalised so match queries don't
+  // need to join Listing for every read.
+  targetOwnerId   String   @map("target_owner_id")
+  direction       String   // "right" | "left"
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, targetListingId])
+  @@index([targetOwnerId, direction])
+  @@index([userId, createdAt])
+  @@map("trade_swipes")
 }
 
 model PromoCode {

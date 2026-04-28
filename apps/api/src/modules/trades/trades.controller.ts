@@ -14,17 +14,21 @@ export class TradesController {
     return { items };
   }
 
-  /** Swipe-left memory. */
-  @Post("pass")
+  /**
+   * Tinder-style swipe. Right-swipes may auto-create a TradeProposal if
+   * the target owner has previously right-swiped one of our tradeable
+   * listings — see TradesService.swipe.
+   */
+  @Post("swipe")
   @HttpCode(200)
-  pass(
+  swipe(
     @CurrentUser() user: SessionUser,
-    @Body() body: { fromListingId: string; toListingId: string }
+    @Body() body: { listingId: string; direction: "right" | "left" }
   ) {
-    if (!body?.fromListingId || !body?.toListingId) {
-      throw new NotFoundException({ code: "bad_input", message: "Listing pair tidak valid." });
+    if (!body?.listingId || (body.direction !== "right" && body.direction !== "left")) {
+      throw new NotFoundException({ code: "bad_input", message: "Swipe tidak valid." });
     }
-    return this.svc.pass(user.id, body.fromListingId, body.toListingId);
+    return this.svc.swipe(user.id, body.listingId, body.direction);
   }
 
   /** Swipe-right → create proposal. */

@@ -50,6 +50,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
     origin: listing.originSubdistrictId
       ? { id: listing.originSubdistrictId, label: "(lokasi tersimpan)", city: "", province: "", postalCode: "" }
       : null,
+    tradeable: listing.tradeable ?? false,
   };
 
   return (

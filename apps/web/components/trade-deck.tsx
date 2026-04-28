@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
+import { ManualTradeModal } from "./manual-trade-modal";
 
 const ACCENT = "#7F77DD"; // Trade Match purple — distinct from marketplace pink
 
@@ -423,6 +424,10 @@ function ActionButton({
 }
 
 function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }) {
+  // Manual proposal lets users start a trade even when neither side has
+  // wishlist'd the other — the algorithmic match is too strict for early
+  // users with thin wishlists / collections.
+  const [manualOpen, setManualOpen] = useState(false);
   return (
     <div
       className="mx-auto flex max-w-[420px] flex-col items-center rounded-3xl border border-dashed p-10 text-center"
@@ -437,20 +442,27 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
         </svg>
       </span>
       <h3 className="mt-4 text-lg font-bold text-fg">
-        {targetUsername ? `Belum ada match dengan @${targetUsername}` : "Deck habis untuk sekarang"}
+        {targetUsername ? `Belum ada match otomatis dengan @${targetUsername}` : "Deck habis untuk sekarang"}
       </h3>
       <p className="mt-2 max-w-xs text-sm text-fg-muted">
         {targetUsername
-          ? "Wishlist & koleksi kalian belum cocok dua arah. Coba kirim pesan dulu, atau tambahin item ke wishlist kamu."
-          : "Tambahin item ke wishlist atau publish lebih banyak listing — match dihitung dari kecocokan dua arah."}
+          ? "Match otomatis butuh wishlist dua arah. Tetap bisa propose tukar manual — pilih barang kamu & barangnya langsung."
+          : "Tambahin item ke wishlist atau publish lebih banyak listing — match otomatis dihitung dari kecocokan dua arah."}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {targetUsername ? (
           <>
-            <Link
-              href={`/dm?to=${encodeURIComponent(targetUsername)}`}
+            <button
+              type="button"
+              onClick={() => setManualOpen(true)}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
               style={{ background: ACCENT }}
+            >
+              Propose tukar manual
+            </button>
+            <Link
+              href={`/dm?to=${encodeURIComponent(targetUsername)}`}
+              className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
             >
               Kirim pesan
             </Link>
@@ -459,12 +471,6 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
               className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
             >
               Lihat profil
-            </Link>
-            <Link
-              href="/wishlist"
-              className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
-            >
-              Wishlist
             </Link>
           </>
         ) : (
@@ -485,6 +491,13 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
           </>
         )}
       </div>
+      {targetUsername && (
+        <ManualTradeModal
+          open={manualOpen}
+          onClose={() => setManualOpen(false)}
+          targetUsername={targetUsername}
+        />
+      )}
     </div>
   );
 }

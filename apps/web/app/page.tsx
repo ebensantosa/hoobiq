@@ -179,7 +179,6 @@ function ShowcaseCard({ l, float }: { l: ListingSummary; float: string }) {
 /* ---------------- Latest strip ---------------- */
 
 function LatestStrip({ items }: { items: ListingSummary[] }) {
-  if (items.length === 0) return null;
   // Loop the array once so the marquee animation has continuous content.
   const loop = [...items, ...items];
   return (
@@ -199,30 +198,36 @@ function LatestStrip({ items }: { items: ListingSummary[] }) {
           </Link>
         </div>
 
-        <div className="mask-fade-x relative overflow-hidden">
-          <div className="flex w-max gap-3 animate-marquee">
-            {loop.map((it, i) => (
-              <Link
-                key={`${it.id}-${i}`}
-                href={`/listing/${it.slug}`}
-                className="flex w-60 shrink-0 items-center gap-3 rounded-xl border border-rule bg-panel px-3 py-2.5 transition-colors hover:border-brand-400/60"
-              >
-                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-panel-2">
-                  {it.cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <CardArt variant={pickArt(it.slug)} />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-fg">{it.title}</p>
-                  <p className="text-xs font-semibold text-brand-400">Rp {it.priceIdr.toLocaleString("id-ID")}</p>
-                </div>
-              </Link>
-            ))}
+        {items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-rule bg-panel/30 px-6 py-8 text-center text-sm text-fg-muted">
+            Belum ada listing aktif. <Link href="/daftar" className="text-brand-400 hover:underline">Daftar gratis</Link> untuk mulai jualan.
           </div>
-        </div>
+        ) : (
+          <div className="mask-fade-x relative overflow-hidden">
+            <div className="flex w-max gap-3 animate-marquee">
+              {loop.map((it, i) => (
+                <Link
+                  key={`${it.id}-${i}`}
+                  href={`/listing/${it.slug}`}
+                  className="flex w-60 shrink-0 items-center gap-3 rounded-xl border border-rule bg-panel px-3 py-2.5 transition-colors hover:border-brand-400/60"
+                >
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-panel-2">
+                    {it.cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <CardArt variant={pickArt(it.slug)} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-fg">{it.title}</p>
+                    <p className="text-xs font-semibold text-brand-400">Rp {it.priceIdr.toLocaleString("id-ID")}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -331,14 +336,13 @@ function CategoryStrip({ cats }: { cats: Category[] }) {
 /* ---------------- Trending listings ---------------- */
 
 function Trending({ items }: { items: ListingSummary[] }) {
-  if (items.length === 0) return null;
   return (
     <section className="mx-auto max-w-[1280px] px-6 pb-16 pt-20 md:px-10">
       <div className="mb-6 flex items-end justify-between">
         <div>
           <h2 className="text-2xl font-bold text-fg md:text-3xl">Lagi dicari minggu ini</h2>
           <p className="mt-1 text-sm text-fg-muted">
-            Listing aktif dari kolektor terverifikasi. Bebas lihat-lihat — buat
+            Listing aktif paling sering dilihat. Bebas lihat-lihat — buat
             beli tinggal daftar.
           </p>
         </div>
@@ -350,13 +354,19 @@ function Trending({ items }: { items: ListingSummary[] }) {
         </Link>
       </div>
 
-      {/* Reuse the same ListingCard the logged-in marketplace uses, so the
-          design stays in sync (cover, condition badge, seller, price). */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {items.map((l) => (
-          <ListingCard key={l.id} l={l} />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-rule bg-panel/30 px-6 py-10 text-center text-sm text-fg-muted">
+          Belum ada listing aktif. Section ini akan otomatis terisi begitu seller publish listing.
+        </div>
+      ) : (
+        // Reuse the same ListingCard the logged-in marketplace uses, so the
+        // design stays in sync (cover, condition badge, seller, price).
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {items.map((l) => (
+            <ListingCard key={l.id} l={l} />
+          ))}
+        </div>
+      )}
 
       <div className="mt-6 text-center md:hidden">
         <Link href="/marketplace" className="text-sm font-medium text-brand-400 hover:underline">

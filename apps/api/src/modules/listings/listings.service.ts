@@ -50,9 +50,18 @@ export class ListingsService {
         ...(input.maxPrice !== undefined && { priceCents: { lte: BigInt(input.maxPrice) * CENTS_PER_RUPIAH } }),
       } as const;
 
+      // "trending" = boosted first, then most-viewed within the last 7 days,
+      // then most-viewed all time, then newest. Approximated via Prisma's
+      // multi-key orderBy — the boosted+recent flag pulls hot listings up
+      // without needing a separate aggregate query.
       const orderBy =
         input.sort === "price_asc"  ? [{ priceCents: "asc"  as const }] :
         input.sort === "price_desc" ? [{ priceCents: "desc" as const }] :
+        input.sort === "trending"   ? [
+                                        { boostedUntil: "desc" as const },
+                                        { views: "desc" as const },
+                                        { createdAt: "desc" as const },
+                                      ] :
                                       [{ boostedUntil: "desc" as const }, { createdAt: "desc" as const }];
 
       const rows = await this.prisma.listing.findMany({

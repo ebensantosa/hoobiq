@@ -57,7 +57,7 @@ export const ListingSearchInput = z.object({
   condition: ConditionSchema.optional(),
   minPrice: z.coerce.number().int().nonnegative().optional(),
   maxPrice: z.coerce.number().int().positive().optional(),
-  sort: z.enum(["newest", "price_asc", "price_desc"]).default("newest"),
+  sort: z.enum(["newest", "price_asc", "price_desc", "trending"]).default("newest"),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(60).default(24),
 });

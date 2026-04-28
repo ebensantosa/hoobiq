@@ -1,13 +1,24 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { Suspense, useState, useTransition } from "react";
 import { Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
+// useSearchParams forces dynamic rendering. Next 15 requires it to live
+// inside a Suspense boundary or the static prerender of /masuk fails the
+// production build with "missing-suspense-with-csr-bailout".
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const [err, setErr] = useState<string | null>(null);

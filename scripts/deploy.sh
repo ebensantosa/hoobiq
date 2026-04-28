@@ -83,11 +83,19 @@ npm --workspace @hoobiq/web run build
 
 # Next standalone needs static + public copied alongside the bundled server.
 # Without these the asset paths 404 in production.
+#
+# IMPORTANT: rm -rf the destinations first. `cp -r src dest` with an existing
+# dest creates dest/src/... (nested), so the second deploy onward would put
+# chunks at .next/static/static/<hash>.js — invisible to Next at runtime,
+# producing the 400-with-text/html ChunkLoadError we hit in prod.
 log "Stage Next standalone assets…"
 WEB_STANDALONE="$APP_DIR/apps/web/.next/standalone/apps/web"
 if [[ -d "$WEB_STANDALONE" ]]; then
+  rm -rf "$WEB_STANDALONE/.next/static" "$WEB_STANDALONE/public"
   cp -r "$APP_DIR/apps/web/.next/static" "$WEB_STANDALONE/.next/static"
-  cp -r "$APP_DIR/apps/web/public" "$WEB_STANDALONE/public" 2>/dev/null || true
+  if [[ -d "$APP_DIR/apps/web/public" ]]; then
+    cp -r "$APP_DIR/apps/web/public" "$WEB_STANDALONE/public"
+  fi
 fi
 
 # 4. Run migrations --------------------------------------------------------

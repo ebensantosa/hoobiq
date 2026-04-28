@@ -1,10 +1,12 @@
-import { BadRequestException, Body, Controller, ForbiddenException, NotFoundException, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Post } from "@nestjs/common";
 import { z } from "zod";
 import type { SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { RedisService } from "../../infrastructure/redis/redis.service";
 import { KomercePaymentService, type ChargeMethod } from "./komerce-payment.service";
 
 const ChargeInput = z.object({
@@ -21,7 +23,22 @@ export class PaymentsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly komerce: KomercePaymentService,
+    private readonly redis: RedisService,
   ) {}
+
+  /**
+   * Live list of enabled methods from Komerce (cached 5 min). Used by the
+   * checkout page to render a real method picker with the merchant's
+   * actual enabled banks/wallets — no hardcoded "BCA / BNI" guesswork.
+   */
+  @Public()
+  @Get("methods")
+  async methods() {
+    return this.redis.cached("payments:komerce:methods:v1", 300, async () => {
+      const items = await this.komerce.listMethods();
+      return { items };
+    });
+  }
 
   @Post("charge")
   async charge(

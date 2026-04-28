@@ -24,11 +24,13 @@ export default async function CheckoutWaitPage({
   searchParams,
 }: {
   params: Promise<{ humanId: string }>;
-  searchParams: Promise<{ m?: string }>;
+  searchParams: Promise<{ m?: string; c?: string }>;
 }) {
   const { humanId } = await params;
   const sp = await searchParams;
-  const method: "page" | "qris" = sp.m === "qris" ? "qris" : "page";
+  // m = "qris" or "va" / "ewallet"; c = bank/wallet code (BCA, OVO, ...).
+  const method: "qris" | "va" | "ewallet" = sp.m === "qris" || sp.m === "ewallet" ? sp.m : "va";
+  const channel = sp.c ?? "";
   const me = await getSessionUser();
   if (!me) redirect(`/masuk?next=${encodeURIComponent(`/checkout/${humanId}/wait`)}`);
 
@@ -75,7 +77,7 @@ export default async function CheckoutWaitPage({
           </div>
 
           <div className="p-5">
-            <KomercePayLauncher humanId={o.humanId} method={method} />
+            <KomercePayLauncher humanId={o.humanId} method={method} channel={channel} />
           </div>
         </Card>
 

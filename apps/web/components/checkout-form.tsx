@@ -70,7 +70,23 @@ export function CheckoutForm({
   const [costLoading, setCostLoading] = React.useState(false);
   const [costErr, setCostErr] = React.useState<string | null>(null);
   const [pickedCourier, setPickedCourier] = React.useState<string | null>(null);
-  const [payMethod, setPayMethod] = React.useState<"page" | "qris">("page");
+
+  // Real payment methods from /payments/komerce/methods (live list of
+  // enabled banks + QRIS). Falls back to a basic "QRIS only" option if
+  // Komerce is unreachable.
+  type Method = { paymentType: string; bankCode: string; displayName: string; logoUrl: string };
+  const [methods, setMethods] = React.useState<Method[] | null>(null);
+  const [pickedPay, setPickedPay] = React.useState<{ type: string; code: string } | null>(null);
+
+  React.useEffect(() => {
+    api<{ items: Method[] }>("/payments/komerce/methods")
+      .then((res) => {
+        setMethods(res.items);
+        const first = res.items[0];
+        if (first) setPickedPay({ type: first.paymentType, code: first.bankCode });
+      })
+      .catch(() => setMethods([]));
+  }, []);
 
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
 
@@ -126,6 +142,10 @@ export function CheckoutForm({
       setErr(costErr ?? "Pilih ekspedisi dulu.");
       return;
     }
+    if (!pickedPay) {
+      setErr("Pilih metode pembayaran dulu.");
+      return;
+    }
     setErr(null);
     setPending(true);
     try {
@@ -138,12 +158,18 @@ export function CheckoutForm({
           courierCode: `${selectedCost.courier}-${selectedCost.service.toLowerCase()}`,
           shippingCents: selectedCost.cost * 100,
           insurance,
-          payMethod,
+          // Server doesn't drive the charge anymore — it just stores the
+          // order. Wait page picks up the selected method via query.
+          payMethod: pickedPay.type === "qris" ? "qris" : "page",
         },
       });
-      // Pass selected method to wait page so it can auto-fire the right
-      // Komerce charge without showing a second picker.
-      router.push(`/checkout/${encodeURIComponent(res.humanId)}/wait?m=${payMethod}`);
+      // Encode method + bank code so the launcher fires the exact channel
+      // the buyer chose (e.g. ?m=va&c=BCA or ?m=qris).
+      const qs = new URLSearchParams({
+        m: pickedPay.type === "qris" ? "qris" : pickedPay.type,
+        ...(pickedPay.code ? { c: pickedPay.code } : {}),
+      });
+      router.push(`/checkout/${encodeURIComponent(res.humanId)}/wait?${qs}`);
     } catch (e) {
       setErr(
         e instanceof ApiError ? e.message :
@@ -308,50 +334,47 @@ export function CheckoutForm({
           </Card>
         </Section>
 
-        {/* Payment method picker — fires the chosen Komerce flow on submit */}
+        {/* Payment method picker — live list from Komerce */}
         <Section title="Metode pembayaran">
-          <div className="flex flex-col gap-3">
-            <Card className={payMethod === "page" ? "border-brand-400 bg-brand-400/5" : ""}>
-              <label className="flex cursor-pointer items-center gap-4 p-4">
-                <input
-                  type="radio"
-                  name="paymethod"
-                  checked={payMethod === "page"}
-                  onChange={() => setPayMethod("page")}
-                  className="h-4 w-4 accent-brand-400"
-                />
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-400/10 text-brand-500">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-fg">Payment Page (VA / E-wallet / Bank)</p>
-                  <p className="mt-0.5 text-xs text-fg-muted">
-                    Klik bayar → diarahkan ke halaman Komerce, pilih bank/e-wallet di sana.
-                  </p>
-                </div>
-              </label>
-            </Card>
-            <Card className={payMethod === "qris" ? "border-brand-400 bg-brand-400/5" : ""}>
-              <label className="flex cursor-pointer items-center gap-4 p-4">
-                <input
-                  type="radio"
-                  name="paymethod"
-                  checked={payMethod === "qris"}
-                  onChange={() => setPayMethod("qris")}
-                  className="h-4 w-4 accent-brand-400"
-                />
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-400/10 text-brand-500">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14h1v1h-1zM14 20h3v1h-3zM20 17h1v4M17 20h3"/></svg>
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-fg">QRIS</p>
-                  <p className="mt-0.5 text-xs text-fg-muted">
-                    Scan QR dari aplikasi mobile banking / e-wallet apa saja.
-                  </p>
-                </div>
-              </label>
-            </Card>
-          </div>
+          {methods === null ? (
+            <Card><div className="p-5 text-sm text-fg-muted">Memuat metode pembayaran…</div></Card>
+          ) : methods.length === 0 ? (
+            <Card><div className="p-5 text-sm text-flame-600">Pembayaran belum dikonfigurasi. Hubungi admin.</div></Card>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {methods.map((m) => {
+                const id = `${m.paymentType}-${m.bankCode}`;
+                const isPicked = pickedPay?.type === m.paymentType && pickedPay.code === m.bankCode;
+                return (
+                  <Card key={id} className={isPicked ? "border-brand-400 bg-brand-400/5" : ""}>
+                    <label className="flex cursor-pointer items-center gap-4 p-3">
+                      <input
+                        type="radio"
+                        name="paymethod"
+                        checked={isPicked}
+                        onChange={() => setPickedPay({ type: m.paymentType, code: m.bankCode })}
+                        className="h-4 w-4 accent-brand-400"
+                      />
+                      <div className="flex h-10 w-14 items-center justify-center overflow-hidden rounded-lg border border-rule bg-white p-1">
+                        {m.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.logoUrl} alt={m.displayName} className="max-h-full max-w-full object-contain" />
+                        ) : (
+                          <span className="font-mono text-[10px] text-fg-muted">{m.bankCode || m.paymentType}</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-fg">{m.displayName}</p>
+                        <p className="mt-0.5 text-xs text-fg-muted">
+                          {m.paymentType === "qris" ? "Scan dari app mobile banking / e-wallet" : "Virtual Account"}
+                        </p>
+                      </div>
+                    </label>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </Section>
       </div>
 

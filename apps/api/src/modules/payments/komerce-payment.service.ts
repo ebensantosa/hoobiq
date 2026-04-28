@@ -61,6 +61,56 @@ export class KomercePaymentService {
     return !!env.KOMERCE_PAYMENT_API_KEY;
   }
 
+  /**
+   * Fetch the merchant's enabled payment methods from Komerce. Cached at
+   * the controller layer so we don't hit Komerce on every checkout render.
+   */
+  async listMethods(): Promise<Array<{
+    paymentType: string; bankCode: string; displayName: string; logoUrl: string;
+    minAmount: number; maxAmount: number;
+  }>> {
+    const key = env.KOMERCE_PAYMENT_API_KEY;
+    if (!key) {
+      throw new ServiceUnavailableException({
+        code: "payment_not_configured",
+        message: "Pembayaran belum dikonfigurasi.",
+      });
+    }
+    const base = env.KOMERCE_PAYMENT_BASE_URL.replace(/\/$/, "");
+    let res: Response;
+    let text: string;
+    try {
+      res = await fetch(`${base}/user/methods`, { headers: { "x-api-key": key } });
+      text = await res.text();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      throw new BadRequestException({
+        code: "payment_network_error",
+        message: `Tidak bisa hubungi Komerce (${reason}).`,
+      });
+    }
+    if (!res.ok) {
+      throw new BadRequestException({
+        code: "payment_upstream_error",
+        message: `Komerce HTTP ${res.status}: ${text.slice(0, 200)}`,
+      });
+    }
+    const json = JSON.parse(text) as {
+      data?: Array<{
+        payment_type: string; display_name: string; bank_code: string;
+        logo_url: string; min_amount: number; max_amount: number;
+      }>;
+    };
+    return (json.data ?? []).map((m) => ({
+      paymentType: m.payment_type,
+      bankCode:    m.bank_code,
+      displayName: m.display_name,
+      logoUrl:     m.logo_url,
+      minAmount:   m.min_amount,
+      maxAmount:   m.max_amount,
+    }));
+  }
+
   async createCharge(req: ChargeRequest): Promise<ChargeResponse> {
     const isQris = req.method === "qris";
     const key = isQris ? env.KOMERCE_QRISLY_API_KEY : env.KOMERCE_PAYMENT_API_KEY;
@@ -75,19 +125,22 @@ export class KomercePaymentService {
     const base = (isQris ? env.KOMERCE_QRISLY_BASE_URL : env.KOMERCE_PAYMENT_BASE_URL).replace(/\/$/, "");
     const path = "/user/payment/create";
 
-    // Map our internal method/channel to Komerce's payment_type/channel_code.
-    //   va     → bank_transfer + channel_code:"bca|bni|..."
-    //   ewallet→ ewallet       + channel_code:"ovo|dana|..."
-    //   qris   → qris          (no channel_code)
+    // Map our internal method to Komerce's payment_type literal. Per the
+    // /user/methods endpoint these are: "va" (virtual account), "ewallet",
+    // "qris" — NOT the "bank_transfer" string the sample request showed.
     const payment_type =
-      req.method === "va"      ? "bank_transfer" :
+      req.method === "va"      ? "va" :
       req.method === "ewallet" ? "ewallet" :
                                  "qris";
+
+    // bank_code in the methods list is uppercase (BCA, BNI, MANDIRI). Komerce
+    // is case-sensitive on channel_code, so always upper-case before sending.
+    const channelCode = req.channel?.toUpperCase();
 
     const body = JSON.stringify({
       order_id: req.humanId,
       payment_type,
-      ...(req.channel ? { channel_code: req.channel } : {}),
+      ...(channelCode ? { channel_code: channelCode } : {}),
       amount: Math.max(10_000, Math.round(req.amountIdr)),  // Komerce min 10k
       customer: { name: req.customer.name, email: req.customer.email, phone: req.customer.phone },
       items: req.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.priceIdr })),

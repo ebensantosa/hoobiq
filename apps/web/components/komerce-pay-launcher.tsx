@@ -28,9 +28,12 @@ type ChargeResult = {
 export function KomercePayLauncher({
   humanId,
   method,
+  channel,
 }: {
   humanId: string;
-  method: "page" | "qris";
+  method: "va" | "ewallet" | "qris";
+  /** Bank/wallet code from the checkout pick (e.g. "BCA", "OVO"). Empty for QRIS. */
+  channel?: string;
 }) {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -42,16 +45,13 @@ export function KomercePayLauncher({
     setBusy(true);
     setErr(null);
     try {
-      // Komerce sandbox doesn't allow BCA as a VA channel; BRI/BNI/Mandiri
-      // are the well-supported ones. The returned payment_url still lands
-      // on Komerce's hosted page where the buyer can swap to any method.
       const body =
-        method === "page"
-          ? { orderHumanId: humanId, method: "va" as const, channel: "bri" }
-          : { orderHumanId: humanId, method: "qris" as const };
+        method === "qris"
+          ? { orderHumanId: humanId, method: "qris" as const }
+          : { orderHumanId: humanId, method, channel };
       const res = await api<ChargeResult>("/payments/komerce/charge", { method: "POST", body });
 
-      if (method === "page") {
+      if (method !== "qris") {
         if (!res.redirectUrl) {
           setErr("Komerce tidak mengembalikan link pembayaran.");
           return;
@@ -120,7 +120,7 @@ export function KomercePayLauncher({
   return (
     <div className="flex items-center justify-center gap-2 py-6 text-sm text-fg-muted">
       <Spinner size={16} />
-      {method === "page" ? "Mengarahkan ke Payment Page Komerce…" : "Generate QRIS…"}
+      {method === "qris" ? "Generate QRIS…" : `Mengarahkan ke pembayaran${channel ? ` ${channel}` : ""}…`}
     </div>
   );
 }

@@ -75,12 +75,25 @@ export class KomercePaymentService {
       callback_url: req.notifyUrl,
     });
 
-    const res = await fetch(`${base}${path}`, {
-      method: "POST",
-      headers: { key, "Content-Type": "application/json" },
-      body,
-    });
-    const text = await res.text();
+    let res: Response;
+    let text: string;
+    try {
+      res = await fetch(`${base}${path}`, {
+        method: "POST",
+        headers: { key, "Content-Type": "application/json" },
+        body,
+      });
+      text = await res.text();
+    } catch (e) {
+      // Network-level failure (DNS, TCP, TLS, abort). Surface as HttpException
+      // with the upstream URL so we don't generic-internal-error in the UI.
+      const reason = e instanceof Error ? e.message : String(e);
+      this.log.error(`Komerce ${isQris ? "qrisly" : "payment"} fetch failed → ${base}${path}: ${reason}`);
+      throw new BadRequestException({
+        code: "payment_network_error",
+        message: `Tidak bisa hubungi Komerce (${reason}). Cek koneksi/endpoint.`,
+      });
+    }
     if (!res.ok) {
       this.log.warn(`Komerce ${isQris ? "qrisly" : "payment"} ${res.status}: ${text.slice(0, 240)}`);
       let msg = `Komerce HTTP ${res.status}`;

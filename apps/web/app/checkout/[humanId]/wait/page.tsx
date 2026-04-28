@@ -19,8 +19,16 @@ type OrderForWait = {
   buyer: { username: string };
 };
 
-export default async function CheckoutWaitPage({ params }: { params: Promise<{ humanId: string }> }) {
+export default async function CheckoutWaitPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ humanId: string }>;
+  searchParams: Promise<{ m?: string }>;
+}) {
   const { humanId } = await params;
+  const sp = await searchParams;
+  const method: "page" | "qris" = sp.m === "qris" ? "qris" : "page";
   const me = await getSessionUser();
   if (!me) redirect(`/masuk?next=${encodeURIComponent(`/checkout/${humanId}/wait`)}`);
 
@@ -67,7 +75,7 @@ export default async function CheckoutWaitPage({ params }: { params: Promise<{ h
           </div>
 
           <div className="p-5">
-            <KomercePayLauncher humanId={o.humanId} />
+            <KomercePayLauncher humanId={o.humanId} method={method} />
           </div>
         </Card>
 

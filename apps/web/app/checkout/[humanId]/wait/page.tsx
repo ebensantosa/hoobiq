@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@hoobiq/ui";
-import { PaymentSimulator } from "@/components/payment-simulator";
+import { KomercePayLauncher } from "@/components/komerce-pay-launcher";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -38,22 +38,17 @@ export default async function CheckoutWaitPage({ params }: { params: Promise<{ h
     );
   }
 
-  // If already paid, jump straight to the order detail.
   if (o.status !== "pending_payment") {
     redirect(`/pesanan/${encodeURIComponent(o.humanId)}`);
   }
-
-  // Stub VA for the dev simulator. Real flow: payment provider returns the
-  // VA number in createCharge() and it gets stored on the Payment row.
-  const vaNumber = o.payment?.vaNumber ?? simulatedVa(o.humanId);
 
   return (
     <AppShell active="Marketplace">
       <div className="mx-auto max-w-2xl px-6 pb-8 lg:px-10">
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">
-          Hoobiq Pay · Menunggu pembayaran
+          Hoobiq Pay · Pilih pembayaran
         </span>
-        <h1 className="mt-2 text-3xl font-bold text-fg">Selesaikan transfer.</h1>
+        <h1 className="mt-2 text-3xl font-bold text-fg">Selesaikan pembayaran.</h1>
         <p className="mt-2 text-sm text-fg-muted">
           Order ID <span className="font-mono text-fg">{o.humanId}</span>. Bayar
           dalam 24 jam atau pesanan otomatis dibatalkan.
@@ -72,51 +67,14 @@ export default async function CheckoutWaitPage({ params }: { params: Promise<{ h
           </div>
 
           <div className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-              BCA Virtual Account
-            </p>
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-rule bg-panel-2/50 px-4 py-3">
-              <span className="font-mono text-xl tabular-nums tracking-wider text-fg">{vaNumber}</span>
-              <CopyVaButton va={vaNumber} />
-            </div>
-            <p className="mt-3 text-xs text-fg-muted">
-              Total transfer: <span className="font-mono font-semibold text-fg">Rp {o.totalIdr.toLocaleString("id-ID")}</span> (transfer pas, tanpa pembulatan).
-            </p>
+            <KomercePayLauncher humanId={o.humanId} />
           </div>
         </Card>
-
-        <div className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
-          <p className="font-semibold">Mode dev — simulator pembayaran aktif.</p>
-          <p className="mt-1">
-            Tombol di bawah cuma di environment ini. Klik "Tandai sudah bayar" untuk men-simulasikan webhook payment masuk dan melanjutkan flow ke halaman pesanan.
-          </p>
-        </div>
-
-        <PaymentSimulator humanId={o.humanId} />
 
         <div className="mt-8 text-center text-xs text-fg-muted">
           Mau batal? <Link href="/marketplace" className="text-brand-500 hover:underline">Kembali ke marketplace</Link> — order otomatis dibatalkan kalau tidak dibayar dalam 24 jam.
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function simulatedVa(humanId: string): string {
-  // Deterministic stub VA derived from the order humanId so the displayed
-  // number stays the same across refreshes. Real provider issues a real VA.
-  const digits = humanId.replace(/\D/g, "").padStart(16, "0").slice(0, 16);
-  return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
-}
-
-function CopyVaButton({ va }: { va: string }) {
-  // Server component — render plain markup; the actual copy interaction
-  // lives in PaymentSimulator (client) where it has the toast. Keeping a
-  // visual hint here.
-  void va;
-  return (
-    <span aria-hidden className="ml-auto rounded-md border border-rule px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-fg-subtle">
-      copy ↓
-    </span>
   );
 }

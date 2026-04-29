@@ -250,8 +250,12 @@ export class OrdersService {
         },
       }),
     ]);
-    // TODO: trigger refund di payment provider (Midtrans). Untuk sandbox cukup
-    // tandai refundedAt — saldo dummy belum dipotong.
+    // Fire the actual refund at the payment provider. Failure here is
+    // logged but doesn't roll back the cancel — ops still has the
+    // refundedAt timestamp + provider tx id to manually reconcile if
+    // the provider's refund endpoint is flaky. Same shape used by
+    // returnComplete() and the scheduler's auto-cancel path.
+    await this.tryRefund(orderId, "cancel");
   }
 
   // ------------------------------------------------------------- return
@@ -401,6 +405,7 @@ export class OrdersService {
         data: { status: "refunded", refundedAt: now },
       }),
     ]);
+    await this.tryRefund(rr.orderId, "return");
   }
 
   /** Buyer fails to ship back within 5 days — return expires, transaction continues. */
@@ -438,6 +443,7 @@ export class OrdersService {
         shipmentDeadlineAt: null,
       },
     });
+    await this.tryRefund(orderId, "auto_cancel");
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
       await this.notify(o.buyerId, "order_auto_cancelled", "Pesanan dibatalkan otomatis", "Seller tidak mengirim dalam 7 hari. Dana direfund.", { humanId: o.humanId });
@@ -519,6 +525,9 @@ export class OrdersService {
     ]);
     await this.notify(d.buyerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null });
     await this.notify(d.sellerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null });
+    if (input.decision !== "release_seller") {
+      await this.tryRefund(d.orderId, "dispute");
+    }
     return { ok: true, decision: input.decision };
   }
 
@@ -527,6 +536,71 @@ export class OrdersService {
     await this.prisma.notification.create({
       data: { userId, kind, title, body, dataJson: JSON.stringify(data) },
     }).catch(() => { /* notif best-effort */ });
+  }
+
+  /**
+   * Best-effort refund at the payment provider. Pulls the saved
+   * provider tx id off the Payment row and calls
+   * paymentProvider.refund() with the order's total. Failures are
+   * logged + a refund_failed notification is sent so ops can manually
+   * reconcile — we never roll back the order's refunded state because
+   * the buyer-facing UX needs to show "refund initiated" as soon as
+   * the operational side has decided the order is over.
+   *
+   * `reason` is just a tag for the audit log so we know which path
+   * (cancel / return / auto / dispute) triggered the refund.
+   */
+  private async tryRefund(orderId: string, reason: "cancel" | "return" | "auto_cancel" | "dispute") {
+    const [order, payment] = await Promise.all([
+      this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: { id: true, humanId: true, totalCents: true, buyerId: true },
+      }),
+      this.prisma.payment.findUnique({
+        where: { orderId },
+        select: { providerTxId: true, provider: true },
+      }),
+    ]);
+    if (!order) return;
+    // Audit the refund attempt regardless of outcome.
+    await this.prisma.auditEntry.create({
+      data: {
+        actorId: null,
+        action: `order.refund.${reason}`,
+        targetRef: `order:${order.humanId}`,
+        metaJson: JSON.stringify({
+          orderId: order.id,
+          totalCents: String(order.totalCents),
+          provider: payment?.provider ?? "unknown",
+          providerTxId: payment?.providerTxId ?? null,
+        }),
+      },
+    }).catch(() => undefined);
+
+    if (!payment?.providerTxId) {
+      // Order was probably never charged (legacy / dev seed). Mark refund
+      // as completed without provider call.
+      return;
+    }
+    try {
+      await this.payment.refund(payment.providerTxId, BigInt(order.totalCents));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Notify ops via audit + buyer notification so the failure is
+      // visible. Buyer's order still shows refunded; operational side
+      // has to manually reconcile via the provider dashboard.
+      await this.prisma.auditEntry.create({
+        data: {
+          actorId: null,
+          action: `order.refund.failed`,
+          targetRef: `order:${order.humanId}`,
+          metaJson: JSON.stringify({ reason, error: msg, providerTxId: payment.providerTxId }),
+        },
+      }).catch(() => undefined);
+      await this.notify(order.buyerId, "refund_failed", "Refund tertunda",
+        "Refund kamu sedang diproses manual oleh tim Hoobiq. Mohon ditunggu.",
+        { humanId: order.humanId, reason });
+    }
   }
 }
 

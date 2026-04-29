@@ -1,13 +1,64 @@
 import Link from "next/link";
-import { Badge, Button, Card } from "@hoobiq/ui";
+import { notFound, redirect } from "next/navigation";
+import { Badge, Card } from "@hoobiq/ui";
 import { AppShell } from "@/components/app-shell";
+import { serverApi } from "@/lib/server/api";
+import { getSessionUser } from "@/lib/server/session";
 
 export const metadata = { title: "Pembayaran berhasil · Hoobiq" };
+export const dynamic = "force-dynamic";
 
-export default function CheckoutSuccessPage() {
+type OrderSnapshot = {
+  humanId: string;
+  status: string;
+  totalIdr: number;
+  payment: { method: string; provider: string; vaNumber: string | null; status: string } | null;
+};
+
+const PAYMENT_LABEL: Record<string, string> = {
+  bca: "BCA Virtual Account",
+  bni: "BNI Virtual Account",
+  mandiri: "Mandiri Virtual Account",
+  bri: "BRI Virtual Account",
+  qris: "QRIS",
+  ovo: "OVO",
+  dana: "DANA",
+  gopay: "GoPay",
+};
+
+/**
+ * Post-checkout landing page. Reads ?o=<humanId> (or ?humanId=<id>) and
+ * pulls the real order snapshot from the API. The previous incarnation
+ * had a hardcoded order ID and total — clearly visible to every buyer
+ * who actually completed checkout. This version refuses to render
+ * without a real, authenticated, owned order.
+ */
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ o?: string; humanId?: string }>;
+}) {
+  const me = await getSessionUser();
+  if (!me) redirect("/masuk");
+
+  const sp = await searchParams;
+  const humanId = (sp.o ?? sp.humanId ?? "").trim();
+  if (!humanId) {
+    // No order id — bounce them to /pesanan rather than render dummy data.
+    redirect("/pesanan");
+  }
+
+  const data = await serverApi<{ order: OrderSnapshot }>(`/orders/${encodeURIComponent(humanId)}`);
+  if (!data?.order) notFound();
+  const o = data.order;
+
+  const paymentLabel = o.payment
+    ? (PAYMENT_LABEL[o.payment.method?.toLowerCase()] ?? PAYMENT_LABEL[o.payment.provider?.toLowerCase()] ?? o.payment.method)
+    : "—";
+
   return (
     <AppShell active="Marketplace" withSidebar={false}>
-      <div className="mx-auto max-w-2xl px-6 py-16 md:py-24">
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 md:py-20">
         <div className="flex flex-col items-center text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-400/15 text-brand-400">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -25,15 +76,17 @@ export default function CheckoutSuccessPage() {
           <div className="divide-y divide-rule">
             <div className="flex items-center justify-between p-5">
               <span className="text-sm text-fg-muted">Nomor pesanan</span>
-              <span className="font-mono text-sm font-medium text-fg">HBQ-2026-04847291</span>
+              <span className="font-mono text-sm font-medium text-fg">{o.humanId}</span>
             </div>
             <div className="flex items-center justify-between p-5">
               <span className="text-sm text-fg-muted">Total dibayar</span>
-              <span className="text-lg font-bold text-fg">Rp 4.325.500</span>
+              <span className="text-base font-bold text-fg sm:text-lg">
+                Rp {o.totalIdr.toLocaleString("id-ID")}
+              </span>
             </div>
             <div className="flex items-center justify-between p-5">
               <span className="text-sm text-fg-muted">Metode pembayaran</span>
-              <span className="text-sm text-fg">BCA Virtual Account</span>
+              <span className="text-sm text-fg">{paymentLabel}</span>
             </div>
             <div className="flex items-center justify-between p-5">
               <span className="text-sm text-fg-muted">Status</span>
@@ -49,20 +102,20 @@ export default function CheckoutSuccessPage() {
           <ol className="mt-3 space-y-2 text-sm text-fg-muted">
             <li>1. Seller wajib kirim dalam 2×24 jam hari kerja.</li>
             <li>2. Kamu dapat resi otomatis — bisa tracking dari halaman pesanan.</li>
-            <li>3. Setelah barang sampai, klik "Konfirmasi diterima" atau auto-release 7 hari setelah <em>delivered</em>.</li>
+            <li>3. Setelah barang sampai, klik &quot;Konfirmasi diterima&quot; atau auto-release 7 hari setelah <em>delivered</em>.</li>
           </ol>
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/pesanan/HBQ-2026-04847291"
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-brand-400 px-6 text-sm font-semibold text-white hover:bg-brand-500"
+            href={`/pesanan/${encodeURIComponent(o.humanId)}`}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
           >
             Lihat detail pesanan
           </Link>
           <Link
             href="/marketplace"
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-rule px-6 text-sm font-medium text-fg hover:border-brand-400/60"
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-md border border-rule px-6 text-sm font-medium text-fg hover:border-brand-400/60"
           >
             Lanjut belanja
           </Link>

@@ -49,6 +49,7 @@ export class OrdersScheduler implements OnModuleInit, OnModuleDestroy {
         this.sweepReturnAutoApprove(),
         this.sweepReturnShipBackExpired(),
         this.sweepReturnAutoConfirm(),
+        this.sweepStalledPayment(),
       ]);
     } finally {
       this.running = false;
@@ -137,5 +138,46 @@ export class OrdersScheduler implements OnModuleInit, OnModuleDestroy {
       catch (e) { this.log.error(`completeReturn auto failed ${rr.id}: ${(e as Error).message}`); }
     }
     if (due.length) this.log.log(`Auto-confirmed ${due.length} returns`);
+  }
+
+  /**
+   * Orders stuck in pending_payment longer than 24 hours are auto-expired.
+   * Komerce / Midtrans VAs already expire on their side after 24h, so the
+   * order can never become paid past that window — leaving the row in
+   * pending_payment forever just clutters the buyer's /pesanan list and
+   * keeps stock reserved that we can never collect on.
+   *
+   * Pure DB transition (no provider call needed since the charge has
+   * already expired upstream). The audit row gives ops a clean record.
+   */
+  private async sweepStalledPayment() {
+    const cutoff = new Date(Date.now() - 24 * 3600 * 1000);
+    const due = await this.prisma.order.findMany({
+      where: { status: "pending_payment", createdAt: { lte: cutoff } },
+      select: { id: true, humanId: true, buyerId: true },
+      take: 200,
+    });
+    for (const o of due) {
+      try {
+        const now = new Date();
+        await this.prisma.$transaction([
+          this.prisma.order.update({
+            where: { id: o.id },
+            data: { status: "expired", cancelledAt: now },
+          }),
+          this.prisma.auditEntry.create({
+            data: {
+              actorId: null,
+              action: "order.payment_expired",
+              targetRef: `order:${o.humanId}`,
+              metaJson: JSON.stringify({ reason: "no_payment_24h" }),
+            },
+          }),
+        ]);
+      } catch (e) {
+        this.log.error(`sweepStalledPayment failed ${o.humanId}: ${(e as Error).message}`);
+      }
+    }
+    if (due.length) this.log.log(`Expired ${due.length} unpaid orders past the 24h window`);
   }
 }

@@ -1,14 +1,18 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { z } from "zod";
 import type { SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { encryptScalar } from "./encryption";
 
 /**
- * Bank accounts for payout. Numbers are stored encrypted at rest (the
- * `numberEnc` column simulates AES-256 — for MVP we just prefix with `enc:`).
- * Only the last 4 digits are returned over the wire.
+ * Bank accounts for payout. Numbers are encrypted at rest with
+ * AES-256-GCM (see ./encryption.ts) keyed off env.BANK_ENCRYPTION_KEY.
+ * The wire response only carries last-4 + holder name + verified flag;
+ * the full number never leaves the database except for the ops-side
+ * payout flow that explicitly decrypts it.
  */
 const BankInput = z.object({
   bank: z.enum(["BCA", "Mandiri", "BNI", "BRI", "CIMB", "Permata", "BSI"]),
@@ -36,6 +40,7 @@ export class BanksController {
   }
 
   @Post()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(201)
   async create(@CurrentUser() user: SessionUser, @Body(new ZodPipe(BankInput)) body: BankInput) {
     if (body.primary) {
@@ -48,7 +53,7 @@ export class BanksController {
       data: {
         userId: user.id,
         bank: body.bank,
-        numberEnc: `enc:${body.number}`, // TODO: real AES-256 in prod
+        numberEnc: encryptScalar(body.number),
         numberLast4: body.number.slice(-4),
         holderName: body.holderName,
         primary: body.primary,
@@ -80,7 +85,7 @@ export class BanksController {
     }
     const data: Record<string, unknown> = { ...body };
     if (body.number) {
-      data.numberEnc = `enc:${body.number}`;
+      data.numberEnc = encryptScalar(body.number);
       data.numberLast4 = body.number.slice(-4);
       delete data.number;
     }

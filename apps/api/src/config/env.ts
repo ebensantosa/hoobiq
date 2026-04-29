@@ -57,6 +57,11 @@ const schema = z.object({
   // CDN or reverse-proxy URL.
   PUBLIC_API_BASE: z.string().url().optional(),
 
+  // At-rest encryption KEK for sensitive scalars (bank account numbers).
+  // SHA-256 hashed before use, so any string ≥ 32 chars works. Falls
+  // back to SESSION_SECRET in dev — set explicitly in prod.
+  BANK_ENCRYPTION_KEY: z.string().min(32).optional(),
+
   // Public base URL of the web app — used to build the `return_url` we
   // hand to Komerce so the buyer auto-bounces back to /pesanan/:id after
   // paying on the hosted Payment Page.

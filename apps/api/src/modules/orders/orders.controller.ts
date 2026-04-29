@@ -3,6 +3,7 @@ import {
   Body, Controller, ForbiddenException, Get, HttpCode,
   NotFoundException, Param, Post, Query,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import {
   CheckoutInput,
   ShipOrderInput,
@@ -27,7 +28,12 @@ export class OrdersController {
     private readonly prisma: PrismaService
   ) {}
 
+  // Throttle the heavy mutation endpoints. Per-user/IP caps stop a
+  // compromised session from spamming orders or dispute storms before
+  // ops notices. The numbers are deliberately generous for organic use
+  // (5 checkouts / minute is a power buyer; everything else is rare).
   @Post("checkout")
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(201)
   checkout(@CurrentUser() user: SessionUser, @Body(new ZodPipe(CheckoutInput)) body: CheckoutInput) {
     return this.orders.checkout(user.id, body);
@@ -200,6 +206,7 @@ export class OrdersController {
 
   // -------------------------------------- cancel ----------------------
   @Post(":humanId/cancel-request")
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @HttpCode(201)
   requestCancel(
     @CurrentUser() user: SessionUser,
@@ -221,6 +228,7 @@ export class OrdersController {
 
   // -------------------------------------- return ----------------------
   @Post(":humanId/return-request")
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @HttpCode(201)
   requestReturn(
     @CurrentUser() user: SessionUser,
@@ -258,6 +266,7 @@ export class OrdersController {
 
   // -------------------------------------- dispute ----------------------
   @Post(":humanId/dispute")
+  @Throttle({ default: { ttl: 60_000, limit: 2 } })
   @HttpCode(201)
   openDispute(
     @CurrentUser() user: SessionUser,

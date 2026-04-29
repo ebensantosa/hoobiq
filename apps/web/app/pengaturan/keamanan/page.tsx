@@ -64,7 +64,7 @@ export default function KeamananPage() {
                   </p>
                 </div>
                 {!s.current && (
-                  <button className="text-xs text-crim-400 hover:underline">Logout</button>
+                  <button className="text-xs text-crim-400">Logout</button>
                 )}
               </div>
             </Card>
@@ -81,8 +81,8 @@ export default function KeamananPage() {
         <p className="mt-1 text-sm text-fg-muted">
           Data profil dihapus permanen setelah 30 hari. Transaksi yang belum selesai wajib diselesaikan dulu.
         </p>
-        <button className="mt-4 text-sm font-medium text-crim-400 hover:underline">
-          Ajukan penutupan akun →
+        <button className="mt-4 text-sm font-medium text-crim-400">
+          Ajukan penutupan akun
         </button>
       </div>
     </section>

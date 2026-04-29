@@ -92,11 +92,11 @@ export default function TentangPage() {
               <Para>
                 Posisi kami terhadap data pengguna, ekstraksi nilai dari komunitas, dan
                 desain yang manipulatif sudah ditulis lengkap di{" "}
-                <a className="text-brand-400 hover:underline" href="/privasi">
+                <a className="text-brand-400" href="/privasi">
                   Kebijakan Privasi
                 </a>{" "}
                 dan{" "}
-                <a className="text-brand-400 hover:underline" href="/ketentuan">
+                <a className="text-brand-400" href="/ketentuan">
                   Ketentuan Layanan
                 </a>
                 .
@@ -111,10 +111,10 @@ export default function TentangPage() {
             <>
               <Bullets
                 items={[
-                  <>Email umum: <a className="text-brand-400 hover:underline" href="mailto:halo@hoobiq.id">halo@hoobiq.id</a></>,
-                  <>Dukungan pengguna: <a className="text-brand-400 hover:underline" href="mailto:bantuan@hoobiq.id">bantuan@hoobiq.id</a></>,
-                  <>Laporan penyalahgunaan & penipuan: <a className="text-brand-400 hover:underline" href="mailto:trust@hoobiq.id">trust@hoobiq.id</a></>,
-                  <>Press / kerjasama: <a className="text-brand-400 hover:underline" href="mailto:press@hoobiq.id">press@hoobiq.id</a></>,
+                  <>Email umum: <a className="text-brand-400" href="mailto:halo@hoobiq.id">halo@hoobiq.id</a></>,
+                  <>Dukungan pengguna: <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">bantuan@hoobiq.id</a></>,
+                  <>Laporan penyalahgunaan & penipuan: <a className="text-brand-400" href="mailto:trust@hoobiq.id">trust@hoobiq.id</a></>,
+                  <>Press / kerjasama: <a className="text-brand-400" href="mailto:press@hoobiq.id">press@hoobiq.id</a></>,
                 ]}
               />
               <Para>

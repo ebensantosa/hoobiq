@@ -52,25 +52,19 @@ export function FloorTicker({ initial }: { initial: FloorPill[] }) {
     <div
       role="region"
       aria-label="Floor price ticker"
-      className="
-        sticky top-20 z-30 border-b border-rule
-        bg-canvas/80 backdrop-blur-md
-      "
+      className=" sticky top-20 z-30 border-b border-rule
+        bg-canvas/80 backdrop-blur-md"
     >
       <div
-        className="
-          mx-auto flex max-w-[1440px] items-stretch gap-1.5 overflow-x-auto
+        className=" mx-auto flex max-w-[1440px] items-stretch gap-1.5 overflow-x-auto
           px-3 py-2 lg:px-6
           [scrollbar-width:none] [-ms-overflow-style:none]
-          [&::-webkit-scrollbar]:hidden
-        "
+          [&::-webkit-scrollbar]:hidden"
       >
         <span
-          className="
-            sticky left-0 grid shrink-0 place-items-center
+          className=" sticky left-0 grid shrink-0 place-items-center
             rounded-lg bg-fg/[0.04] px-2.5 font-mono text-[10px] font-bold
-            uppercase tracking-[0.18em] text-fg-subtle
-          "
+            uppercase tracking-[0.18em] text-fg-subtle"
           aria-hidden
         >
           Floor

@@ -31,7 +31,7 @@ const sections: Section[] = [
             Di halaman login, klik "Lupa password?". Kami kirim tautan reset ke
             email kamu yang masa berlakunya 30 menit. Kalau email tidak masuk,
             cek folder spam atau kontak{" "}
-            <a className="text-brand-400 hover:underline" href="mailto:bantuan@hoobiq.id">
+            <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">
               bantuan@hoobiq.id
             </a>
             .
@@ -108,7 +108,7 @@ const sections: Section[] = [
             Barang bajakan, bootleg tanpa label jelas, barang curian, benda
             terlarang (narkotika, senjata, satwa dilindungi), dan akun digital
             yang dilarang di ToS platform asalnya. Daftar lengkap ada di{" "}
-            <Link href="/ketentuan#listing" className="text-brand-400 hover:underline">
+            <Link href="/ketentuan#listing" className="text-brand-400">
               Ketentuan Layanan bagian 2
             </Link>
             .
@@ -130,7 +130,7 @@ const sections: Section[] = [
             dengan kondisi sesuai deskripsi. Transfer langsung ke seller tidak
             kami dukung dan kamu kehilangan semua perlindungan kalau terjadi
             masalah. Seller yang memaksa transfer langsung bisa dilaporkan ke{" "}
-            <a className="text-brand-400 hover:underline" href="mailto:trust@hoobiq.id">
+            <a className="text-brand-400" href="mailto:trust@hoobiq.id">
               trust@hoobiq.id
             </a>
             .
@@ -305,7 +305,7 @@ export default function BantuanPage() {
             </h1>
             <p className="mt-4 max-w-xl text-base text-fg-muted md:text-lg">
               Cari di bawah, atau kontak tim bantuan di{" "}
-              <a className="text-brand-400 hover:underline" href="mailto:bantuan@hoobiq.id">
+              <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">
                 bantuan@hoobiq.id
               </a>
               . Rata-rata respon &lt; 6 jam di hari kerja.

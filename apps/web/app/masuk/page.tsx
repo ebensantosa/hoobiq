@@ -60,7 +60,7 @@ function LoginPageInner() {
       <h1 className="text-3xl font-bold text-fg md:text-4xl">Masuk.</h1>
       <p className="mt-2 text-sm text-fg-muted">
         Belum punya akun?{" "}
-        <Link href="/daftar" className="font-medium text-brand-400 hover:underline">Daftar gratis</Link>
+        <Link href="/daftar" className="font-medium text-brand-400">Daftar gratis</Link>
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">

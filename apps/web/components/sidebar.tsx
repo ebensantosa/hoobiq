@@ -87,7 +87,7 @@ export async function Sidebar() {
             ))}
           </ul>
         )}
-        {/* Proper button rather than the cramped "SEMUA →" header pill —
+        {/* Proper button rather than the cramped "SEMUA" header pill —
             sits below the list so the eye flows top-to-bottom and the
             visual weight matches a real CTA. */}
         <a

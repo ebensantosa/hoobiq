@@ -144,7 +144,7 @@ export function SettingsForm({ initial, defaults }: Props) {
                     <button
                       type="button"
                       onClick={() => setState({ ...state, copy: { ...state.copy, [key]: defaults[key] } })}
-                      className="text-[11px] text-brand-400 hover:underline"
+                      className="text-[11px] text-brand-400"
                     >
                       Reset ke default
                     </button>
@@ -203,7 +203,7 @@ function LogoPicker({
         <button
           type="button"
           onClick={() => ref.current?.click()}
-          className="text-xs font-semibold text-brand-400 hover:underline"
+          className="text-xs font-semibold text-brand-400"
         >
           {url ? "Ganti…" : "Upload…"}
         </button>

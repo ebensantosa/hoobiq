@@ -29,7 +29,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <AdminShell active="Pengguna">
         <div className="px-8 py-12 text-center">
           <p className="text-sm text-fg-muted">User @{username} tidak ditemukan.</p>
-          <Link href="/admin-panel/pengguna" className="mt-4 inline-block text-sm text-brand-400 hover:underline">
+          <Link href="/admin-panel/pengguna" className="mt-4 inline-block text-sm text-brand-400">
             ← Kembali ke daftar pengguna
           </Link>
         </div>
@@ -93,7 +93,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
             <Card className="border-rule">
               <div className="p-5 text-xs text-fg-muted">
-                Aksi (suspend/role/hapus) ada di kolom <Link href="/admin-panel/pengguna" className="text-brand-400 hover:underline">daftar pengguna</Link>.
+                Aksi (suspend/role/hapus) ada di kolom <Link href="/admin-panel/pengguna" className="text-brand-400">daftar pengguna</Link>.
                 Detail risk signal (dispute rate, multi-akun, IP) belum di-track — akan muncul setelah modul fraud detection di-wire.
               </div>
             </Card>
@@ -102,7 +102,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <section>
             <h2 className="text-xl font-semibold text-fg">Riwayat tindakan admin</h2>
             <p className="mt-1 text-sm text-fg-muted">
-              Lihat di <Link href={`/admin-panel/audit`} className="text-brand-400 hover:underline">audit log</Link> dan filter berdasarkan target <code className="font-mono">user:{u.id}</code>.
+              Lihat di <Link href={`/admin-panel/audit`} className="text-brand-400">audit log</Link> dan filter berdasarkan target <code className="font-mono">user:{u.id}</code>.
             </p>
           </section>
         </div>

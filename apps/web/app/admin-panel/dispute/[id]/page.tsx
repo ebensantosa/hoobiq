@@ -138,8 +138,8 @@ export default async function AdminDisputeDetailPage({ params }: { params: Promi
                   <Kv k="Kurir" v="SiCepat REG" />
                   <Kv k="Status dana" v={<Badge tone="mint" size="xs">Di escrow</Badge>} />
                 </dl>
-                <Link href="/pesanan/HBQ-2026-04845120" className="mt-4 inline-block text-xs text-brand-400 hover:underline">
-                  Buka halaman pesanan →
+                <Link href="/pesanan/HBQ-2026-04845120" className="mt-4 inline-block text-xs text-brand-400">
+                  Buka halaman pesanan
                 </Link>
               </div>
             </Card>
@@ -203,8 +203,8 @@ function Party({ user, role, trust, flagged }: { user: string; role: string; tru
           {role} · Trust {trust}
         </p>
       </div>
-      <Link href={`/admin/pengguna/${user}`} className="text-xs text-brand-400 hover:underline">
-        Profil →
+      <Link href={`/admin/pengguna/${user}`} className="text-xs text-brand-400">
+        Profil
       </Link>
     </div>
   );

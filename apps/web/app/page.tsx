@@ -226,13 +226,13 @@ function LatestStrip({ items }: { items: ListingSummary[] }) {
             <span className="text-fg-subtle">langsung dari seller</span>
           </div>
           <Link href="/marketplace" className="hidden text-sm text-fg-muted hover:text-fg md:inline">
-            Semua listing →
+            Semua listing
           </Link>
         </div>
 
         {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-rule bg-panel/30 px-6 py-8 text-center text-sm text-fg-muted">
-            Belum ada listing aktif. <Link href="/daftar" className="text-brand-400 hover:underline">Daftar gratis</Link> untuk mulai jualan.
+            Belum ada listing aktif. <Link href="/daftar" className="text-brand-400">Daftar gratis</Link> untuk mulai jualan.
           </div>
         ) : (
           <div className="mask-fade-x relative overflow-hidden">
@@ -357,7 +357,7 @@ function CategoryStrip({ cats }: { cats: Category[] }) {
               <p className="truncate text-sm font-semibold text-fg">{c.name}</p>
               <p className="mt-0.5 text-xs text-fg-subtle">{c.listingCount.toLocaleString("id-ID")} listing</p>
             </div>
-            <span className="text-fg-subtle transition-colors group-hover:text-brand-400">→</span>
+            <span className="text-fg-subtle transition-colors group-hover:text-brand-400"></span>
           </Link>
         ))}
       </div>
@@ -380,9 +380,9 @@ function Trending({ items }: { items: ListingSummary[] }) {
         </div>
         <Link
           href="/marketplace"
-          className="hidden text-sm font-medium text-brand-400 hover:underline md:inline"
+          className="hidden text-sm font-medium text-brand-400 md:inline"
         >
-          Lihat semua →
+          Lihat semua
         </Link>
       </div>
 
@@ -401,8 +401,8 @@ function Trending({ items }: { items: ListingSummary[] }) {
       )}
 
       <div className="mt-6 text-center md:hidden">
-        <Link href="/marketplace" className="text-sm font-medium text-brand-400 hover:underline">
-          Lihat semua →
+        <Link href="/marketplace" className="text-sm font-medium text-brand-400">
+          Lihat semua
         </Link>
       </div>
     </section>

@@ -150,7 +150,7 @@ export default async function CategoryPage({
               href={`/marketplace?cat=${encodeURIComponent(slug)}`}
               className="inline-flex items-center gap-1.5 rounded-xl border border-rule bg-panel px-5 py-2.5 text-sm font-semibold text-fg transition-colors hover:border-brand-400/50 hover:text-brand-500"
             >
-              Atau lihat semua {node.name} di marketplace →
+              Atau lihat semua {node.name} di marketplace
             </Link>
           </div>
         </div>
@@ -227,7 +227,7 @@ export default async function CategoryPage({
             <p className="text-base font-medium text-fg">Belum ada listing di kategori ini.</p>
             <p className="mt-1 text-sm text-fg-muted">
               Jadi yang pertama!{" "}
-              <Link href="/upload" className="text-brand-500 hover:underline">Pasang listing</Link>.
+              <Link href="/upload" className="text-brand-500">Pasang listing</Link>.
             </p>
           </div>
         ) : (
@@ -244,7 +244,7 @@ export default async function CategoryPage({
               href={`/marketplace?cat=${encodeURIComponent(slug)}${condition ? `&condition=${condition}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}`}
               className="inline-flex items-center gap-1.5 rounded-xl border border-rule bg-panel px-5 py-2.5 text-sm font-semibold text-fg transition-colors hover:border-brand-400/50 hover:text-brand-500"
             >
-              Lihat semua di marketplace →
+              Lihat semua di marketplace
             </Link>
           </div>
         )}

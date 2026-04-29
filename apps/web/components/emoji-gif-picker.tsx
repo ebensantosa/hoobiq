@@ -257,9 +257,9 @@ function GifTab({ onPick }: { onPick: (url: string) => void }) {
           href="https://developers.google.com/tenor/guides/quickstart"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-block text-xs font-semibold text-brand-500 hover:underline"
+          className="mt-3 inline-block text-xs font-semibold text-brand-500"
         >
-          Cara dapat API key gratis →
+          Cara dapat API key gratis
         </a>
       </div>
     );

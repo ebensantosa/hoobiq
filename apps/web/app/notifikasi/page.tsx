@@ -32,8 +32,8 @@ export default async function NotifikasiPage() {
                 : "Semua notifikasi sudah dibaca"}
             </p>
           </div>
-          <Link href="/pengaturan/notifikasi" className="text-sm text-brand-400 hover:underline">
-            Preferensi →
+          <Link href="/pengaturan/notifikasi" className="text-sm text-brand-400">
+            Preferensi
           </Link>
         </header>
 

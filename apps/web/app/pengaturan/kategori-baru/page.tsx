@@ -87,7 +87,7 @@ export default async function KategoriBaruPage() {
                     <p className="mt-2 font-semibold text-fg">{r.name}</p>
                     <p className="text-xs text-fg-muted">
                       Diajukan di bawah {" "}
-                      <Link href={`/kategori/${r.parent.slug}`} className="text-brand-500 hover:underline">
+                      <Link href={`/kategori/${r.parent.slug}`} className="text-brand-500">
                         {r.parent.name}
                       </Link>
                     </p>

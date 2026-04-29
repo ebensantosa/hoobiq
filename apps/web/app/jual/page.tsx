@@ -58,7 +58,7 @@ export default async function SellerDashboardPage() {
             <h1 className="text-3xl font-bold text-fg">Jual · Dashboard</h1>
             <p className="mt-2 text-sm text-fg-muted">
               Kelola listing kamu, cek pesanan masuk, tarik saldo. Butuh bantuan?{" "}
-              <Link href="/bantuan#jual" className="text-brand-400 hover:underline">Panduan seller</Link>.
+              <Link href="/bantuan#jual" className="text-brand-400">Panduan seller</Link>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -93,9 +93,9 @@ export default async function SellerDashboardPage() {
             {myListings.length > 0 && (
               <Link
                 href={`/u/${encodeURIComponent(me.username)}`}
-                className="text-xs font-semibold text-brand-500 hover:underline"
+                className="text-xs font-semibold text-brand-500"
               >
-                Lihat dari sudut pembeli →
+                Lihat dari sudut pembeli
               </Link>
             )}
           </div>
@@ -147,7 +147,7 @@ export default async function SellerDashboardPage() {
                       {o.humanId} · {o.courier.toUpperCase()} · Rp {o.totalIdr.toLocaleString("id-ID")}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-brand-500">→</span>
+                  <span className="text-xs font-semibold text-brand-500"></span>
                 </Link>
               ))}
             </div>

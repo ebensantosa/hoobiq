@@ -44,7 +44,7 @@ export default async function PesananPage() {
           <h1 className="text-3xl font-bold text-fg">Pesanan saya</h1>
           <p className="mt-2 text-sm text-fg-muted">
             Semua transaksi sebagai pembeli. Untuk dashboard seller, buka{" "}
-            <Link href="/jual" className="text-brand-400 hover:underline">halaman Jual</Link>.
+            <Link href="/jual" className="text-brand-400">halaman Jual</Link>.
           </p>
         </header>
 
@@ -52,7 +52,7 @@ export default async function PesananPage() {
           <div className="mt-10 rounded-xl border border-rule bg-panel/40 p-10 text-center">
             <p className="text-fg-muted">
               Belum ada pesanan.{" "}
-              <Link href="/marketplace" className="text-brand-400 hover:underline">Mulai belanja →</Link>
+              <Link href="/marketplace" className="text-brand-400">Mulai belanja</Link>
             </p>
           </div>
         ) : (
@@ -86,7 +86,7 @@ export default async function PesananPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-fg">Rp {o.totalIdr.toLocaleString("id-ID")}</p>
-                      <span className="text-xs text-brand-400">Detail →</span>
+                      <span className="text-xs text-brand-400">Detail</span>
                     </div>
                   </div>
                 </Link>

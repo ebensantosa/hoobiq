@@ -228,11 +228,9 @@ function Tooltip({
       {open && (
         <span
           role="tooltip"
-          className="
-            pointer-events-none absolute left-1/2 top-full z-40 mt-2 w-max max-w-[220px]
+          className=" pointer-events-none absolute left-1/2 top-full z-40 mt-2 w-max max-w-[220px]
             -translate-x-1/2 rounded-lg bg-fg px-3 py-2 text-left text-xs
-            text-canvas shadow-[0_12px_32px_-8px_rgba(0,0,0,0.4)]
-          "
+            text-canvas shadow-[0_12px_32px_-8px_rgba(0,0,0,0.4)]"
         >
           <span aria-hidden className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-fg" />
           <span className="block font-semibold">{title}</span>

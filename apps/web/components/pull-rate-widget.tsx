@@ -50,19 +50,15 @@ export function PullRateWidget({
 
   return (
     <div
-      className="
-        relative mx-5 my-3 overflow-hidden rounded-2xl border border-brand-200/70
+      className=" relative mx-5 my-3 overflow-hidden rounded-2xl border border-brand-200/70
         bg-gradient-to-br from-brand-50 via-white to-flame-50
-        p-4 dark:border-brand-500/30 dark:from-brand-500/10 dark:via-panel dark:to-flame-500/10
-      "
+        p-4 dark:border-brand-500/30 dark:from-brand-500/10 dark:via-panel dark:to-flame-500/10"
     >
       {/* decorative blob */}
       <span
         aria-hidden
-        className="
-          pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full
-          bg-brand-300/30 blur-2xl dark:bg-brand-500/20
-        "
+        className=" pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full
+          bg-brand-300/30 blur-2xl dark:bg-brand-500/20"
       />
 
       <div className="relative flex items-start justify-between gap-3">
@@ -98,18 +94,14 @@ export function PullRateWidget({
       {/* Bar */}
       <div className="relative mt-4">
         <div
-          className="
-            relative h-2.5 overflow-hidden rounded-full
-            bg-brand-100/80 dark:bg-white/10
-          "
+          className=" relative h-2.5 overflow-hidden rounded-full
+            bg-brand-100/80 dark:bg-white/10"
         >
           <div
-            className="
-              h-full rounded-full
+            className=" h-full rounded-full
               bg-gradient-to-r from-brand-400 via-flame-400 to-brand-500
               shadow-[0_0_12px_rgba(231,85,159,0.55)]
-              transition-[width] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]
-            "
+              transition-[width] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{ width: `${filled * 100}%` }}
           />
         </div>

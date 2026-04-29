@@ -178,7 +178,7 @@ export default async function FeedsPage({
                     {rawQ
                       ? "Coba kata kunci lain, atau ganti filter."
                       : <>Jadi yang pertama nge-post! Atau lihat{" "}
-                          <Link href="/marketplace" className="text-brand-500 hover:underline">marketplace</Link> dulu.</>}
+                          <Link href="/marketplace" className="text-brand-500">marketplace</Link> dulu.</>}
                   </p>
                 </div>
               );

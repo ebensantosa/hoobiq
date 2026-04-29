@@ -237,7 +237,7 @@ export function CheckoutForm({
         <Section
           title="Alamat pengiriman"
           action={
-            <Link href="/pengaturan/alamat" className="text-xs text-brand-500 hover:underline">
+            <Link href="/pengaturan/alamat" className="text-xs text-brand-500">
               Kelola alamat
             </Link>
           }
@@ -426,7 +426,7 @@ export function CheckoutForm({
             </Button>
             <p className="mt-3 text-center text-xs text-fg-subtle">
               Dengan klik bayar, kamu setuju dengan{" "}
-              <Link href="/syarat" className="text-brand-400 hover:underline">Ketentuan Transaksi</Link>.
+              <Link href="/syarat" className="text-brand-400">Ketentuan Transaksi</Link>.
             </p>
           </div>
         </Card>

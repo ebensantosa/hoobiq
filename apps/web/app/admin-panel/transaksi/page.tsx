@@ -58,7 +58,7 @@ export default async function AdminTxPage() {
               <div key={t.id} className={"grid grid-cols-[160px_2fr_1fr_1fr_120px] items-center gap-4 px-5 py-3 text-sm " + (i < items.length - 1 ? "border-b border-rule/60" : "")}>
                 <span className="truncate font-mono text-xs text-fg-subtle">{t.humanId}</span>
                 <p className="truncate text-fg">{t.item}</p>
-                <p className="truncate text-xs text-fg-muted">@{t.buyer} → <span className="text-fg">@{t.seller}</span></p>
+                <p className="truncate text-xs text-fg-muted">@{t.buyer} <span className="text-fg">@{t.seller}</span></p>
                 <span><Badge tone={statusTone[t.status] ?? "ghost"} size="xs">{t.status.replace("_", " ")}</Badge></span>
                 <span className="text-right font-mono font-medium text-fg">Rp {t.totalIdr.toLocaleString("id-ID")}</span>
               </div>

@@ -62,11 +62,9 @@ export function HaulReel({ items }: { items: HaulItem[] }) {
         </div>
 
         <div
-          className="
-            flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-3 lg:px-10
+          className=" flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-3 lg:px-10
             [scrollbar-width:none] [-ms-overflow-style:none]
-            [&::-webkit-scrollbar]:hidden
-          "
+            [&::-webkit-scrollbar]:hidden"
         >
           {items.map((it, i) => (
             <ReelThumb key={it.id} item={it} onOpen={() => setOpenIdx(i)} />
@@ -94,20 +92,16 @@ function ReelThumb({ item, onOpen }: { item: HaulItem; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="
-        group relative flex shrink-0 snap-start flex-col items-center gap-1.5
-        focus:outline-none
-      "
+      className=" group relative flex shrink-0 snap-start flex-col items-center gap-1.5
+        focus:outline-none"
     >
       {/* Animated gradient ring — uses padding trick so inner avatar stays a perfect circle */}
       <span
-        className="
-          relative grid h-[68px] w-[68px] place-items-center rounded-full p-[3px]
+        className=" relative grid h-[68px] w-[68px] place-items-center rounded-full p-[3px]
           bg-[conic-gradient(from_var(--ring-angle,0deg),#E7559F_0%,#FAA74A_25%,#6B61AB_55%,#E7559F_100%)]
           transition-transform duration-200 group-hover:scale-105 group-active:scale-95
           shadow-[0_4px_16px_-4px_rgba(231,85,159,0.55)]
-          [animation:reel-ring_4s_linear_infinite]
-        "
+          [animation:reel-ring_4s_linear_infinite]"
       >
         <span className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-canvas">
           {item.posterUrl ? (
@@ -127,13 +121,11 @@ function ReelThumb({ item, onOpen }: { item: HaulItem; onOpen: () => void }) {
 
         {item.live && (
           <span
-            className="
-              absolute -bottom-1 left-1/2 -translate-x-1/2
+            className=" absolute -bottom-1 left-1/2 -translate-x-1/2
               rounded-md bg-flame-500 px-1.5 py-0.5
               text-[9px] font-extrabold uppercase tracking-widest text-white
               shadow-[0_2px_6px_rgba(231,85,159,0.6)]
-              [animation:reel-pulse_1.4s_ease-in-out_infinite]
-            "
+              [animation:reel-pulse_1.4s_ease-in-out_infinite]"
           >
             ● Live
           </span>
@@ -301,11 +293,9 @@ function ReelPlayer({
 
       {/* Frame */}
       <div
-        className="
-          relative flex h-[100dvh] max-h-[100dvh] w-full max-w-[420px] flex-col
+        className=" relative flex h-[100dvh] max-h-[100dvh] w-full max-w-[420px] flex-col
           overflow-hidden bg-black
-          md:h-[92vh] md:rounded-3xl md:shadow-[0_30px_120px_-20px_rgba(231,85,159,0.5)]
-        "
+          md:h-[92vh] md:rounded-3xl md:shadow-[0_30px_120px_-20px_rgba(231,85,159,0.5)]"
       >
         {/* Progress bars */}
         <div className="absolute inset-x-3 top-3 z-20 flex gap-1">
@@ -434,12 +424,10 @@ function ReelPlayer({
                 type="button"
                 onClick={() => fireReaction(r.emoji)}
                 aria-label={r.label}
-                className="
-                  grid h-11 w-11 place-items-center rounded-full
+                className=" grid h-11 w-11 place-items-center rounded-full
                   bg-white/10 text-2xl backdrop-blur-md
                   transition-transform duration-150 hover:scale-110 active:scale-95
-                  hover:bg-white/20
-                "
+                  hover:bg-white/20"
               >
                 {r.emoji}
               </button>
@@ -449,14 +437,12 @@ function ReelPlayer({
           {item.listing ? (
             <Link
               href={`/listing/${item.listing.slug}`}
-              className="
-                flex items-center justify-between gap-3 rounded-2xl
+              className=" flex items-center justify-between gap-3 rounded-2xl
                 bg-gradient-to-r from-brand-500 via-flame-500 to-brand-500
                 bg-[length:200%_100%] px-4 py-3
                 font-semibold text-white shadow-[0_8px_24px_-6px_rgba(231,85,159,0.8)]
                 [animation:reel-shimmer_3s_linear_infinite]
-                hover:opacity-95
-              "
+                hover:opacity-95"
             >
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-white/85">
@@ -474,11 +460,9 @@ function ReelPlayer({
           ) : (
             <Link
               href={`/u/${item.seller.username}`}
-              className="
-                flex items-center justify-center gap-2 rounded-2xl
+              className=" flex items-center justify-center gap-2 rounded-2xl
                 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur-md
-                hover:bg-white/20
-              "
+                hover:bg-white/20"
             >
               Lihat profil {item.seller.name ?? item.seller.username}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

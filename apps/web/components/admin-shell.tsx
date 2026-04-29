@@ -184,7 +184,7 @@ function AdminSidebar({
       <div className="mt-auto rounded-xl border border-rule bg-panel p-4">
         <p className="text-xs text-fg-muted">
           Semua tindakan di panel ini masuk ke{" "}
-          <Link href="/admin-panel/audit" className="text-brand-400 hover:underline">
+          <Link href="/admin-panel/audit" className="text-brand-400">
             audit log
           </Link>
           .

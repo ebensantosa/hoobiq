@@ -135,7 +135,7 @@ export function NotificationsBell() {
               <button
                 type="button"
                 onClick={markAll}
-                className="text-xs font-semibold text-brand-500 hover:underline"
+                className="text-xs font-semibold text-brand-500"
               >
                 Tandai semua
               </button>
@@ -186,9 +186,9 @@ export function NotificationsBell() {
             <Link
               href="/notifikasi"
               onClick={() => setOpen(false)}
-              className="text-xs font-semibold text-brand-500 hover:underline"
+              className="text-xs font-semibold text-brand-500"
             >
-              Lihat semua →
+              Lihat semua
             </Link>
           </div>
         </div>

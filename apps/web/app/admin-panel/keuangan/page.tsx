@@ -39,10 +39,10 @@ export default async function AdminKeuanganPage() {
           <div className="p-5 text-sm">
             <p className="font-medium text-fg">Akses cepat</p>
             <ul className="mt-3 space-y-1.5 text-fg-muted">
-              <li>· <Link href="/admin-panel/audit" className="text-brand-400 hover:underline">Audit transaksi finansial</Link></li>
-              <li>· <Link href="/admin-panel/webhook" className="text-brand-400 hover:underline">Log webhook Midtrans</Link></li>
-              <li>· <Link href="/admin-panel/payout" className="text-brand-400 hover:underline">Antrian payout</Link></li>
-              <li>· <Link href="/admin-panel/transaksi" className="text-brand-400 hover:underline">Riwayat transaksi</Link></li>
+              <li>· <Link href="/admin-panel/audit" className="text-brand-400">Audit transaksi finansial</Link></li>
+              <li>· <Link href="/admin-panel/webhook" className="text-brand-400">Log webhook Midtrans</Link></li>
+              <li>· <Link href="/admin-panel/payout" className="text-brand-400">Antrian payout</Link></li>
+              <li>· <Link href="/admin-panel/transaksi" className="text-brand-400">Riwayat transaksi</Link></li>
             </ul>
           </div>
         </Card>

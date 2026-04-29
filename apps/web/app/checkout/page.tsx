@@ -39,8 +39,8 @@ export default async function CheckoutPage({
       <AppShell active="Marketplace">
         <div className="mx-auto max-w-xl px-6 py-16 text-center">
           <p className="text-base font-medium text-fg">Pilih barang dulu dari marketplace.</p>
-          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500 hover:underline">
-            Buka marketplace →
+          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500">
+            Buka marketplace
           </Link>
         </div>
       </AppShell>
@@ -64,7 +64,7 @@ export default async function CheckoutPage({
       <AppShell active="Marketplace">
         <div className="mx-auto max-w-xl px-6 py-16 text-center">
           <p className="text-base font-medium text-fg">Listing tidak ditemukan.</p>
-          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500 hover:underline">
+          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500">
             Kembali ke marketplace
           </Link>
         </div>
@@ -77,7 +77,7 @@ export default async function CheckoutPage({
       <AppShell active="Marketplace">
         <div className="mx-auto max-w-xl px-6 py-16 text-center">
           <p className="text-base font-medium text-fg">Tidak bisa membeli listing sendiri.</p>
-          <Link href={`/listing/${listing.slug}`} className="mt-4 inline-block text-sm text-brand-500 hover:underline">
+          <Link href={`/listing/${listing.slug}`} className="mt-4 inline-block text-sm text-brand-500">
             Kembali ke listing
           </Link>
         </div>

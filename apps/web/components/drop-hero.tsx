@@ -59,11 +59,9 @@ export function DropHero({ initial }: { initial: DropSummary[] }) {
   return (
     <section
       aria-label="Drop berikutnya"
-      className="
-        relative overflow-hidden rounded-2xl
+      className=" relative overflow-hidden rounded-2xl
         bg-[radial-gradient(120%_120%_at_0%_0%,#3F1A4A_0%,#1A0B2E_45%,#0A0612_100%)]
-        text-white shadow-[0_20px_60px_-20px_rgba(60,15,80,0.6)]
-      "
+        text-white shadow-[0_20px_60px_-20px_rgba(60,15,80,0.6)]"
     >
       {/* decorative blobs */}
       <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-brand-500/30 blur-3xl" />
@@ -135,11 +133,9 @@ export function DropHero({ initial }: { initial: DropSummary[] }) {
             {live ? (
               <Link
                 href={`/drops/${next.slug}`}
-                className="
-                  inline-flex flex-1 items-center justify-center gap-2 rounded-xl
+                className=" inline-flex flex-1 items-center justify-center gap-2 rounded-xl
                   bg-flame-500 px-4 py-3 text-sm font-bold text-white
-                  shadow-[0_8px_24px_-6px_rgba(250,167,74,0.7)] hover:bg-flame-400
-                "
+                  shadow-[0_8px_24px_-6px_rgba(250,167,74,0.7)] hover:bg-flame-400"
               >
                 Buka sekarang
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -178,11 +174,9 @@ export function DropHero({ initial }: { initial: DropSummary[] }) {
             )}
             <Link
               href="/drops"
-              className="
-                inline-flex items-center justify-center rounded-xl
+              className=" inline-flex items-center justify-center rounded-xl
                 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur
-                hover:bg-white/20
-              "
+                hover:bg-white/20"
             >
               Lihat kalender
             </Link>

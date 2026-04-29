@@ -75,7 +75,7 @@ export default async function VerifikasiEmailPage({
       <p className="mt-10 rounded-xl border border-rule bg-panel/60 p-4 text-xs leading-relaxed text-fg-muted">
         <b className="text-fg">Salah alamat email?</b> Kamu bisa mengubah email sebelum
         verifikasi dari halaman ini. Kontak{" "}
-        <a href="mailto:bantuan@hoobiq.id" className="text-brand-400 hover:underline">
+        <a href="mailto:bantuan@hoobiq.id" className="text-brand-400">
           bantuan@hoobiq.id
         </a>{" "}
         kalau kesulitan.

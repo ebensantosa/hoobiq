@@ -128,7 +128,7 @@ export function BankManager({ initial }: { initial: BankAccount[] }) {
                 </div>
                 <div className="flex flex-col gap-1 text-right">
                   {!b.primary && (
-                    <button onClick={() => makePrimary(b.id)} className="text-xs text-brand-500 hover:underline">Jadikan utama</button>
+                    <button onClick={() => makePrimary(b.id)} className="text-xs text-brand-500">Jadikan utama</button>
                   )}
                   <button onClick={() => remove(b.id)} className="text-xs text-fg-subtle hover:text-flame-500">Hapus</button>
                 </div>

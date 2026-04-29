@@ -33,8 +33,8 @@ export default async function KeranjangPage() {
           <div className="mt-10 rounded-md border border-rule bg-panel/40 p-10 text-center">
             <p className="text-base font-medium text-fg">Keranjang kosong.</p>
             <p className="mt-2 text-sm text-fg-muted">
-              <Link href="/marketplace" className="text-brand-500 hover:underline">
-                Buka marketplace →
+              <Link href="/marketplace" className="text-brand-500">
+                Buka marketplace
               </Link>
             </p>
           </div>

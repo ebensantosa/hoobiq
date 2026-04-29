@@ -190,7 +190,7 @@ function UploadSlot({
         )}
       </button>
       {value && (
-        <button type="button" onClick={onClear} className="text-xs font-medium text-flame-600 hover:underline">
+        <button type="button" onClick={onClear} className="text-xs font-medium text-flame-600">
           Ganti foto
         </button>
       )}

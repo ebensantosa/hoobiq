@@ -227,8 +227,8 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         />
         <p className="-mt-3 text-[11px] text-fg-subtle">
           Belum ada series/anime yang kamu cari?{" "}
-          <a href="/pengaturan/kategori-baru" className="font-semibold text-brand-500 hover:underline">
-            Request kategori baru →
+          <a href="/pengaturan/kategori-baru" className="font-semibold text-brand-500">
+            Request kategori baru
           </a>
         </p>
 

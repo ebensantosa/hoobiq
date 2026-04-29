@@ -38,7 +38,7 @@ export default function LupaPasswordPage() {
 
       <p className="mt-8 text-sm text-fg-muted">
         Ingat password lagi?{" "}
-        <Link href="/masuk" className="font-medium text-brand-400 hover:underline">
+        <Link href="/masuk" className="font-medium text-brand-400">
           Kembali ke masuk
         </Link>
       </p>

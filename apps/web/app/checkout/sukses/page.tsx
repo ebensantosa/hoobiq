@@ -69,8 +69,8 @@ export default function CheckoutSuccessPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-fg-subtle">
-          Butuh bantuan? <Link href="/bantuan" className="text-brand-400 hover:underline">Pusat Bantuan</Link> atau kontak{" "}
-          <a href="mailto:bantuan@hoobiq.id" className="text-brand-400 hover:underline">bantuan@hoobiq.id</a>
+          Butuh bantuan? <Link href="/bantuan" className="text-brand-400">Pusat Bantuan</Link> atau kontak{" "}
+          <a href="mailto:bantuan@hoobiq.id" className="text-brand-400">bantuan@hoobiq.id</a>
         </p>
       </div>
     </AppShell>

@@ -165,12 +165,10 @@ function CaseCell({ item }: { item: CollectionItem }) {
   return (
     <Link
       href={`/listing/${item.slug}`}
-      className="
-        group relative flex flex-col overflow-hidden rounded-xl border border-rule bg-canvas
+      className=" group relative flex flex-col overflow-hidden rounded-xl border border-rule bg-canvas
         shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_2px_6px_-2px_rgba(0,0,0,0.08)]
         transition-all duration-200
-        hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_-10px_rgba(231,85,159,0.4)]
-      "
+        hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_-10px_rgba(231,85,159,0.4)]"
     >
       {/* Shelf highlight */}
       <span
@@ -255,12 +253,10 @@ function CollectionEmpty({
   }
   return (
     <div
-      className="
-        relative overflow-hidden rounded-3xl border border-rule
+      className=" relative overflow-hidden rounded-3xl border border-rule
         bg-[radial-gradient(120%_90%_at_0%_0%,rgba(231,85,159,0.08),transparent_50%),radial-gradient(120%_90%_at_100%_100%,rgba(250,167,74,0.08),transparent_50%)]
         bg-panel/30
-        px-6 py-12 text-center
-      "
+        px-6 py-12 text-center"
     >
       <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-brand-500/15 to-flame-500/15 ring-1 ring-rule">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500">
@@ -280,20 +276,18 @@ function CollectionEmpty({
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/upload"
-            className="
-              inline-flex items-center gap-2 rounded-xl
+            className=" inline-flex items-center gap-2 rounded-xl
               bg-gradient-to-r from-brand-500 to-flame-500 px-5 py-2.5
               text-sm font-bold text-white
               shadow-[0_10px_24px_-8px_rgba(231,85,159,0.6)]
-              transition-transform hover:-translate-y-0.5
-            "
+              transition-transform hover:-translate-y-0.5"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Pasang listing pertama
           </Link>
           <Link
             href="/jual"
-            className="text-xs font-medium text-fg-muted underline-offset-4 hover:text-fg hover:underline"
+            className="text-xs font-medium text-fg-muted underline-offset-4 hover:text-fg"
           >
             Atau buka dashboard jual
           </Link>
@@ -322,8 +316,8 @@ function ActivityTab({ username, isOwn }: { username: string; isOwn: boolean }) 
           {isOwn ? "Belum ada postingan." : `@${username} belum posting apa-apa.`}
         </p>
         {isOwn && (
-          <Link href="/feeds" className="mt-3 inline-block text-xs font-semibold text-brand-500 hover:underline">
-            Buat postingan pertama →
+          <Link href="/feeds" className="mt-3 inline-block text-xs font-semibold text-brand-500">
+            Buat postingan pertama
           </Link>
         )}
       </div>
@@ -387,7 +381,7 @@ function TradeHistoryTab({ username }: { username: string }) {
             <p className="line-clamp-2 text-sm font-semibold text-fg">{t.got}</p>
           </div>
           <div className="text-right text-xs text-fg-muted">
-            <Link href={`/u/${t.counterparty}`} className="font-medium text-brand-500 hover:underline">
+            <Link href={`/u/${t.counterparty}`} className="font-medium text-brand-500">
               @{t.counterparty}
             </Link>
             <p className="font-mono text-[10px] text-fg-subtle">{relTime(t.completedAt)}</p>

@@ -40,7 +40,7 @@ export default function NotFound() {
         </div>
         <p className="mt-8 text-xs text-fg-subtle">
           Masih bingung?{" "}
-          <Link href="/bantuan" className="text-brand-400 hover:underline">
+          <Link href="/bantuan" className="text-brand-400">
             Pusat Bantuan
           </Link>
         </p>

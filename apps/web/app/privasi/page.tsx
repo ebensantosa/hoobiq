@@ -76,7 +76,7 @@ export default function PrivasiPage() {
               </Para>
               <Bullets
                 items={[
-                  <><b className="text-fg">Midtrans</b> (payment gateway) — menerima data pembayaran dan rekening tujuan payout. <a className="text-brand-400 hover:underline" href="https://midtrans.com/id/privacy" target="_blank" rel="noreferrer">Kebijakan Midtrans ↗</a></>,
+                  <><b className="text-fg">Midtrans</b> (payment gateway) — menerima data pembayaran dan rekening tujuan payout. <a className="text-brand-400" href="https://midtrans.com/id/privacy" target="_blank" rel="noreferrer">Kebijakan Midtrans ↗</a></>,
                   <><b className="text-fg">Komerce / JNE / J&amp;T / SiCepat / GoSend</b> — menerima alamat pengiriman dan nama penerima untuk label resi.</>,
                   <><b className="text-fg">Cloudflare R2</b> — penyimpanan foto listing & post (tidak menyimpan data identitas).</>,
                   <><b className="text-fg">Resend + Novu</b> — pengiriman email & notifikasi transaksional.</>,
@@ -134,7 +134,7 @@ export default function PrivasiPage() {
               />
               <Para>
                 Permintaan dapat dikirim ke{" "}
-                <a className="text-brand-400 hover:underline" href="mailto:privacy@hoobiq.id">
+                <a className="text-brand-400" href="mailto:privacy@hoobiq.id">
                   privacy@hoobiq.id
                 </a>
                 . Kami akan merespons dalam maksimal 3×24 jam dan menyelesaikan permintaan
@@ -172,7 +172,7 @@ export default function PrivasiPage() {
             <Para>
               Hoobiq tidak ditujukan untuk anak di bawah 13 tahun. Kalau kamu tahu ada akun
               yang dibuat oleh anak di bawah umur, kabari kami di{" "}
-              <a className="text-brand-400 hover:underline" href="mailto:privacy@hoobiq.id">
+              <a className="text-brand-400" href="mailto:privacy@hoobiq.id">
                 privacy@hoobiq.id
               </a>{" "}
               dan akan kami tindaklanjuti dalam 24 jam.
@@ -187,7 +187,7 @@ export default function PrivasiPage() {
               Kebijakan ini bisa berubah seiring evolusi produk atau regulasi. Perubahan
               material akan diumumkan via email dan banner in-app minimal 14 hari sebelum
               berlaku. Versi lama selalu bisa diakses di{" "}
-              <a className="text-brand-400 hover:underline" href="/privasi/riwayat">
+              <a className="text-brand-400" href="/privasi/riwayat">
                 halaman arsip
               </a>
               .

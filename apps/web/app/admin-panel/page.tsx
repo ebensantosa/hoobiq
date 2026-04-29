@@ -90,7 +90,7 @@ export default async function AdminDashboard() {
                 { label: "Webhook", href: "/admin-panel/webhook" },
               ].map((q) => (
                 <Link key={q.href} href={q.href} className="rounded-lg border border-rule bg-panel p-4 text-sm text-fg transition-colors hover:border-brand-400/50">
-                  {q.label} →
+                  {q.label}
                 </Link>
               ))}
             </div>

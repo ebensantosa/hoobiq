@@ -64,7 +64,7 @@ export default function RegisterPage() {
       <h1 className="text-3xl font-bold text-fg md:text-4xl">Daftar gratis.</h1>
       <p className="mt-2 text-sm text-fg-muted">
         Sudah punya akun?{" "}
-        <Link href="/masuk" className="font-medium text-brand-400 hover:underline">Masuk</Link>
+        <Link href="/masuk" className="font-medium text-brand-400">Masuk</Link>
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
@@ -91,8 +91,8 @@ export default function RegisterPage() {
           <input type="checkbox" name="terms" required className="mt-0.5 h-4 w-4 rounded border-rule accent-brand-400" />
           <span>
             Saya setuju dengan{" "}
-            <Link href="/ketentuan" className="text-brand-400 hover:underline">Ketentuan Layanan</Link> dan{" "}
-            <Link href="/privasi" className="text-brand-400 hover:underline">Kebijakan Privasi</Link>.
+            <Link href="/ketentuan" className="text-brand-400">Ketentuan Layanan</Link> dan{" "}
+            <Link href="/privasi" className="text-brand-400">Kebijakan Privasi</Link>.
           </span>
         </label>
 

@@ -75,7 +75,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               <SpecCard label="Kategori" value={listing.category.name} />
             </section>
 
-            {/* Reviews — anchored for the "review →" link in the aside.
+            {/* Reviews — anchored for the "review" link in the aside.
                 `scroll-mt-28` keeps the heading clear of the fixed header
                 when the user lands here from the anchor. */}
             <div id="reviews" className="scroll-mt-28">
@@ -106,7 +106,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     <span className="font-mono font-semibold text-fg">{ratingAvg?.toFixed(1)}</span>
                   </span>
                   <a href="#reviews" className="text-xs text-fg-muted hover:text-fg">
-                    {ratingCount} review →
+                    {ratingCount} review
                   </a>
                 </>
               ) : (
@@ -176,9 +176,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 </div>
                 <Link
                   href={`/u/${encodeURIComponent(listing.seller.username)}`}
-                  className="text-xs font-semibold text-brand-500 hover:underline"
+                  className="text-xs font-semibold text-brand-500"
                 >
-                  Profil →
+                  Profil
                 </Link>
               </div>
               {!isOwn && (
@@ -218,7 +218,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               Mau tukar daripada beli?{" "}
               <Link
                 href={`/trades?to=${encodeURIComponent(listing.seller.username)}`}
-                className="font-semibold text-brand-500 hover:underline"
+                className="font-semibold text-brand-500"
               >
                 Coba trade dengan {listing.seller.name ?? listing.seller.username}
               </Link>
@@ -241,9 +241,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </div>
               <Link
                 href={`/kategori/${encodeURIComponent(listing.category.slug)}`}
-                className="text-sm font-semibold text-brand-500 hover:underline"
+                className="text-sm font-semibold text-brand-500"
               >
-                Lihat semua →
+                Lihat semua
               </Link>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">

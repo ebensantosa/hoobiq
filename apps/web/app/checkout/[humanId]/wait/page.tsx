@@ -85,7 +85,7 @@ export default async function CheckoutWaitPage({
         <PaymentStatusPoller humanId={o.humanId} />
 
         <div className="mt-8 text-center text-xs text-fg-muted">
-          Mau batal? <Link href="/marketplace" className="text-brand-500 hover:underline">Kembali ke marketplace</Link> — order otomatis dibatalkan kalau tidak dibayar dalam 24 jam.
+          Mau batal? <Link href="/marketplace" className="text-brand-500">Kembali ke marketplace</Link> — order otomatis dibatalkan kalau tidak dibayar dalam 24 jam.
         </div>
       </div>
     </AppShell>

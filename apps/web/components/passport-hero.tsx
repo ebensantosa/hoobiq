@@ -75,25 +75,19 @@ export function PassportHero({
   return (
     <section
       aria-label="Profil"
-      className="
-        relative overflow-hidden rounded-3xl border border-rule bg-panel
-        shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_20px_50px_-30px_rgba(0,0,0,0.15)]
-      "
+      className=" relative overflow-hidden rounded-3xl border border-rule bg-panel
+        shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_20px_50px_-30px_rgba(0,0,0,0.15)]"
     >
       {/* Soft gradient corner accent — the only chrome */}
       <span
         aria-hidden
-        className="
-          pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full
-          bg-[radial-gradient(closest-side,rgba(231,85,159,0.18),transparent)]
-        "
+        className=" pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full
+          bg-[radial-gradient(closest-side,rgba(231,85,159,0.18),transparent)]"
       />
       <span
         aria-hidden
-        className="
-          pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full
-          bg-[radial-gradient(closest-side,rgba(127,119,221,0.14),transparent)]
-        "
+        className=" pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full
+          bg-[radial-gradient(closest-side,rgba(127,119,221,0.14),transparent)]"
       />
 
       <div className="relative px-6 pt-8 pb-6 md:px-10 md:pt-10">
@@ -105,27 +99,21 @@ export function PassportHero({
             <div className="relative shrink-0">
               <span
                 aria-hidden
-                className="
-                  absolute -inset-1 rounded-full
+                className=" absolute -inset-1 rounded-full
                   bg-[conic-gradient(from_180deg_at_50%_50%,#E7559F,#FAA74A,#7F77DD,#E7559F)]
-                  opacity-90 blur-[1px]
-                "
+                  opacity-90 blur-[1px]"
               />
               <div
-                className="
-                  relative grid h-24 w-24 place-items-center overflow-hidden rounded-full
-                  bg-canvas ring-[3px] ring-canvas md:h-28 md:w-28
-                "
+                className=" relative grid h-24 w-24 place-items-center overflow-hidden rounded-full
+                  bg-canvas ring-[3px] ring-canvas md:h-28 md:w-28"
               >
                 {user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <div
-                    className="
-                      grid h-full w-full place-items-center
-                      bg-gradient-to-br from-brand-500 via-flame-500 to-ultra-500
-                    "
+                    className=" grid h-full w-full place-items-center
+                      bg-gradient-to-br from-brand-500 via-flame-500 to-ultra-500"
                   >
                     <span className="font-mono text-3xl font-extrabold text-white md:text-4xl">
                       {(user.name ?? user.username)[0]?.toUpperCase()}
@@ -135,11 +123,9 @@ export function PassportHero({
               </div>
               {/* Level chip pinned bottom-right of avatar */}
               <span
-                className="
-                  absolute -bottom-1 right-0 inline-flex items-center gap-1
+                className=" absolute -bottom-1 right-0 inline-flex items-center gap-1
                   rounded-full bg-fg px-2 py-0.5 font-mono text-[10px] font-bold text-canvas
-                  ring-2 ring-canvas
-                "
+                  ring-2 ring-canvas"
               >
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 LV {user.level}
@@ -180,23 +166,19 @@ export function PassportHero({
               <>
                 <Link
                   href="/pengaturan"
-                  className="
-                    inline-flex items-center gap-1.5 rounded-xl border border-rule
+                  className=" inline-flex items-center gap-1.5 rounded-xl border border-rule
                     bg-canvas px-3.5 py-2 text-xs font-semibold text-fg transition-colors
-                    hover:border-brand-400/50 hover:text-brand-500
-                  "
+                    hover:border-brand-400/50 hover:text-brand-500"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
                   Edit profil
                 </Link>
                 <Link
                   href="/upload"
-                  className="
-                    inline-flex items-center gap-1.5 rounded-xl
+                  className=" inline-flex items-center gap-1.5 rounded-xl
                     bg-gradient-to-r from-brand-500 to-flame-500 px-4 py-2
                     text-xs font-bold text-white shadow-[0_8px_20px_-8px_rgba(231,85,159,0.55)]
-                    transition-transform hover:-translate-y-0.5
-                  "
+                    transition-transform hover:-translate-y-0.5"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Pasang listing
@@ -206,23 +188,19 @@ export function PassportHero({
               <>
                 <Link
                   href={`/dm?to=${user.username}`}
-                  className="
-                    inline-flex items-center gap-1.5 rounded-xl border border-rule
+                  className=" inline-flex items-center gap-1.5 rounded-xl border border-rule
                     bg-canvas px-3.5 py-2 text-xs font-semibold text-fg transition-colors
-                    hover:border-brand-400/50 hover:text-brand-500
-                  "
+                    hover:border-brand-400/50 hover:text-brand-500"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   Pesan
                 </Link>
                 <Link
                   href={`/trades?to=${user.username}`}
-                  className="
-                    inline-flex items-center gap-1.5 rounded-xl
+                  className=" inline-flex items-center gap-1.5 rounded-xl
                     bg-gradient-to-r from-brand-500 to-flame-500 px-4 py-2
                     text-xs font-bold text-white shadow-[0_8px_20px_-8px_rgba(231,85,159,0.55)]
-                    transition-transform hover:-translate-y-0.5
-                  "
+                    transition-transform hover:-translate-y-0.5"
                 >
                   Ajak trade
                 </Link>
@@ -233,10 +211,8 @@ export function PassportHero({
 
         {/* Inline stat ticker — no individual cards, divided by hairlines */}
         <dl
-          className="
-            mt-7 grid grid-cols-3 divide-x divide-rule rounded-2xl border border-rule bg-canvas/60
-            overflow-hidden
-          "
+          className=" mt-7 grid grid-cols-3 divide-x divide-rule rounded-2xl border border-rule bg-canvas/60
+            overflow-hidden"
         >
           {showRating ? (
             <>
@@ -330,7 +306,7 @@ function ReviewsStrip({ reviews }: { reviews: ProfileReview[] }) {
                 <p className="truncate text-sm font-medium text-fg">{r.buyer.name ?? r.buyer.username}</p>
                 <div className="mt-0.5 flex items-center gap-2">
                   <Stars value={r.rating} size={12} />
-                  <Link href={`/listing/${r.listing.slug}`} className="truncate text-[11px] text-fg-subtle hover:underline">
+                  <Link href={`/listing/${r.listing.slug}`} className="truncate text-[11px] text-fg-subtle">
                     {r.listing.title}
                   </Link>
                 </div>
@@ -364,9 +340,9 @@ function BadgeStrip({ badges, username }: { badges: Badge[]; username: string })
         </h3>
         <a
           href={`/u/${encodeURIComponent(username)}/badges`}
-          className="text-xs font-semibold text-brand-500 hover:underline"
+          className="text-xs font-semibold text-brand-500"
         >
-          Lihat koleksi badge →
+          Lihat koleksi badge
         </a>
       </div>
       <div className="mt-3 flex flex-wrap gap-3">

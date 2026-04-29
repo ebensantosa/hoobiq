@@ -98,7 +98,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <AppShell active="Marketplace">
         <div className="mx-auto max-w-xl px-6 py-16 text-center">
           <p className="text-base font-medium text-fg">Kamu perlu masuk dulu.</p>
-          <Link href={`/masuk?next=/pesanan/${encodeURIComponent(id)}`} className="mt-4 inline-block text-sm text-brand-500 hover:underline">
+          <Link href={`/masuk?next=/pesanan/${encodeURIComponent(id)}`} className="mt-4 inline-block text-sm text-brand-500">
             Masuk
           </Link>
         </div>
@@ -245,9 +245,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       </div>
                       <Link
                         href={`/dm?to=${encodeURIComponent(counterpart.username)}`}
-                        className="ml-auto text-xs text-brand-400 hover:underline"
+                        className="ml-auto text-xs text-brand-400"
                       >
-                        Pesan {isBuyer ? "seller" : "buyer"} →
+                        Pesan {isBuyer ? "seller" : "buyer"}
                       </Link>
                     </div>
                   </div>
@@ -292,8 +292,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <p className="mt-1 text-fg-muted">
                 Buka dispute jika barang tidak sesuai deskripsi atau bermasalah saat diterima.
               </p>
-              <Link href="/bantuan#dispute" className="mt-3 inline-block text-brand-400 hover:underline">
-                Cara buka dispute →
+              <Link href="/bantuan#dispute" className="mt-3 inline-block text-brand-400">
+                Cara buka dispute
               </Link>
             </div>
           </aside>

@@ -26,7 +26,7 @@ export default async function AdminModerasiPage() {
         <div className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg">Moderasi</h1>
           <p className="mt-2 text-sm text-fg-muted">
-            Listing baru menunggu review. Approve atau hapus dari halaman <Link href="/admin-panel/listing" className="text-brand-400 hover:underline">Listing</Link>.
+            Listing baru menunggu review. Approve atau hapus dari halaman <Link href="/admin-panel/listing" className="text-brand-400">Listing</Link>.
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export default async function AdminModerasiPage() {
             <p className="font-medium text-fg">Moderasi feed/post</p>
             <p className="mt-1 text-xs text-fg-muted">
               Untuk laporan dari pengguna terhadap post atau komentar, lihat halaman{" "}
-              <Link href="/admin-panel/laporan" className="text-brand-400 hover:underline">Laporan & abuse</Link>.
+              <Link href="/admin-panel/laporan" className="text-brand-400">Laporan & abuse</Link>.
             </p>
           </div>
         </Card>

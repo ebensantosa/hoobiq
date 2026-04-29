@@ -153,7 +153,7 @@ export function CartList({
                     type="button"
                     onClick={() => remove(it.id)}
                     disabled={itemBusy}
-                    className="text-xs font-semibold text-flame-600 hover:underline disabled:opacity-50"
+                    className="text-xs font-semibold text-flame-600 disabled:opacity-50"
                   >
                     Hapus
                   </button>

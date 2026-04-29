@@ -25,7 +25,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
       <AppShell active="Marketplace">
         <div className="mx-auto max-w-xl px-6 py-16 text-center">
           <p className="text-base font-medium text-fg">Kamu bukan pemilik listing ini.</p>
-          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500 hover:underline">
+          <Link href="/marketplace" className="mt-4 inline-block text-sm text-brand-500">
             Kembali ke marketplace
           </Link>
         </div>

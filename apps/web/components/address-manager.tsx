@@ -188,7 +188,7 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                   <p className="text-sm text-fg-muted">{a.city}, {a.province} {a.postal}</p>
                 </div>
                 <div className="flex flex-col gap-2 text-right">
-                  <button onClick={() => startEdit(a)} className="text-xs text-brand-500 hover:underline">Edit</button>
+                  <button onClick={() => startEdit(a)} className="text-xs text-brand-500">Edit</button>
                   {!a.primary && (
                     <button onClick={() => makePrimary(a.id)} className="text-xs text-fg-muted hover:text-fg">Jadikan utama</button>
                   )}

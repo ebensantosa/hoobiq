@@ -74,8 +74,8 @@ export function DocPage({
 
         <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-fg-muted">
           Butuh bantuan lebih lanjut?
-          <Link href="/bantuan" className="font-medium text-brand-400 hover:underline">
-            Pusat Bantuan →
+          <Link href="/bantuan" className="font-medium text-brand-400">
+            Pusat Bantuan
           </Link>
         </div>
       </main>

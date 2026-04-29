@@ -241,7 +241,7 @@ export function MarketplaceFilterBar({
                 <button
                   type="button"
                   onClick={() => pushUrl({ cats: null, cat: null })}
-                  className="font-medium text-brand-500 hover:underline"
+                  className="font-medium text-brand-500"
                 >
                   Reset kategori
                 </button>

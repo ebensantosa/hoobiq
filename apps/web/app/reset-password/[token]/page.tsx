@@ -34,7 +34,7 @@ export default function ResetPasswordConfirmPage() {
 
       <p className="mt-8 text-xs text-fg-subtle">
         Tautan reset kadaluarsa?{" "}
-        <Link href="/lupa-password" className="text-brand-400 hover:underline">
+        <Link href="/lupa-password" className="text-brand-400">
           Minta tautan baru
         </Link>
       </p>

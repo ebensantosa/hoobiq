@@ -75,7 +75,7 @@ export default async function AdminUsersPage({
                   {u.trustScore.toFixed(1)}
                 </span>
                 <div className="flex items-center justify-end gap-3 text-xs">
-                  <Link href={`/admin/pengguna/${u.username}`} className="text-brand-500 hover:underline">Detail</Link>
+                  <Link href={`/admin/pengguna/${u.username}`} className="text-brand-500">Detail</Link>
                   <UserActions id={u.id} status={u.status} />
                 </div>
               </div>

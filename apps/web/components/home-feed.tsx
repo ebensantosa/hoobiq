@@ -67,7 +67,7 @@ export function HomeFeed({
             kicker="Sponsored · Boost aktif"
             title="Lagi disorot"
             href="/marketplace?sort=trending"
-            ctaLabel="Lihat semua trending →"
+            ctaLabel="Lihat semua trending"
           >
             <BoostStrip items={boosted.slice(0, 6)} />
           </Section>
@@ -78,7 +78,7 @@ export function HomeFeed({
             kicker="Trending"
             title="Viral minggu ini"
             href="/marketplace?sort=trending"
-            ctaLabel="Lihat semua →"
+            ctaLabel="Lihat semua"
           >
             <Grid items={trending.slice(0, 8)} />
           </Section>
@@ -89,7 +89,7 @@ export function HomeFeed({
             kicker="Most viewed"
             title="Paling populer"
             href="/marketplace?sort=trending"
-            ctaLabel="Lihat lebih banyak →"
+            ctaLabel="Lihat lebih banyak"
           >
             <Grid items={popular.slice(0, 8)} />
           </Section>
@@ -100,7 +100,7 @@ export function HomeFeed({
             kicker="Baru di Hoobiq"
             title="Listing terbaru"
             href="/marketplace"
-            ctaLabel="Buka marketplace →"
+            ctaLabel="Buka marketplace"
           >
             <Grid items={fresh.slice(0, 12)} />
           </Section>
@@ -109,8 +109,8 @@ export function HomeFeed({
         {boosted.length === 0 && trending.length === 0 && popular.length === 0 && fresh.length === 0 && (
           <div className="mt-10 rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
             Belum ada listing untuk ditampilkan.{" "}
-            <Link href="/upload" className="font-semibold text-brand-500 hover:underline">
-              Pasang listing pertama →
+            <Link href="/upload" className="font-semibold text-brand-500">
+              Pasang listing pertama
             </Link>
           </div>
         )}
@@ -153,8 +153,8 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           </span>
           <h2 className="mt-1 text-base font-bold text-fg">Pilih dari mana mau mulai</h2>
         </div>
-        <Link href="/kategori" className="text-xs font-semibold text-brand-500 hover:underline">
-          Lihat semua →
+        <Link href="/kategori" className="text-xs font-semibold text-brand-500">
+          Lihat semua
         </Link>
       </div>
       {/* py-2 keeps the hover lift + brand ring from being clipped by

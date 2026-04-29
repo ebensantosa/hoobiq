@@ -9,13 +9,21 @@ import { RedisService } from "../../infrastructure/redis/redis.service";
 import { OrdersService } from "../orders/orders.service";
 
 const ListingPatch = z.object({
-  title:       z.string().min(3).max(140).optional(),
-  description: z.string().max(8_000).optional(),
-  priceIdr:    z.number().int().positive().optional(),
-  categoryId:  z.string().min(1).optional(),
-  condition:   z.enum(["BRAND_NEW_SEALED", "LIKE_NEW", "EXCELLENT", "GOOD", "FAIR", "POOR"]).optional(),
-  moderation:  z.enum(["pending", "active", "hidden", "rejected"]).optional(),
-  isPublished: z.boolean().optional(),
+  title:        z.string().min(3).max(140).optional(),
+  description:  z.string().max(8_000).optional(),
+  priceIdr:     z.number().int().positive().optional(),
+  categoryId:   z.string().min(1).optional(),
+  condition:    z.enum(["BRAND_NEW_SEALED", "LIKE_NEW", "EXCELLENT", "GOOD", "FAIR", "POOR"]).optional(),
+  moderation:   z.enum(["pending", "active", "hidden", "rejected"]).optional(),
+  isPublished:  z.boolean().optional(),
+  // New admin-only powers — full content edit + transfer ownership.
+  images:       z.array(z.string().min(1)).min(1).max(8).optional(),
+  stock:        z.number().int().min(0).max(999).optional(),
+  weightGrams:  z.number().int().min(10).max(50_000).optional(),
+  tradeable:    z.boolean().optional(),
+  /** Reassign the listing to a different seller. Identifier can be a
+   *  user id, username, or email — server resolves it. */
+  sellerRef:    z.string().min(1).max(80).optional(),
 });
 type ListingPatch = z.infer<typeof ListingPatch>;
 
@@ -304,14 +312,66 @@ export class AdminController {
   /* Listings — admin can edit moderation, price, basic fields, or wipe */
   /* ------------------------------------------------------------------ */
 
+  /** Full listing detail for the admin editor — used by the edit form. */
+  @Get("listings/:id")
+  async getListing(@Param("id") id: string) {
+    const l = await this.prisma.listing.findUnique({
+      where: { id },
+      include: {
+        seller: { select: { id: true, username: true, name: true, email: true } },
+        category: { select: { id: true, slug: true, name: true } },
+      },
+    });
+    if (!l) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+    let images: string[] = [];
+    try {
+      const parsed = JSON.parse(l.imagesJson);
+      if (Array.isArray(parsed)) images = parsed.filter((s) => typeof s === "string");
+    } catch { /* ignore */ }
+    return {
+      id: l.id,
+      slug: l.slug,
+      title: l.title,
+      description: l.description,
+      priceIdr: Number(l.priceCents / 100n),
+      condition: l.condition,
+      stock: l.stock,
+      weightGrams: l.weightGrams,
+      tradeable: l.tradeable,
+      moderation: l.moderation,
+      isPublished: l.isPublished,
+      images,
+      seller: l.seller,
+      category: l.category,
+    };
+  }
+
   @Patch("listings/:id")
   async patchListing(
     @CurrentUser() user: SessionUser,
     @Param("id") id: string,
     @Body(new ZodPipe(ListingPatch)) input: ListingPatch,
   ) {
-    const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true } });
+    const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true, sellerId: true } });
     if (!exists) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+
+    // Resolve transfer target — accepts id, username, or email so the
+    // admin doesn't have to copy the user id from another tab.
+    let nextSellerId: string | undefined;
+    if (input.sellerRef && input.sellerRef.trim()) {
+      const ref = input.sellerRef.trim();
+      const target = await this.prisma.user.findFirst({
+        where: {
+          deletedAt: null,
+          OR: [{ id: ref }, { username: ref }, { email: ref.toLowerCase() }],
+        },
+        select: { id: true },
+      });
+      if (!target) {
+        throw new NotFoundException({ code: "seller_not_found", message: `Seller "${ref}" tidak ditemukan.` });
+      }
+      if (target.id !== exists.sellerId) nextSellerId = target.id;
+    }
 
     const updated = await this.prisma.listing.update({
       where: { id },
@@ -323,6 +383,11 @@ export class AdminController {
         ...(input.condition   !== undefined && { condition:   input.condition }),
         ...(input.moderation  !== undefined && { moderation:  input.moderation }),
         ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+        ...(input.images      !== undefined && { imagesJson:  JSON.stringify(input.images) }),
+        ...(input.stock       !== undefined && { stock:       input.stock }),
+        ...(input.weightGrams !== undefined && { weightGrams: input.weightGrams }),
+        ...(input.tradeable   !== undefined && { tradeable:   input.tradeable }),
+        ...(nextSellerId      !== undefined && { sellerId:    nextSellerId }),
       },
       select: { id: true, title: true, moderation: true, isPublished: true, priceCents: true },
     });

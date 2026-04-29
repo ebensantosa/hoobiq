@@ -19,7 +19,11 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 const CENTS_PER_RUPIAH = 100n;
 
 const AddInput = z.object({
-  listingId: z.string().cuid(),
+  // Don't require strict cuid — listing ids are cuids in practice but
+  // zod's `.cuid()` regex sometimes rejects production-seeded IDs and
+  // other string id shapes (cuid2, custom prefixes). The `findUnique`
+  // below is the real authority.
+  listingId: z.string().min(1).max(64),
   qty: z.number().int().min(1).max(99).optional(),
 });
 
@@ -125,24 +129,28 @@ export class CartController {
       throw new BadRequestException({ code: "unavailable", message: "Listing tidak tersedia." });
     }
 
-    const qty = Math.min(body.qty ?? 1, listing.stock);
-    // Upsert keyed on (userId, listingId) — prevents duplicate rows;
-    // re-adding bumps qty up to the listing's available stock.
-    const existing = await this.prisma.cartItem.findUnique({
+    const addQty = Math.min(body.qty ?? 1, listing.stock);
+    // Atomic upsert keyed on (userId, listingId) — eliminates the
+    // findUnique→create race window where two concurrent adds for the
+    // same (user, listing) could both miss the existing row and trip
+    // the unique constraint, surfacing as "gagal tambah ke keranjang".
+    // We pass `increment` so re-adds bump qty in a single round-trip.
+    const item = await this.prisma.cartItem.upsert({
       where: { userId_listingId: { userId: user.id, listingId: listing.id } },
+      create: { userId: user.id, listingId: listing.id, qty: addQty },
+      update: { qty: { increment: addQty } },
     });
-    if (existing) {
-      const nextQty = Math.min(existing.qty + qty, listing.stock);
-      const updated = await this.prisma.cartItem.update({
-        where: { id: existing.id },
-        data: { qty: nextQty },
+    // Clamp post-upsert if the increment pushed us past available stock
+    // (e.g. user spammed the +Keranjang button). Cheap separate update
+    // — only hits when actually over-cap.
+    if (item.qty > listing.stock) {
+      const clamped = await this.prisma.cartItem.update({
+        where: { id: item.id },
+        data: { qty: listing.stock },
       });
-      return { id: updated.id, qty: updated.qty };
+      return { id: clamped.id, qty: clamped.qty };
     }
-    const created = await this.prisma.cartItem.create({
-      data: { userId: user.id, listingId: listing.id, qty },
-    });
-    return { id: created.id, qty: created.qty };
+    return { id: item.id, qty: item.qty };
   }
 
   @Patch(":id")

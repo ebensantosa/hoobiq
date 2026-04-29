@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/client";
 
@@ -50,6 +51,12 @@ export function ListingActions({ id, moderation }: { id: string; moderation: str
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex gap-2">
+        <Link
+          href={`/admin-panel/listing/${id}/edit`}
+          className="text-xs text-fg-muted hover:text-brand-400"
+        >
+          Edit
+        </Link>
         <button
           onClick={toggleModeration}
           disabled={busy !== null}

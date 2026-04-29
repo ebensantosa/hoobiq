@@ -14,8 +14,47 @@ type Node = {
   children: Node[];
 };
 
-/** Per-slug icon + accent color. Falls back to a generic grid + brand pink. */
+/** Per-slug icon + accent color. Falls back to a generic grid + brand pink.
+ *  Both the new spec slugs and the legacy ones are listed so the index
+ *  page keeps rendering icons during the rollout window where both
+ *  taxonomies coexist in the DB. */
 const meta: Record<string, { icon: React.ReactNode; tint: string; ring: string }> = {
+  "collection-cards": {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="16" rx="2"/><path d="M6 6V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"/></svg>
+    ),
+    tint: "from-emerald-100 to-emerald-50",
+    ring: "group-hover:border-emerald-400/60 group-hover:shadow-[0_8px_24px_-12px] group-hover:shadow-emerald-400/40",
+  },
+  "trading-cards": {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="16" rx="2"/><path d="M6 6V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"/></svg>
+    ),
+    tint: "from-brand-100 to-brand-50",
+    ring: "group-hover:border-brand-400/60 group-hover:shadow-[0_8px_24px_-12px] group-hover:shadow-brand-400/40",
+  },
+  merchandise: {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.4 7.5 16 4l-2 2-2-2-2 2-2-2-4.4 3.5L5 12h2v8h10v-8h2z"/></svg>
+    ),
+    tint: "from-sky-100 to-sky-50",
+    ring: "group-hover:border-sky-400/60 group-hover:shadow-[0_8px_24px_-12px] group-hover:shadow-sky-400/40",
+  },
+  toys: {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 1 4 4v2H8V6a4 4 0 0 1 4-4z"/><path d="M5 22h14l-1.5-9h-11z"/><path d="M9 13v9M15 13v9"/></svg>
+    ),
+    tint: "from-ultra-100 to-ultra-50",
+    ring: "group-hover:border-ultra-400/60 group-hover:shadow-[0_8px_24px_-12px] group-hover:shadow-ultra-400/40",
+  },
+  others: {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg>
+    ),
+    tint: "from-flame-100 to-flame-50",
+    ring: "group-hover:border-flame-400/60 group-hover:shadow-[0_8px_24px_-12px] group-hover:shadow-flame-400/40",
+  },
+  // Legacy slugs (kept until migration retires them)
   cards: {
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="16" rx="2"/><path d="M6 6V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"/></svg>

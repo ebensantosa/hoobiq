@@ -16,7 +16,7 @@ export default async function MarketplacePage({
   searchParams,
 }: {
   searchParams: Promise<{
-    q?: string; cat?: string; sort?: string;
+    q?: string; cat?: string; cats?: string; sort?: string;
     minPrice?: string; maxPrice?: string;
     condition?: string; grade?: string;
     city?: string; distance?: string;
@@ -26,6 +26,10 @@ export default async function MarketplacePage({
   const q = new URLSearchParams();
   if (sp.q)        q.set("q", sp.q);
   if (sp.cat)      q.set("categorySlug", sp.cat);
+  // `cats` is the new multi-select filter — comma-separated slugs from
+  // the checkbox tree. The single `cat` param still works for /kategori
+  // → marketplace deep links and for backward-compat shareable URLs.
+  if (sp.cats)     q.set("cats", sp.cats);
   if (sp.sort)     q.set("sort", sp.sort);
   if (sp.minPrice) q.set("minPrice", sp.minPrice);
   if (sp.maxPrice) q.set("maxPrice", sp.maxPrice);

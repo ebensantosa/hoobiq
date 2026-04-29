@@ -17,6 +17,16 @@ function parseImages(json: string | null | undefined): string[] {
   }
 }
 
+/** Merge the legacy single-slug filter with the multi-select array, dedup. */
+function collectSlugs(single: string | undefined, multi: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of [single, ...(multi ?? [])]) {
+    if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+  }
+  return out;
+}
+
 @Injectable()
 export class ListingsService {
   constructor(
@@ -28,15 +38,20 @@ export class ListingsService {
     const limit = Math.min(input.limit, MAX_LIMIT);
     const key = `listings:search:${JSON.stringify({ ...input, limit })}`;
     return this.redis.cached(key, 30, async () => {
-      // Resolve categorySlug → set of category IDs that includes the given
-      // category and all of its descendants. Hitting "Trading Cards" should
-      // also surface listings under Pokémon, Crown Zenith, etc.
+      // Resolve every slug (single legacy `categorySlug` and the
+      // checkbox-multi-select `cats`) to the union of its descendant
+      // category ids. Hitting "Trading Cards" should also surface
+      // listings under Pokémon, Crown Zenith, etc; checking
+      // "Toys" + "Action Figure" + "Naruto" unions all three subtrees.
       let categoryIds: string[] | undefined;
-      if (input.categorySlug) {
-        categoryIds = await this.descendantCategoryIds(input.categorySlug);
-        if (categoryIds.length === 0) {
+      const slugs = collectSlugs(input.categorySlug, input.cats);
+      if (slugs.length > 0) {
+        const sets = await Promise.all(slugs.map((s) => this.descendantCategoryIds(s)));
+        const merged = Array.from(new Set(sets.flat()));
+        if (merged.length === 0) {
           return { items: [], nextCursor: null };
         }
+        categoryIds = merged;
       }
 
       const where = {

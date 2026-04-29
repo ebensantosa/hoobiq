@@ -65,6 +65,10 @@ export function MarketplaceFilterBar({
   const [pending, startTransition] = useTransition();
 
   const cat       = sp.get("cat") ?? "";
+  // Multi-select: `cats` is comma-separated slugs that the API resolves to
+  // a union of descendant categories. Empty array = no filter.
+  const catsParam = sp.get("cats") ?? "";
+  const cats      = catsParam ? catsParam.split(",").filter(Boolean) : [];
   const minPrice  = numOrNull(sp.get("minPrice"));
   const maxPrice  = numOrNull(sp.get("maxPrice"));
   const condition = (sp.get("condition") as Condition | null) ?? null;
@@ -122,22 +126,49 @@ export function MarketplaceFilterBar({
 
   const isTcg = cat === "cards" || cat.startsWith("pokemon") || cat.includes("trading");
 
-  /* Series search (in dropdown) */
+  /* Multi-level checkbox picker — supports the spec'd flow where buyers
+   * tick across kategori + sub kategori + series simultaneously. The tree
+   * comes from /categories already shaped as L1 → L2 → L3, so we just
+   * render expandable groups. */
   const [seriesQ, setSeriesQ] = useState("");
   const seriesFlat = useMemo(() => flattenCats(series), [series]);
   const seriesFiltered = useMemo(() => {
     const q = seriesQ.trim().toLowerCase();
-    if (!q) return seriesFlat.slice(0, 24);
+    if (!q) return null;
     return seriesFlat.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 24);
   }, [seriesFlat, seriesQ]);
-  const catName = seriesFlat.find((s) => s.slug === cat)?.name ?? null;
+
+  // Selected count combines the legacy single `cat` and the multi `cats`.
+  const selectedSlugs = useMemo(() => {
+    const set = new Set<string>(cats);
+    if (cat) set.add(cat);
+    return set;
+  }, [cat, cats]);
+
+  function toggleCat(slug: string) {
+    const next = new Set(selectedSlugs);
+    if (next.has(slug)) next.delete(slug);
+    else next.add(slug);
+    // Migrate everything onto the new `cats` param; clear `cat` to avoid
+    // a stale single-value bleeding into the union.
+    pushUrl({
+      cats: next.size > 0 ? Array.from(next).join(",") : null,
+      cat: null,
+    });
+  }
+
+  const catLabel =
+    selectedSlugs.size === 0 ? "Kategori"
+    : selectedSlugs.size === 1
+      ? (seriesFlat.find((s) => s.slug === Array.from(selectedSlugs)[0])?.name ?? "Kategori")
+      : `Kategori · ${selectedSlugs.size}`;
 
   /* Active count */
   const activeCount =
     (minPrice !== null || maxPrice !== null ? 1 : 0) +
     (condition ? 1 : 0) +
     (grade ? 1 : 0) +
-    (cat ? 1 : 0) +
+    (selectedSlugs.size > 0 ? 1 : 0) +
     (city ? 1 : 0) +
     (distance > 0 ? 1 : 0);
 
@@ -164,44 +195,58 @@ export function MarketplaceFilterBar({
 
         {/* Filter pills */}
         <Pill
-          label={catName ?? "Kategori"}
-          active={!!cat}
-          onClear={cat ? () => pushUrl({ cat: null }) : undefined}
+          label={catLabel}
+          active={selectedSlugs.size > 0}
+          onClear={selectedSlugs.size > 0 ? () => pushUrl({ cats: null, cat: null }) : undefined}
         >
-          <div className="w-72">
+          <div className="w-80">
             <div className="border-b border-rule p-2">
               <input
                 type="text"
                 value={seriesQ}
                 onChange={(e) => setSeriesQ(e.target.value)}
-                placeholder="Cari brand atau set…"
+                placeholder="Cari kategori, anime, atau series…"
                 className="w-full rounded-lg border border-rule bg-panel-2 px-3 py-1.5 text-xs text-fg placeholder:text-fg-subtle focus:border-brand-400 focus:outline-none"
                 autoFocus
               />
             </div>
-            <div className="max-h-72 overflow-y-auto p-1">
-              {seriesFiltered.length === 0 ? (
-                <p className="px-3 py-4 text-center text-xs text-fg-subtle">Tidak ada cocok.</p>
+            <div className="max-h-96 overflow-y-auto p-1">
+              {seriesFiltered ? (
+                seriesFiltered.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-xs text-fg-subtle">Tidak ada cocok.</p>
+                ) : (
+                  seriesFiltered.map((s) => (
+                    <CheckboxRow
+                      key={s.slug}
+                      slug={s.slug}
+                      name={s.name}
+                      checked={selectedSlugs.has(s.slug)}
+                      onToggle={() => toggleCat(s.slug)}
+                      indent={0}
+                    />
+                  ))
+                )
               ) : (
-                seriesFiltered.map((s) => (
-                  <button
-                    key={s.slug}
-                    type="button"
-                    onClick={() => pushUrl({ cat: s.slug === cat ? null : s.slug })}
-                    className={
-                      "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors " +
-                      (s.slug === cat
-                        ? "bg-brand-400/10 font-semibold text-brand-500"
-                        : "text-fg-muted hover:bg-panel-2 hover:text-fg")
-                    }
-                  >
-                    <BrandGlyph slug={s.slug} />
-                    <span className="flex-1">{s.name}</span>
-                    {s.slug === cat && <span className="text-brand-500">✓</span>}
-                  </button>
-                ))
+                <CategoryTree
+                  nodes={series}
+                  selectedSlugs={selectedSlugs}
+                  onToggle={toggleCat}
+                  level={0}
+                />
               )}
             </div>
+            {selectedSlugs.size > 0 && (
+              <div className="flex items-center justify-between border-t border-rule px-3 py-2 text-[11px] text-fg-muted">
+                <span>{selectedSlugs.size} dipilih</span>
+                <button
+                  type="button"
+                  onClick={() => pushUrl({ cats: null, cat: null })}
+                  className="font-medium text-brand-500 hover:underline"
+                >
+                  Reset kategori
+                </button>
+              </div>
+            )}
           </div>
         </Pill>
 
@@ -591,6 +636,135 @@ function DistanceSlider({ value, onChange }: { value: number; onChange: (v: numb
 }
 
 /* ============================================================ helpers */
+
+/* ============================================================ category tree */
+
+/**
+ * Expandable checkbox tree. Each row is a category — clicking the
+ * checkbox toggles ONLY that node's slug; clicking the chevron toggles
+ * the children panel. Children render indented and follow the same
+ * pattern recursively, so L1 → L2 → L3 all share one component.
+ *
+ * Per spec the buyer can tick boxes at any level (e.g. Toys + Action
+ * Figure + Naruto) — each ticked slug is independent and the API unions
+ * their descendant ids on the server.
+ */
+function CategoryTree({
+  nodes, selectedSlugs, onToggle, level,
+}: {
+  nodes: Category[];
+  selectedSlugs: Set<string>;
+  onToggle: (slug: string) => void;
+  level: number;
+}) {
+  return (
+    <>
+      {nodes.map((n) => (
+        <CategoryNode
+          key={n.slug}
+          node={n}
+          selectedSlugs={selectedSlugs}
+          onToggle={onToggle}
+          level={level}
+        />
+      ))}
+    </>
+  );
+}
+
+function CategoryNode({
+  node, selectedSlugs, onToggle, level,
+}: {
+  node: Category;
+  selectedSlugs: Set<string>;
+  onToggle: (slug: string) => void;
+  level: number;
+}) {
+  // Auto-expand level-1 by default, collapse deeper. The buyer can still
+  // click the chevron to toggle.
+  const [open, setOpen] = useState(level === 0);
+  const hasKids = !!node.children?.length;
+
+  return (
+    <>
+      <div className="flex items-stretch">
+        {hasKids ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Tutup" : "Buka"}
+            className="grid w-6 shrink-0 place-items-center text-fg-subtle hover:text-fg"
+            style={{ marginLeft: level * 12 }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={open ? "rotate-90 transition-transform" : "transition-transform"}>
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+          </button>
+        ) : (
+          <span className="w-6 shrink-0" style={{ marginLeft: level * 12 }} />
+        )}
+        <CheckboxRow
+          slug={node.slug}
+          name={node.name}
+          checked={selectedSlugs.has(node.slug)}
+          onToggle={() => onToggle(node.slug)}
+          indent={0}
+          flush
+        />
+      </div>
+      {hasKids && open && (
+        <CategoryTree
+          nodes={node.children ?? []}
+          selectedSlugs={selectedSlugs}
+          onToggle={onToggle}
+          level={level + 1}
+        />
+      )}
+    </>
+  );
+}
+
+function CheckboxRow({
+  slug, name, checked, onToggle, indent, flush,
+}: {
+  slug: string;
+  name: string;
+  checked: boolean;
+  onToggle: () => void;
+  indent: number;
+  flush?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={
+        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors " +
+        (checked
+          ? "bg-brand-400/10 font-semibold text-brand-500"
+          : "text-fg-muted hover:bg-panel-2 hover:text-fg") +
+        (flush ? "" : " ml-0")
+      }
+      style={flush ? undefined : { marginLeft: indent }}
+    >
+      <span
+        aria-hidden
+        className={
+          "grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border transition-colors " +
+          (checked ? "border-brand-500 bg-brand-500 text-white" : "border-rule bg-panel")
+        }
+      >
+        {checked && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        )}
+      </span>
+      <BrandGlyph slug={slug} />
+      <span className="flex-1 truncate">{name}</span>
+    </button>
+  );
+}
 
 function BrandGlyph({ slug }: { slug: string }) {
   const letter = slug.replace(/[^a-z]/gi, "")[0]?.toUpperCase() ?? "·";

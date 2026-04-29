@@ -74,9 +74,25 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;
 
+/**
+ * Accepts either ?categorySlug=xxx (single, legacy) or ?cats=xxx,yyy
+ * (comma-separated, multi-select). Both resolve to the union of each
+ * slug's descendant category ids on the server, so checking
+ * "toys" + "action-figure" + "naruto" returns listings tagged with
+ * any of the three or any descendant under them.
+ */
 export const ListingSearchInput = z.object({
   q: z.string().max(80).optional(),
   categorySlug: z.string().max(64).optional(),
+  cats: z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) =>
+      Array.isArray(v)
+        ? v
+        : v.split(",").map((s) => s.trim()).filter(Boolean),
+    )
+    .pipe(z.array(z.string().max(64)).max(20))
+    .optional(),
   condition: ConditionSchema.optional(),
   minPrice: z.coerce.number().int().nonnegative().optional(),
   maxPrice: z.coerce.number().int().positive().optional(),

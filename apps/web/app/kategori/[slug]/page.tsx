@@ -71,11 +71,82 @@ export default async function CategoryPage({
   const { node, ancestors } = found;
 
   const items = listingsRes?.items ?? [];
-  const subcategories = node.children.slice(0, 8);
-  const siblingFallback = ancestors.length > 0 ? ancestors[ancestors.length - 1]!.children.filter((c) => c.slug !== slug).slice(0, 8) : [];
-  const subsetChips = subcategories.length > 0 ? subcategories : siblingFallback;
-
+  const subcategories = node.children;
+  const hasChildren = subcategories.length > 0;
   const breadcrumb = ["Kategori", ...ancestors.map((a) => a.name), node.name];
+
+  // Per spec: when this node still has children, render the kotak-kotak
+  // picker (like /kategori does for level-1) instead of the listings grid.
+  // Listings appear only at the leaf level. The buyer can also bypass this
+  // by clicking "Lihat semua" which jumps straight to /marketplace?cat=slug.
+  if (hasChildren) {
+    return (
+      <AppShell active="Kategori">
+        <div className="px-6 pb-8 lg:px-10">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+            {breadcrumb.join(" · ")}
+          </div>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-8">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl font-bold text-fg md:text-5xl">{node.name}.</h1>
+              <p className="mt-4 max-w-[56ch] text-fg-muted">
+                Pilih sub-kategori untuk lihat listing yang lebih spesifik.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <Stat value={node.listingCount.toLocaleString("id-ID")} label="Listing" />
+              <Stat value={subcategories.length.toLocaleString("id-ID")} label={node.level === 1 ? "Sub-kategori" : "Series/Set"} accent="gold" />
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {subcategories.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/kategori/${c.slug}`}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-rule bg-panel transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40"
+              >
+                <div className="flex aspect-[16/9] items-end bg-gradient-to-br from-brand-100 to-ultra-50 p-5">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/85 text-fg shadow-sm backdrop-blur">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col gap-2 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-fg">{c.name}</h2>
+                    <span className="rounded-full bg-panel-2 px-2 py-0.5 font-mono text-[11px] text-fg-muted">
+                      {c.listingCount.toLocaleString("id-ID")} listing
+                    </span>
+                  </div>
+                  {c.children.length > 0 && (
+                    <p className="text-xs text-fg-subtle">
+                      {c.children.slice(0, 4).map((s) => s.name).join(" · ")}
+                      {c.children.length > 4 ? ` · +${c.children.length - 4}` : ""}
+                    </p>
+                  )}
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-500 transition-transform group-hover:translate-x-0.5">
+                    Jelajahi <span>→</span>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href={`/marketplace?cat=${encodeURIComponent(slug)}`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rule bg-panel px-5 py-2.5 text-sm font-semibold text-fg transition-colors hover:border-brand-400/50 hover:text-brand-500"
+            >
+              Atau lihat semua {node.name} di marketplace →
+            </Link>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const siblingFallback = ancestors.length > 0 ? ancestors[ancestors.length - 1]!.children.filter((c) => c.slug !== slug).slice(0, 8) : [];
+  const subsetChips = subcategories.length > 0 ? subcategories.slice(0, 8) : siblingFallback;
 
   return (
     <AppShell active="Kategori">

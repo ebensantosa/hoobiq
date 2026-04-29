@@ -84,10 +84,19 @@ export default function TentangPage() {
           body: (
             <>
               <Para>
-                Hoobiq dibangun oleh tim kecil yang juga kolektor aktif — masing-masing
-                punya koleksi yang mereka rawat sendiri. Kami bekerja dari Jakarta dan
-                Yogyakarta, dan sebagian besar keputusan produk diambil bareng admin
-                kategori (kolektor yang kami rekrut dari komunitas).
+                Hoobiq didirikan oleh dua founder — keduanya kolektor aktif yang merawat
+                koleksinya sendiri:
+              </Para>
+              <Bullets
+                items={[
+                  <><b className="text-fg">Cendria Vanessa</b> — Co-Founder.</>,
+                  <><b className="text-fg">Ebentera Santosa</b> — Co-Founder.</>,
+                ]}
+              />
+              <Para>
+                Tim kami bekerja dari Jakarta dan Yogyakarta, dan sebagian besar keputusan
+                produk diambil bareng admin kategori (kolektor yang kami rekrut dari
+                komunitas).
               </Para>
               <Para>
                 Posisi kami terhadap data pengguna, ekstraksi nilai dari komunitas, dan

@@ -95,9 +95,13 @@ module.exports = {
         "fg-subtle": "hsl(var(--fg-subtle) / <alpha-value>)",
       },
       fontFamily: {
+        // All families resolve to Nunito — single typeface across the app.
+        // `mono` keeps `font-variant-numeric: tabular-nums` semantics via the
+        // utility but renders in Nunito so numbers and code line up with
+        // the rest of the UI.
         sans: ["var(--font-sans)", "Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["var(--font-sans)", "Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
+        mono: ["var(--font-sans)", "Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       fontSize: {
         "display-lg": ["clamp(3rem, 6vw, 5.5rem)", { lineHeight: "1.02", letterSpacing: "-0.035em", fontWeight: "800" }],

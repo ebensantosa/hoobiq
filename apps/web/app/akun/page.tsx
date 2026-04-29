@@ -110,8 +110,8 @@ export default async function AkunPage() {
             alt={`Avatar @${me.username}`}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xl font-bold text-fg">{me.name ?? me.username}</p>
-            <p className="truncate text-sm text-fg-muted">{me.username}</p>
+            <p className="truncate text-xl font-bold text-fg">{me.name ?? `@${me.username}`}</p>
+            <p className="truncate text-sm text-fg-muted">@{me.username}</p>
             <p className="mt-1 text-xs text-fg-subtle">
               LV {me.level} · ★ {me.trustScore.toFixed(1)}
             </p>

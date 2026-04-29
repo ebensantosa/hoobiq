@@ -135,10 +135,10 @@ export function PassportHero({
             <div className="min-w-0 flex-1 pt-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-fg md:text-[32px]">
-                  {user.name ?? user.username}
+                  {user.name ?? `@${user.username}`}
                 </h1>
               </div>
-              <p className="mt-0.5 text-sm font-medium text-fg-subtle">{user.username}</p>
+              <p className="mt-0.5 text-sm font-medium text-fg-subtle">@{user.username}</p>
 
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
                 {user.city && (
@@ -303,7 +303,7 @@ function ReviewsStrip({ reviews }: { reviews: ProfileReview[] }) {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-fg">{r.buyer.name ?? r.buyer.username}</p>
+                <p className="truncate text-sm font-medium text-fg">{r.buyer.name ?? `@${r.buyer.username}`}</p>
                 <div className="mt-0.5 flex items-center gap-2">
                   <Stars value={r.rating} size={12} />
                   <Link href={`/listing/${r.listing.slug}`} className="truncate text-[11px] text-fg-subtle">

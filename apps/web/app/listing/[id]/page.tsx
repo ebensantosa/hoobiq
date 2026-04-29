@@ -168,7 +168,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-fg">
-                    {listing.seller.name ?? listing.seller.username}
+                    {listing.seller.name ?? `@${listing.seller.username}`}
                   </p>
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
                     <span>Trust {listing.seller.trustScore.toFixed(1)}</span>
@@ -225,7 +225,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 href={`/trades?to=${encodeURIComponent(listing.seller.username)}`}
                 className="font-semibold text-brand-500"
               >
-                Coba trade dengan {listing.seller.name ?? listing.seller.username}
+                Coba trade dengan {listing.seller.name ?? `@${listing.seller.username}`}
               </Link>
             </div>
             )}

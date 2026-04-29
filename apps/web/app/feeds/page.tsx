@@ -272,7 +272,7 @@ function SpotlightCollectors({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-fg">{c.name ?? c.username}</p>
+                  <p className="truncate font-medium text-fg">{c.name ?? `@${c.username}`}</p>
                   <p className="truncate text-[11px] text-fg-muted">{c.posts} post · {c.score} eng</p>
                 </div>
               </Link>

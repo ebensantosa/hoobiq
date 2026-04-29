@@ -229,7 +229,7 @@ function ReviewItem({ review }: { review: Review }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="text-sm font-semibold text-fg">
-              {review.buyer.name ?? review.buyer.username}
+              {review.buyer.name ?? `@${review.buyer.username}`}
             </p>
             {review.buyer.city && (
               <span className="text-xs text-fg-subtle">{review.buyer.city}</span>

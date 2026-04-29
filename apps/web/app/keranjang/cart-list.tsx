@@ -109,7 +109,7 @@ export function CartList({
                   </p>
                 </div>
                 <p className="mt-1 text-xs text-fg-muted">
-                  {it.listing.seller.name ?? it.listing.seller.username}
+                  {it.listing.seller.name ?? `@${it.listing.seller.username}`}
                   {it.listing.seller.city ? ` · ${it.listing.seller.city}` : ""}
                 </p>
                 <p className="mt-1 inline-flex items-center gap-2 text-[11px] text-fg-subtle">

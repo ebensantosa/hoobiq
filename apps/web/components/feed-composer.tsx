@@ -140,7 +140,7 @@ export function FeedComposer({
             alt="Avatar"
           />
           <p className="text-sm font-semibold text-fg">
-            Pamerin koleksi kamu, {me.name ?? me.username}
+            Pamerin koleksi kamu, {me.name ?? `@${me.username}`}
           </p>
         </div>
 
@@ -195,7 +195,7 @@ export function FeedComposer({
             src={me.avatarUrl ?? null}
             alt="Avatar"
           />
-          <p className="text-sm font-semibold text-fg">{me.name ?? me.username}</p>
+          <p className="text-sm font-semibold text-fg">{me.name ?? `@${me.username}`}</p>
         </div>
         <button
           type="button"

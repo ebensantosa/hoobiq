@@ -56,7 +56,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
           className="absolute right-0 mt-3 w-60 overflow-hidden rounded-2xl border border-rule bg-panel shadow-xl ring-1 ring-black/5 z-50 origin-top-right animate-menu-pop"
         >
           <div className="border-b border-rule px-4 py-3">
-            <p className="text-sm font-medium text-fg">{user.name ?? user.username}</p>
+            <p className="text-sm font-medium text-fg">{user.name ?? `@${user.username}`}</p>
             <p className="mt-0.5 text-xs text-fg-subtle">{user.email}</p>
           </div>
           <ul className="py-1 text-sm">

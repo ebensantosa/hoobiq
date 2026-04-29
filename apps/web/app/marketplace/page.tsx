@@ -66,7 +66,7 @@ export default async function MarketplacePage({
           icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 1.5-4h17L22 7"/><path d="M2 7v3a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2V7"/><path d="M4 12v9h16v-9"/></svg>}
         />
 
-        <MarketplaceFilterBar resultCount={filtered.length} series={tree ?? []} />
+        <MarketplaceFilterBar series={tree ?? []} />
 
         {data === null && (
           <div className="rounded-xl border border-flame-400/30 bg-flame-400/5 p-4 text-sm">

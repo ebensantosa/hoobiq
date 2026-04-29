@@ -1,24 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Nunito, JetBrains_Mono } from "next/font/google";
+import { Nunito } from "next/font/google";
 import { themeInitScript } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
 import { ToastProvider } from "@/components/toast-provider";
 import { getSiteSettings } from "@/lib/site-settings";
 import "./globals.css";
 
-// Nunito — rounded, friendly, high-readability sans. Pairs nicely with the
-// playful "hoobiq" wordmark while still feeling premium at heavier weights.
+// Nunito — rounded, friendly, high-readability sans. Single typeface across
+// the entire app; `--font-mono` aliases to the same instance so any tokens
+// or utilities that reference the mono variable still work.
 const sans = Nunito({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
   weight: ["400", "500", "600", "700", "800", "900"],
-});
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
 });
 
 // themeColor moved to its own `viewport` export — Next.js 15 split this out
@@ -53,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="id"
-      className={`${sans.variable} ${mono.variable}`}
+      className={sans.variable}
       // The pre-hydration theme script flips html.classList before React boots,
       // so the html element legitimately differs between SSR and client.
       // suppressHydrationWarning only silences the warning on <html> itself —

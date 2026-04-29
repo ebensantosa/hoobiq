@@ -139,7 +139,7 @@ function Row({ item, onChange, status }: { item: RequestItem; onChange: () => vo
             <span className="font-mono uppercase tracking-[0.18em]">
               {new Date(item.createdAt).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
             </span>
-            <span>· dari {item.user.name ?? item.user.username}</span>
+            <span>· dari {item.user.name ?? `@${item.user.username}`}</span>
           </div>
           <p className="mt-2 text-lg font-semibold text-fg">{item.name}</p>
           <p className="text-xs text-fg-muted">

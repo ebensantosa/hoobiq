@@ -133,7 +133,7 @@ function ReelThumb({ item, onOpen }: { item: HaulItem; onOpen: () => void }) {
       </span>
 
       <span className="max-w-[72px] truncate text-[11px] font-medium text-fg-muted">
-        {item.seller.username}
+        @{item.seller.username}
       </span>
 
     </button>
@@ -333,7 +333,7 @@ function ReelPlayer({
                 (item.seller.name ?? item.seller.username)[0]?.toUpperCase()
               )}
             </span>
-            <span className="text-sm font-semibold">{item.seller.username}</span>
+            <span className="text-sm font-semibold">@{item.seller.username}</span>
             {item.live && (
               <span className="rounded-md bg-flame-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-white">
                 ● Live
@@ -464,7 +464,7 @@ function ReelPlayer({
                 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur-md
                 hover:bg-white/20"
             >
-              Lihat profil {item.seller.name ?? item.seller.username}
+              Lihat profil {item.seller.name ?? `@${item.seller.username}`}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 5l7 7-7 7" />
               </svg>

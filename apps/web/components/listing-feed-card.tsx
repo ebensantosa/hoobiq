@@ -35,7 +35,7 @@ export function ListingFeedCard({
         </Link>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-fg">
-            {listing.seller.username}
+            @{listing.seller.username}
           </p>
           <p className="text-xs text-fg-subtle">
             {listing.seller.city ?? "Lokasi belum diisi"} · {relTime(listing.createdAt)}

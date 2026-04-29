@@ -76,7 +76,7 @@ export function PayoutQueue({ initial, status }: { initial: PayoutRow[]; status:
               <div>
                 <p className="text-base font-bold text-fg">Rp {r.amountIdr.toLocaleString("id-ID")}</p>
                 <p className="mt-0.5 text-xs text-fg-muted">
-                  {r.user.name ?? r.user.username} · @{r.user.username} · {r.user.email}
+                  {r.user.name ?? `@${r.user.username}`} · @{r.user.username} · {r.user.email}
                 </p>
                 <p className="mt-0.5 text-xs text-fg-subtle">
                   {new Date(r.createdAt).toLocaleString("id-ID")}

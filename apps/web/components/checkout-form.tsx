@@ -210,7 +210,7 @@ export function CheckoutForm({
               </p>
               <p className="mt-1 font-medium text-fg">{listing.title}</p>
               <p className="mt-1 text-xs text-fg-muted">
-                Dari {listing.seller.username}{listing.seller.city ? ` · ${listing.seller.city}` : ""}
+                Dari @{listing.seller.username}{listing.seller.city ? ` · ${listing.seller.city}` : ""}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">

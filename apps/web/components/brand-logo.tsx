@@ -1,32 +1,25 @@
 import { Logo } from "@hoobiq/ui";
 import { getSiteSettings } from "@/lib/site-settings";
 
-const sizes = { sm: 48, md: 80, lg: 144 } as const;
+const frame = { sm: 32, md: 32, lg: 56 } as const;
 
 /**
  * Brand logo that respects admin-uploaded overrides.
  *
- * If SiteSettings.logoUrl is set, render that image (with the same vertical
- * trimming the default Logo uses). Otherwise fall back to the bundled Logo
- * component (which loads /logo.PNG).
+ * If SiteSettings.logoUrl is set, render that image inside the same
+ * fixed-height frame the bundled Logo uses, so it lines up vertically
+ * with the rest of the header regardless of the asset's intrinsic
+ * aspect ratio.
  *
- * Pass `size="responsive"` to render small on mobile + medium from sm:
- * breakpoint up — what every nav surface should use so the logo doesn't
- * blow out the 64-px-tall mobile header.
+ * `size="responsive"` renders one consistent size — keeps the header
+ * looking the same on mobile and desktop, logged in or out.
  *
  * Server component — pulls from the cached site-settings fetch.
  */
 export async function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" | "responsive" }) {
   const settings = await getSiteSettings();
-  if (size === "responsive") {
-    return (
-      <>
-        <span className="inline-flex sm:hidden"><BrandLogoInner size="sm" url={settings.logoUrl} brand={settings.brandName} /></span>
-        <span className="hidden sm:inline-flex"><BrandLogoInner size="md" url={settings.logoUrl} brand={settings.brandName} /></span>
-      </>
-    );
-  }
-  return <BrandLogoInner size={size} url={settings.logoUrl ?? null} brand={settings.brandName} />;
+  const resolved = size === "responsive" ? "sm" : size;
+  return <BrandLogoInner size={resolved} url={settings.logoUrl ?? null} brand={settings.brandName} />;
 }
 
 function BrandLogoInner({
@@ -37,15 +30,15 @@ function BrandLogoInner({
   brand: string;
 }) {
   if (!url) return <Logo size={size} />;
-  const h = sizes[size];
+  const h = frame[size];
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-center" style={{ height: h }}>
       <img
         src={url}
         alt={brand}
         height={h}
-        style={{ height: h, width: "auto", marginTop: -h / 12, marginBottom: -h / 4 }}
-        className="select-none object-contain transition-transform duration-300 ease-out hover:scale-[1.03]"
+        style={{ height: h, width: "auto" }}
+        className="max-w-none select-none object-contain transition-transform duration-300 ease-out hover:scale-[1.03]"
         draggable={false}
       />
     </span>

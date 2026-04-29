@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Card } from "@hoobiq/ui";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { ListingCard } from "@/components/listing-card";
 import { HomeFeed, type HomeCategory } from "@/components/home-feed";
-import { BrandLogo } from "@/components/brand-logo";
 import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
@@ -71,8 +70,8 @@ export default async function LandingPage() {
   const trending  = listings.slice(0, 8);
 
   return (
-    <main className="min-h-screen pt-16">
-      <Nav />
+    <main className="min-h-screen pt-14 sm:pt-16">
+      <MarketingNav />
       <Hero picks={heroPicks} t={t} />
       <LatestStrip items={listings.slice(0, 12)} />
       <Trending items={trending} />
@@ -80,37 +79,6 @@ export default async function LandingPage() {
       <BottomCTA />
       <MarketingFooter />
     </main>
-  );
-}
-
-/* ---------------- Nav ---------------- */
-
-function Nav() {
-  return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
-      <div className="mx-auto flex h-20 max-w-[1280px] items-center gap-8 px-6 md:px-10">
-        <Link href="/" className="shrink-0">
-          <BrandLogo size="md" />
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm text-fg-muted md:flex">
-          <Link href="/marketplace" className="hover:text-fg">Marketplace</Link>
-          <Link href="/kategori" className="hover:text-fg">Kategori</Link>
-          <Link href="/feeds" className="hover:text-fg">Komunitas</Link>
-        </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-          <Link href="/masuk" className="rounded-lg px-3 py-2 text-sm text-fg-muted hover:text-fg">
-            Masuk
-          </Link>
-          <Link
-            href="/daftar"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-brand-400 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-500"
-          >
-            Daftar
-          </Link>
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -416,7 +384,7 @@ function CommunityPreview({ posts }: { posts: Post[] }) {
                 </div>
                 <div className="p-4">
                   <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                    {p.author.username}
+                    @{p.author.username}
                     <span className="rounded-full bg-flame-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-flame-400">
                       LV {p.author.level}
                     </span>

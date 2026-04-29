@@ -196,7 +196,7 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
             href={`/u/${post.author.username}`}
             className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg hover:text-brand-500"
           >
-            {post.author.name ?? post.author.username}
+            {post.author.name ?? `@${post.author.username}`}
             <span className="rounded-full bg-flame-400/15 px-2 py-0.5 text-[10px] font-bold text-flame-600">
               LV {post.author.level}
             </span>

@@ -238,7 +238,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                         alt={`Avatar @${counterpart.username}`}
                       />
                       <div>
-                        <p className="text-sm font-medium text-fg">{counterpart.name ?? counterpart.username}</p>
+                        <p className="text-sm font-medium text-fg">{counterpart.name ?? `@${counterpart.username}`}</p>
                         <p className="text-xs text-fg-muted">
                           {counterpart.city ?? "—"} · ★ {counterpart.trustScore.toFixed(1)}
                         </p>

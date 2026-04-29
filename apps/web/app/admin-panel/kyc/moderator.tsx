@@ -94,7 +94,7 @@ function Row({ item, status, onChange }: { item: KycItem; status: string; onChan
     start(async () => {
       try {
         await api(`/users/kyc/${item.id}/approve`, { method: "POST" });
-        toast.success("KTP disetujui", `${item.name ?? item.username} sekarang bisa tambah rekening.`);
+        toast.success("KTP disetujui", `${item.name ?? `@${item.username}`} sekarang bisa tambah rekening.`);
         onChange();
       } catch (e) {
         const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal approve.";
@@ -133,7 +133,7 @@ function Row({ item, status, onChange }: { item: KycItem; status: string; onChan
                 src={item.avatarUrl}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-bold text-fg">{item.name ?? item.username}</p>
+                <p className="truncate text-base font-bold text-fg">{item.name ?? `@${item.username}`}</p>
                 <p className="truncate text-xs text-fg-muted">{item.email}</p>
                 {item.city && <p className="truncate text-xs text-fg-subtle">{item.city}</p>}
               </div>

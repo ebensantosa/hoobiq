@@ -54,10 +54,8 @@ const fmtIdr = (n: number): string => {
  * full screen for the listing grid.
  */
 export function MarketplaceFilterBar({
-  resultCount,
   series,
 }: {
-  resultCount: number;
   series: Category[];
 }) {
   const router = useRouter();
@@ -180,18 +178,11 @@ export function MarketplaceFilterBar({
   const sortLabel = SORT_OPTIONS.find((s) => s.key === sort)?.label ?? "Terbaru";
 
   return (
-    <div className="sticky top-20 z-20 -mx-6 mb-6 border-b border-rule bg-canvas/90 px-6 py-3 backdrop-blur-md lg:-mx-10 lg:px-10">
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Result count + spinner */}
-        <div className="mr-2 flex items-baseline gap-2">
-          <span className="font-mono text-lg font-extrabold tabular-nums text-fg">
-            {resultCount.toLocaleString("id-ID")}
-          </span>
-          <span className="text-xs text-fg-muted">listing</span>
-          {pending && (
-            <span className="ml-1 h-3 w-3 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
-          )}
-        </div>
+    <div className="sticky top-14 z-20 -mx-4 mb-6 border-b border-rule bg-canvas/90 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 sm:top-16 lg:-mx-10 lg:px-10">
+      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {pending && (
+          <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
+        )}
 
         {/* Filter pills */}
         <Pill
@@ -386,7 +377,7 @@ export function MarketplaceFilterBar({
         </Pill>
 
         {/* Sort — separate group, doesn't count as filter */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <Pill label={`Urutkan: ${sortLabel}`} compact>
             <div className="w-44 p-1.5">
               {SORT_OPTIONS.map((s) => (
@@ -457,12 +448,12 @@ function Pill({
     : "border-brand-400 bg-brand-400/10 text-brand-500";
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " +
+          "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " +
           (compact ? "py-1 " : "") +
           (active
             ? activeStyle

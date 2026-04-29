@@ -5,6 +5,7 @@ import { Avatar, Badge, Card } from "@hoobiq/ui";
 import { OrderActions } from "@/components/order-actions";
 import { TrackingTimeline } from "@/components/tracking-timeline";
 import { PendingOrdersReconciler } from "@/components/pending-orders-reconciler";
+import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -213,9 +214,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-brand-400/25 via-ultra-400/20 to-flame-400/25" />
                     )}
-                    <Badge tone={o.listing.condition === "MINT" ? "mint" : "near"} size="xs" className="absolute left-2 top-2">
-                      {o.listing.condition.replace("_", " ")}
-                    </Badge>
+                    {(() => {
+                      const c = conditionBadge(o.listing.condition);
+                      return (
+                        <Badge tone={c.tone} size="xs" className="absolute left-2 top-2">
+                          {c.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1">
                     {o.listing.category && (

@@ -366,7 +366,13 @@ function toSummary(l: Row) {
     slug: l.slug,
     title: l.title,
     priceIdr: Number(l.priceCents / CENTS_PER_RUPIAH),
-    condition: l.condition as "MINT" | "NEAR_MINT" | "EXCELLENT" | "GOOD" | "FAIR",
+    // Stored as a string column — the type union covers the new enum
+    // (BRAND_NEW_SEALED, LIKE_NEW, EXCELLENT, GOOD, FAIR, POOR) plus
+    // legacy values still on un-migrated rows (MINT, NEAR_MINT). UI uses
+    // conditionBadge() to normalize either form.
+    condition: l.condition as
+      | "BRAND_NEW_SEALED" | "LIKE_NEW" | "EXCELLENT" | "GOOD" | "FAIR" | "POOR"
+      | "MINT" | "NEAR_MINT",
     images,
     cover: images[0] ?? null,
     boosted: !!l.boostedUntil && l.boostedUntil > new Date(),

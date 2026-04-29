@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Badge } from "@hoobiq/ui";
+import { conditionBadge } from "@/lib/condition-badge";
 
 /**
  * Click-to-swap image gallery for the listing detail page. Cover image is
@@ -27,9 +28,14 @@ export function ListingGallery({
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-brand-400/15 via-transparent to-flame-400/10" />
         )}
-        <Badge tone={condition === "MINT" ? "mint" : "near"} size="sm" className="absolute left-4 top-4">
-          {condition === "MINT" ? "Mint" : condition.replace("_", " ")}
-        </Badge>
+        {(() => {
+          const c = conditionBadge(condition);
+          return (
+            <Badge tone={c.tone} size="sm" className="absolute left-4 top-4">
+              {c.label}
+            </Badge>
+          );
+        })()}
         {images.length > 1 && (
           <span className="absolute right-4 bottom-4 rounded-full bg-black/55 px-2.5 py-1 font-mono text-[11px] text-white backdrop-blur">
             {active + 1} / {images.length}

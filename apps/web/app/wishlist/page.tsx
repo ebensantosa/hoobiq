@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@hoobiq/ui";
 import { CardArt, pickArt } from "@/components/card-art";
 import { serverApi } from "@/lib/server/api";
+import { conditionBadge } from "@/lib/condition-badge";
 import type { WishlistItem } from "@/lib/api/wishlist";
 
 export const dynamic = "force-dynamic";
@@ -46,9 +47,14 @@ export default async function WishlistPage() {
                   ) : (
                     <CardArt variant={pickArt(w.listing.slug)} />
                   )}
-                  <Badge tone={w.listing.condition === "MINT" ? "mint" : "near"} size="xs" className="absolute left-3 top-3">
-                    {w.listing.condition === "MINT" ? "Mint" : "Near Mint"}
-                  </Badge>
+                  {(() => {
+                    const c = conditionBadge(w.listing.condition);
+                    return (
+                      <Badge tone={c.tone} size="xs" className="absolute left-3 top-3">
+                        {c.label}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 <div className="p-4">
                   <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-fg">{w.listing.title}</p>

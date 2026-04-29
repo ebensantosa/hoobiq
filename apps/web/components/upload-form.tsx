@@ -9,7 +9,8 @@ import { Spinner } from "./spinner";
 import { listingsWriteApi } from "@/lib/api/listings-write";
 import { uploadImage } from "@/lib/api/uploads";
 import { ApiError } from "@/lib/api/client";
-import type { CreateListingInput as CreateListingPayload } from "@hoobiq/types";
+import type { CreateListingInput as CreateListingPayload, Condition } from "@hoobiq/types";
+import { CONDITION_LABELS } from "@hoobiq/types";
 
 type Node = {
   id: string;
@@ -19,7 +20,14 @@ type Node = {
   children: Node[];
 };
 
-const conditions = ["MINT", "NEAR_MINT", "EXCELLENT", "GOOD", "FAIR"] as const;
+const conditions: readonly Condition[] = [
+  "BRAND_NEW_SEALED",
+  "LIKE_NEW",
+  "EXCELLENT",
+  "GOOD",
+  "FAIR",
+  "POOR",
+];
 
 export type UploadFormExisting = {
   id: string;
@@ -28,7 +36,7 @@ export type UploadFormExisting = {
   priceIdr: number;
   stock: number;
   weightGrams: number;
-  condition: typeof conditions[number];
+  condition: Condition;
   images: string[];
   categoryId: string;
   couriers?: string[];
@@ -76,14 +84,13 @@ function validate(state: FormState, images: string[], condition: string): Errors
 
   if (!state.categoryId)                          e.categoryId = "Pilih kategori.";
   if (images.length === 0)                        e.images = "Upload minimal 1 foto.";
-  if (!conditions.includes(condition as typeof conditions[number])) e.condition = "Pilih kondisi.";
+  if (!conditions.includes(condition as Condition)) e.condition = "Pilih kondisi.";
 
   return e;
 }
 
 export function UploadForm({ tree, existing }: { tree: Node[]; existing?: UploadFormExisting }) {
   const router = useRouter();
-  const flatCategories = React.useMemo(() => flatten(tree), [tree]);
 
   const [state, setState] = React.useState<FormState>({
     title:       existing?.title ?? "",
@@ -93,7 +100,9 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
     weight:      String(existing?.weightGrams ?? 500),
     categoryId:  existing?.categoryId ?? "",
   });
-  const [condition, setCondition] = React.useState<typeof conditions[number]>(existing?.condition ?? "MINT");
+  const [condition, setCondition] = React.useState<Condition>(
+    (existing?.condition as Condition | undefined) ?? "BRAND_NEW_SEALED",
+  );
   const [images, setImages]       = React.useState<string[]>(existing?.images ?? []);
   const [imageErr, setImageErr]   = React.useState<string | null>(null);
   const [couriers, setCouriers]   = React.useState<string[]>(existing?.couriers ?? []);
@@ -208,22 +217,12 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           />
         </Field>
 
-        <Field label="Kategori" error={showErr("categoryId")}>
-          <select
-            value={state.categoryId}
-            onChange={(e) => { set("categoryId", e.target.value); blur("categoryId"); }}
-            onBlur={() => blur("categoryId")}
-            className={
-              "h-12 w-full rounded-xl border bg-panel px-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-brand-400/20 " +
-              (showErr("categoryId") ? "border-flame-400 focus:border-flame-400" : "border-rule focus:border-brand-400/60")
-            }
-          >
-            <option value="">— Pilih kategori —</option>
-            {flatCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.path}</option>
-            ))}
-          </select>
-        </Field>
+        <CategoryPicker
+          tree={tree}
+          value={state.categoryId}
+          onChange={(id) => { set("categoryId", id); blur("categoryId"); }}
+          error={showErr("categoryId")}
+        />
 
         <div className="grid gap-5 md:grid-cols-3">
           <Field label="Harga (Rp)" error={showErr("price")}>
@@ -277,7 +276,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
                     : "border-rule text-fg-muted hover:border-brand-400/50")
                 }
               >
-                {c.replace("_", " ")}
+                {CONDITION_LABELS[c]}
               </button>
             ))}
           </div>
@@ -356,14 +355,132 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   );
 }
 
-function flatten(nodes: Node[], parents: string[] = []): Array<{ id: string; path: string }> {
-  const out: Array<{ id: string; path: string }> = [];
-  for (const n of nodes) {
-    const path = [...parents, n.name].join(" › ");
-    out.push({ id: n.id, path });
-    if (n.children?.length) out.push(...flatten(n.children, [...parents, n.name]));
-  }
-  return out;
+/**
+ * Three dependent dropdowns matching the Hoobiq spec wording:
+ *   Kategori → Sub Kategori → Series/Set
+ *
+ * The form's persisted `categoryId` is the deepest selected node, so when
+ * the seller picks just a category we save the level-1 id; if they go
+ * deeper we save level-2 or level-3. The marketplace filter rolls up
+ * counts so saving deep is always correct.
+ *
+ * Resets cascade downward — picking a new "Kategori" clears the sub +
+ * series fields automatically. We resolve the active path from the
+ * existing categoryId on mount so editing an existing listing works.
+ */
+function CategoryPicker({
+  tree, value, onChange, error,
+}: {
+  tree: Node[];
+  value: string;
+  onChange: (id: string) => void;
+  error?: string;
+}) {
+  // Build a flat lookup so we can resolve the ancestor chain of the
+  // currently-stored value when the form mounts.
+  const byId = React.useMemo(() => {
+    const m = new Map<string, { node: Node; parentId: string | null }>();
+    const walk = (nodes: Node[], parentId: string | null) => {
+      for (const n of nodes) {
+        m.set(n.id, { node: n, parentId });
+        if (n.children?.length) walk(n.children, n.id);
+      }
+    };
+    walk(tree, null);
+    return m;
+  }, [tree]);
+
+  // Resolve initial L1/L2/L3 from `value` (deepest-first stored id).
+  const initial = React.useMemo(() => {
+    if (!value) return { l1: "", l2: "", l3: "" };
+    const chain: string[] = [];
+    let cur = byId.get(value);
+    while (cur) {
+      chain.unshift(cur.node.id);
+      cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+    }
+    return { l1: chain[0] ?? "", l2: chain[1] ?? "", l3: chain[2] ?? "" };
+  }, [value, byId]);
+
+  const [l1, setL1] = React.useState(initial.l1);
+  const [l2, setL2] = React.useState(initial.l2);
+  const [l3, setL3] = React.useState(initial.l3);
+
+  // Sync if `value` is reset externally (e.g. server-side validation reset).
+  React.useEffect(() => {
+    setL1(initial.l1); setL2(initial.l2); setL3(initial.l3);
+  }, [initial.l1, initial.l2, initial.l3]);
+
+  const l1Nodes = tree;
+  const l2Nodes = React.useMemo(
+    () => l1Nodes.find((n) => n.id === l1)?.children ?? [],
+    [l1Nodes, l1],
+  );
+  const l3Nodes = React.useMemo(
+    () => l2Nodes.find((n) => n.id === l2)?.children ?? [],
+    [l2Nodes, l2],
+  );
+
+  const selectClass = (hasError: boolean) =>
+    "h-12 w-full rounded-xl border bg-panel px-3 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-brand-400/20 " +
+    (hasError ? "border-flame-400 focus:border-flame-400" : "border-rule focus:border-brand-400/60");
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <Field label="Kategori" error={error}>
+        <select
+          value={l1}
+          onChange={(e) => {
+            const v = e.target.value;
+            setL1(v); setL2(""); setL3("");
+            onChange(v);
+          }}
+          className={selectClass(!!error && !l1)}
+        >
+          <option value="">— Pilih —</option>
+          {l1Nodes.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="Sub Kategori" hint={l1 && l2Nodes.length === 0 ? "(tidak ada sub)" : undefined}>
+        <select
+          value={l2}
+          onChange={(e) => {
+            const v = e.target.value;
+            setL2(v); setL3("");
+            onChange(v || l1);
+          }}
+          disabled={!l1 || l2Nodes.length === 0}
+          className={selectClass(false) + (!l1 || l2Nodes.length === 0 ? " opacity-50" : "")}
+        >
+          <option value="">{l1 ? "— Pilih —" : "Pilih kategori dulu"}</option>
+          {l2Nodes.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="Series/Set" hint={l2 && l3Nodes.length === 0 ? "(tidak ada series)" : undefined}>
+        <select
+          value={l3}
+          onChange={(e) => {
+            const v = e.target.value;
+            setL3(v);
+            onChange(v || l2 || l1);
+          }}
+          disabled={!l2 || l3Nodes.length === 0}
+          className={selectClass(false) + (!l2 || l3Nodes.length === 0 ? " opacity-50" : "")}
+        >
+          <option value="">{l2 ? "— Pilih —" : "Pilih sub kategori dulu"}</option>
+          {l3Nodes.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </Field>
+    </div>
+  );
 }
 
 function Section({

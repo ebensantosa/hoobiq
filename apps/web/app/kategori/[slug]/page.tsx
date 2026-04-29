@@ -25,9 +25,13 @@ type SearchParams = {
 };
 
 const CONDITION_TABS = [
-  { key: undefined,  label: "Semua kondisi" },
-  { key: "MINT",      label: "Mint" },
-  { key: "NEAR_MINT", label: "Near Mint" },
+  { key: undefined,           label: "Semua kondisi" },
+  { key: "BRAND_NEW_SEALED",  label: "Brand New" },
+  { key: "LIKE_NEW",          label: "Like New" },
+  { key: "EXCELLENT",         label: "Excellent" },
+  { key: "GOOD",              label: "Good" },
+  { key: "FAIR",              label: "Fair" },
+  { key: "POOR",              label: "Poor" },
 ];
 
 const SORT_TABS = [
@@ -46,7 +50,7 @@ export default async function CategoryPage({
   const { slug } = await params;
   const sp = await searchParams;
   const sort = sp.sort && SORT_TABS.some((s) => s.key === sp.sort) ? sp.sort : "newest";
-  const condition = sp.condition && /^(MINT|NEAR_MINT|EXCELLENT|GOOD|FAIR)$/.test(sp.condition) ? sp.condition : null;
+  const condition = sp.condition && /^(BRAND_NEW_SEALED|LIKE_NEW|EXCELLENT|GOOD|FAIR|POOR)$/.test(sp.condition) ? sp.condition : null;
 
   // Build the listings query — same shape the marketplace uses.
   const q = new URLSearchParams();

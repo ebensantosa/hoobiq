@@ -7,7 +7,10 @@ export type WishlistItem = {
     slug: string;
     title: string;
     priceIdr: number;
-    condition: "MINT" | "NEAR_MINT" | "EXCELLENT" | "GOOD" | "FAIR";
+    // Wide string type — conditionBadge() resolves both new
+    // (BRAND_NEW_SEALED, LIKE_NEW, ...) and legacy (MINT, NEAR_MINT)
+    // values until the data migration completes.
+    condition: string;
     cover: string | null;
     seller: { username: string; city: string | null; trustScore: number };
   };

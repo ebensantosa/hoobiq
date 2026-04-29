@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CardArt, pickArt } from "./card-art";
 import { ListingOwnerMenu } from "./listing-owner-menu";
+import { conditionBadge } from "@/lib/condition-badge";
 import type { ListingSummary } from "@hoobiq/types";
 
 /**
@@ -41,19 +42,25 @@ export function ListingCard({
           {/* Soft gradient at top so the condition pill is always legible. */}
           <span className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/35 via-black/10 to-transparent" />
           <div className="absolute left-3 top-3 flex gap-1.5">
-            <span
-              className={
-                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm " +
-                (l.condition === "MINT"
-                  ? "bg-emerald-500/95 text-white"
-                  : l.condition === "NEAR_MINT"
-                  ? "bg-sky-500/95 text-white"
-                  : "bg-fg/85 text-canvas")
-              }
-            >
-              <span className="h-1 w-1 rounded-full bg-white" />
-              {l.condition === "MINT" ? "Mint" : l.condition.replace("_", " ")}
-            </span>
+            {(() => {
+              const c = conditionBadge(l.condition);
+              const tint =
+                c.tone === "mint" ? "bg-emerald-500/95 text-white"
+                : c.tone === "near" ? "bg-sky-500/95 text-white"
+                : c.tone === "crim" ? "bg-rose-500/95 text-white"
+                : "bg-fg/85 text-canvas";
+              return (
+                <span
+                  className={
+                    "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm " +
+                    tint
+                  }
+                >
+                  <span className="h-1 w-1 rounded-full bg-white" />
+                  {c.label}
+                </span>
+              );
+            })()}
             {l.boosted && (
               <span className="inline-flex items-center gap-1 rounded-full bg-flame-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
                 ⚡ Boosted
@@ -67,14 +74,13 @@ export function ListingCard({
           <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-fg transition-colors group-hover:text-brand-500">
             {l.title}
           </p>
+          {/* Per spec: show seller location only on the card (no username/@). */}
           <p className="mt-1.5 flex items-center gap-1 text-xs text-fg-subtle">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21a8 8 0 0 1 16 0" />
+              <path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z" />
+              <circle cx="12" cy="10" r="2.5" />
             </svg>
-            <span className="truncate">
-              @{l.seller.username}{l.seller.city ? ` · ${l.seller.city}` : ""}
-            </span>
+            <span className="truncate">{l.seller.city ?? "Lokasi belum diisi"}</span>
           </p>
           <div className="mt-3 flex items-end justify-between gap-2">
             <p className="text-base font-extrabold tracking-tight text-fg">

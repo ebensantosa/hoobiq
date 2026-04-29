@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card } from "@hoobiq/ui";
 import { api, ApiError } from "@/lib/api/client";
+import { conditionBadge } from "@/lib/condition-badge";
 
 type Address = {
   id: string;
@@ -193,9 +194,14 @@ export function CheckoutForm({
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-brand-400/20 to-flame-400/10" />
               )}
-              <Badge tone={listing.condition === "MINT" ? "mint" : "near"} size="xs" className="absolute left-1.5 top-1.5">
-                {listing.condition.replace("_", " ")}
-              </Badge>
+              {(() => {
+                const c = conditionBadge(listing.condition);
+                return (
+                  <Badge tone={c.tone} size="xs" className="absolute left-1.5 top-1.5">
+                    {c.label}
+                  </Badge>
+                );
+              })()}
             </div>
             <div className="flex-1">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">

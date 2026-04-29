@@ -13,7 +13,7 @@ const ListingPatch = z.object({
   description: z.string().max(8_000).optional(),
   priceIdr:    z.number().int().positive().optional(),
   categoryId:  z.string().min(1).optional(),
-  condition:   z.enum(["MINT", "NEAR_MINT", "GOOD", "USED"]).optional(),
+  condition:   z.enum(["BRAND_NEW_SEALED", "LIKE_NEW", "EXCELLENT", "GOOD", "FAIR", "POOR"]).optional(),
   moderation:  z.enum(["pending", "active", "hidden", "rejected"]).optional(),
   isPublished: z.boolean().optional(),
 });

@@ -15,25 +15,71 @@ if (!PEPPER) {
 const prisma = new PrismaClient();
 
 async function main() {
-  /* ---------- Categories ---------- */
-  const cards    = await upsertCat("cards",    "Trading Cards",  1);
-  const figure   = await upsertCat("figure",   "Action Figure",  1);
-  const blindbox = await upsertCat("blindbox", "Blind Box",      1);
-  const merch    = await upsertCat("merch",    "Merchandise",    1);
-  const komik    = await upsertCat("komik",    "Komik",          1);
+  /* ---------- Categories ----------------------------------------------
+   * 3-level taxonomy aligned with the Hoobiq spec:
+   *   1. Collection Cards
+   *   2. Trading Cards
+   *   3. Merchandise
+   *      ├── Official Goods (sub-sub: anime titles)
+   *      └── Art & Fan Goods (plush, keychain, fanart)
+   *   4. Toys
+   *      ├── Action Figure
+   *      ├── Blind Box
+   *      └── Hot Wheels
+   *   5. Others
+   *      ├── Komik
+   *      ├── Novel
+   *      └── Cosplay
+   * Old slugs (cards/figure/blindbox/merch/komik + their level-2 kids) are
+   * intentionally NOT removed here so existing listings keep their
+   * categoryId until scripts/migrate-categories.ts re-points them.
+   * ----------------------------------------------------------------- */
+  const collection = await upsertCat("collection-cards", "Collection Cards", 1, undefined, 1);
+  const trading    = await upsertCat("trading-cards",    "Trading Cards",    1, undefined, 2);
+  const merchRoot  = await upsertCat("merchandise",      "Merchandise",      1, undefined, 3);
+  const toysRoot   = await upsertCat("toys",             "Toys",             1, undefined, 4);
+  const others     = await upsertCat("others",           "Others",           1, undefined, 5);
 
-  const pokemon  = await upsertCat("pokemon",  "Pokémon",         2, cards.id);
-  const onepiece = await upsertCat("onepiece", "One Piece",       2, cards.id);
-  const genshin  = await upsertCat("genshin",  "Genshin Impact",  2, figure.id);
-  const popmart  = await upsertCat("popmart",  "Pop Mart",        2, blindbox.id);
-  const manga    = await upsertCat("manga",    "Manga",           2, komik.id);
+  // Merchandise sub-categories
+  const official     = await upsertCat("official-goods",   "Official Goods",   2, merchRoot.id, 1);
+  const artFan       = await upsertCat("art-fan-goods",    "Art & Fan Goods",  2, merchRoot.id, 2);
 
-  await upsertCat("crown-zenith",   "Crown Zenith",   3, pokemon.id);
-  await upsertCat("paldea-evolved", "Paldea Evolved", 3, pokemon.id);
-  await upsertCat("op01",           "OP01",           3, onepiece.id);
-  await upsertCat("labubu",         "Labubu",         3, popmart.id);
-  // Silence unused-warnings — we want these in the tree even if no listing yet.
-  void merch;
+  // Official Goods → series/anime titles (sub-sub).
+  const animeTitles: Array<[string, string, number]> = [
+    ["one-piece",       "One Piece",        1],
+    ["naruto",          "Naruto",           2],
+    ["demon-slayer",    "Demon Slayer",     3],
+    ["jujutsu-kaisen",  "Jujutsu Kaisen",   4],
+    ["attack-on-titan", "Attack on Titan",  5],
+    ["chainsaw-man",    "Chainsaw Man",     6],
+    ["dragon-ball",     "Dragon Ball",      7],
+    ["my-hero-academia","My Hero Academia", 8],
+    ["spy-x-family",    "Spy x Family",     9],
+    ["frieren",         "Frieren",         10],
+    ["genshin-impact",  "Genshin Impact",  11],
+    ["honkai-star-rail","Honkai Star Rail",12],
+  ];
+  for (const [slug, name, order] of animeTitles) {
+    await upsertCat(slug, name, 3, official.id, order);
+  }
+
+  // Art & Fan Goods sub-sub
+  await upsertCat("plush",     "Plush Karakter", 3, artFan.id, 1);
+  await upsertCat("keychain",  "Keychain",       3, artFan.id, 2);
+  await upsertCat("fanart",    "Fanart",         3, artFan.id, 3);
+
+  // Toys sub-categories
+  await upsertCat("action-figure", "Action Figure", 2, toysRoot.id, 1);
+  await upsertCat("blind-box",     "Blind Box",     2, toysRoot.id, 2);
+  await upsertCat("hot-wheels",    "Hot Wheels",    2, toysRoot.id, 3);
+
+  // Others sub-categories
+  await upsertCat("komik",   "Komik",   2, others.id, 1);
+  await upsertCat("novel",   "Novel",   2, others.id, 2);
+  await upsertCat("cosplay", "Cosplay", 2, others.id, 3);
+
+  // Silence unused-warnings — both roots are referenced via children only.
+  void collection; void trading;
 
   /* ---------- Users ---------- */
   const adminHash  = await bcrypt.hash("Admin123!"  + PEPPER, 12);
@@ -258,11 +304,31 @@ async function main() {
   console.log("   rangga@hoobiq.id   Buyer1234! ← buyer demo (wishlist, completed order)");
 }
 
-async function upsertCat(slug: string, name: string, level: number, parentId?: string) {
+async function upsertCat(
+  slug: string,
+  name: string,
+  level: number,
+  parentId?: string,
+  order?: number,
+) {
   return prisma.category.upsert({
     where: { slug },
-    update: {},
-    create: { slug, name, level, parentId: parentId ?? null },
+    // Re-running the seed should refresh the display order and parent
+    // wiring so reorders/renames in the seed propagate to the running
+    // dev DB without a manual reset. Slug stays the immutable key.
+    update: {
+      name,
+      level,
+      parentId: parentId ?? null,
+      ...(typeof order === "number" ? { order } : {}),
+    },
+    create: {
+      slug,
+      name,
+      level,
+      parentId: parentId ?? null,
+      ...(typeof order === "number" ? { order } : {}),
+    },
   });
 }
 

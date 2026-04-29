@@ -29,7 +29,7 @@ export default async function MarketplacePage({
   if (sp.sort)     q.set("sort", sp.sort);
   if (sp.minPrice) q.set("minPrice", sp.minPrice);
   if (sp.maxPrice) q.set("maxPrice", sp.maxPrice);
-  if (sp.condition && /^(MINT|NEAR_MINT|EXCELLENT|GOOD|FAIR)$/.test(sp.condition)) {
+  if (sp.condition && /^(BRAND_NEW_SEALED|LIKE_NEW|EXCELLENT|GOOD|FAIR|POOR)$/.test(sp.condition)) {
     q.set("condition", sp.condition);
   }
   q.set("limit", "24");

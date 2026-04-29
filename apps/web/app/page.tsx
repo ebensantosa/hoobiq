@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
+import { conditionLabel } from "@/lib/condition-badge";
 import { copyFor } from "@/lib/copy/server";
 import type { ListingSummary } from "@hoobiq/types";
 
@@ -164,7 +165,7 @@ function ShowcaseCard({ l, float }: { l: ListingSummary; float: string }) {
           <CardArt variant={pickArt(l.slug)} />
         )}
         <span className="absolute left-1.5 top-1.5 rounded-full border border-rule bg-white/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-fg-muted backdrop-blur">
-          {l.condition === "MINT" ? "Mint" : l.condition.replace("_", " ")}
+          {conditionLabel(l.condition)}
         </span>
         <span className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white/30 to-transparent mix-blend-overlay" />
       </div>

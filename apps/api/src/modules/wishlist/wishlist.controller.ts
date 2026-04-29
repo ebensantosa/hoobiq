@@ -31,7 +31,7 @@ export class WishlistController {
             slug: l.slug,
             title: l.title,
             priceIdr: Number(l.priceCents / 100n),
-            condition: l.condition as "MINT" | "NEAR_MINT" | "EXCELLENT" | "GOOD" | "FAIR",
+            condition: l.condition,
             cover,
             seller: { username: l.seller.username, city: l.seller.city, trustScore: Number(l.seller.trustScore) },
           },

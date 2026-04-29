@@ -1,7 +1,30 @@
 import { z } from "zod";
 
-export const ConditionSchema = z.enum(["MINT", "NEAR_MINT", "EXCELLENT", "GOOD", "FAIR"]);
+// Canonical condition labels (per product spec). Old values
+// (MINT/NEAR_MINT) map onto BRAND_NEW_SEALED/LIKE_NEW via the migration
+// script in scripts/migrate-conditions.ts, which is run once on prod
+// during the rollout. The API accepts only these new values going
+// forward — the marketplace filter and upload form mirror this exact
+// list, so a typo here propagates everywhere immediately.
+export const ConditionSchema = z.enum([
+  "BRAND_NEW_SEALED",
+  "LIKE_NEW",
+  "EXCELLENT",
+  "GOOD",
+  "FAIR",
+  "POOR",
+]);
 export type Condition = z.infer<typeof ConditionSchema>;
+
+/** Display labels in Bahasa for UI surfaces — keep in sync with the enum. */
+export const CONDITION_LABELS: Record<Condition, string> = {
+  BRAND_NEW_SEALED: "Brand New (Sealed)",
+  LIKE_NEW: "Like New",
+  EXCELLENT: "Excellent",
+  GOOD: "Good",
+  FAIR: "Fair",
+  POOR: "Poor",
+};
 
 export const ListingSummarySchema = z.object({
   id: z.string(),

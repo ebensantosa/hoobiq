@@ -6,13 +6,14 @@ import { api } from "@/lib/api/client";
 
 /* ============================================================== types */
 
-type Condition = "MINT" | "NEAR_MINT" | "EXCELLENT" | "GOOD" | "FAIR";
+import type { Condition } from "@hoobiq/types";
 const CONDITIONS: { key: Condition; label: string; sub: string }[] = [
-  { key: "MINT",      label: "Mint",      sub: "Sempurna" },
-  { key: "NEAR_MINT", label: "Near Mint", sub: "Hampir sempurna" },
-  { key: "EXCELLENT", label: "Used",      sub: "Bekas wajar" },
-  { key: "GOOD",      label: "Damaged",   sub: "Ada cacat" },
-  { key: "FAIR",      label: "Box only",  sub: "Tanpa item" },
+  { key: "BRAND_NEW_SEALED", label: "Brand New", sub: "Sealed / segel" },
+  { key: "LIKE_NEW",         label: "Like New",  sub: "Mulus, hampir baru" },
+  { key: "EXCELLENT",        label: "Excellent", sub: "Bekas terawat" },
+  { key: "GOOD",             label: "Good",      sub: "Bekas wajar" },
+  { key: "FAIR",             label: "Fair",      sub: "Ada minor cacat" },
+  { key: "POOR",             label: "Poor",      sub: "Cacat jelas / box only" },
 ];
 
 type Grade = "PSA10" | "PSA9" | "PSA8" | "BGS" | "UNGRADED";

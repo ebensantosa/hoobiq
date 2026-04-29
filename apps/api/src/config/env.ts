@@ -57,6 +57,11 @@ const schema = z.object({
   // CDN or reverse-proxy URL.
   PUBLIC_API_BASE: z.string().url().optional(),
 
+  // Public base URL of the web app — used to build the `return_url` we
+  // hand to Komerce so the buyer auto-bounces back to /pesanan/:id after
+  // paying on the hosted Payment Page.
+  PUBLIC_WEB_BASE: z.string().url().optional(),
+
   // R2 storage (production — see UploadsController for swap point)
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY: z.string().optional(),

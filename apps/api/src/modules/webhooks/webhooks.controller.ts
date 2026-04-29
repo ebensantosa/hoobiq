@@ -8,6 +8,7 @@ import {
   Post,
 } from "@nestjs/common";
 import { Public } from "../../common/decorators/public.decorator";
+import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
 import { OrdersService } from "../orders/orders.service";
@@ -57,18 +58,56 @@ export class WebhooksController {
   @Public()
   @Post("komerce")
   @HttpCode(200)
-  async komerce(@Body() payload: unknown) {
-    // TODO: verify Komerce signature (HMAC-SHA256 of raw body with KOMERCE_WEBHOOK_SECRET)
+  async komerce(
+    @Body() payload: Record<string, unknown>,
+    @Headers("x-callback-api-key") headerKey?: string,
+    @Headers("callback_api_key") legacyKey?: string,
+  ) {
+    const started = Date.now();
+
+    // Komerce echoes the `callback_API_KEY` we sent during createCharge.
+    // Different product types put it in different header casings, and some
+    // ship it inside the body, so check all three.
+    const expected = env.KOMERCE_WEBHOOK_SECRET ?? "";
+    const received =
+      headerKey ?? legacyKey ?? String(payload?.callback_api_key ?? payload?.callback_API_KEY ?? "");
+    const ok = !!expected && received === expected;
+
+    // Komerce field naming differs across products: paid VA pings carry
+    // `status: "paid"`, QRIS uses `payment_status`. The order id we sent
+    // (`order_id` = our humanId) comes back as `order_id` for VA/ewallet
+    // and `merchant_order_id` for some tenants — read defensively.
+    const orderHumanId = String(
+      payload.order_id ?? payload.merchant_order_id ?? payload.invoice_id ?? "",
+    );
+    const status = String(
+      payload.status ?? payload.payment_status ?? payload.transaction_status ?? "",
+    ).toLowerCase();
+    const paymentId = String(payload.payment_id ?? payload.id ?? payload.transaction_id ?? "");
+
     await this.prisma.webhookLog.create({
       data: {
         source: "komerce",
-        event: "shipment.update",
-        statusRaw: "ok",
-        latencyMs: 0,
+        event: status || "unknown",
+        statusRaw: String(payload.status ?? payload.payment_status ?? "?"),
+        latencyMs: Date.now() - started,
         payloadJson: JSON.stringify(payload ?? {}),
-        signatureOk: false,
+        signatureOk: ok,
       },
     });
+
+    if (!ok) {
+      // Don't reveal which check failed — return 400 so Komerce retries.
+      throw new BadRequestException({ code: "bad_signature", message: "Invalid callback key" });
+    }
+
+    const isPaid = status === "paid" || status === "settlement" || status === "success";
+    if (isPaid && orderHumanId) {
+      const order = await this.prisma.order.findUnique({ where: { humanId: orderHumanId } });
+      if (order && order.status === "pending_payment") {
+        await this.orders.markPaid(order.id, paymentId, payload);
+      }
+    }
     return { received: true };
   }
 }

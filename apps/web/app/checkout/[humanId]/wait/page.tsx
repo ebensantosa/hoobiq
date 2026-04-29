@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@hoobiq/ui";
 import { KomercePayLauncher } from "@/components/komerce-pay-launcher";
+import { PaymentStatusPoller } from "@/components/payment-status-poller";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -80,6 +81,8 @@ export default async function CheckoutWaitPage({
             <KomercePayLauncher humanId={o.humanId} method={method} channel={channel} />
           </div>
         </Card>
+
+        <PaymentStatusPoller humanId={o.humanId} />
 
         <div className="mt-8 text-center text-xs text-fg-muted">
           Mau batal? <Link href="/marketplace" className="text-brand-500 hover:underline">Kembali ke marketplace</Link> — order otomatis dibatalkan kalau tidak dibayar dalam 24 jam.

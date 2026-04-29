@@ -25,6 +25,10 @@ export type ChargeRequest = {
   notifyUrl: string;
   /** Required when notifyUrl is set — Komerce includes this back in webhooks so we can authenticate them. */
   callbackKey: string;
+  /** Browser return URL — Komerce hosted Payment Page bounces the buyer
+   * here once status flips to "paid". Without this the buyer is stuck on
+   * pay-sandbox.komerce.my.id with no way back to /pesanan. */
+  returnUrl?: string;
   items: ChargeItem[];
 };
 
@@ -150,6 +154,13 @@ export class KomercePaymentService {
       // Note the casing — Komerce docs spell this exactly as
       // "callback_API_KEY", not "callback_api_key". Don't normalize.
       callback_API_KEY: req.callbackKey,
+      // Browser-side bounce after a successful payment. Komerce's docs use
+      // `return_url`; we also send `redirect_url`/`success_url` defensively
+      // because field naming has drifted across product types and Komerce
+      // simply ignores unknown fields.
+      ...(req.returnUrl
+        ? { return_url: req.returnUrl, redirect_url: req.returnUrl, success_url: req.returnUrl }
+        : {}),
     });
 
     let res: Response;

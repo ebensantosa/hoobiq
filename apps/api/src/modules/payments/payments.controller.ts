@@ -79,6 +79,11 @@ export class PaymentsController {
     // configured webhook secret so the receiver can authenticate inbound
     // pings against env.KOMERCE_WEBHOOK_SECRET.
     const callbackKey = env.KOMERCE_WEBHOOK_SECRET ?? "";
+    // After a successful payment Komerce's hosted page bounces the buyer
+    // here. We send them straight to the order detail (status will already
+    // be "paid" because the webhook fires before the redirect lands).
+    const webBase = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    const returnUrl = `${webBase}/pesanan/${encodeURIComponent(input.orderHumanId)}`;
 
     const charge = await this.komerce.createCharge({
       orderId: order.id,
@@ -98,6 +103,7 @@ export class PaymentsController {
       }],
       notifyUrl,
       callbackKey,
+      returnUrl,
     });
 
     return {

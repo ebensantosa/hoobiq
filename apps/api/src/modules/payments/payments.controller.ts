@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, forwardRef, Get, Inject, NotFoundException, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, forwardRef, Get, Inject, Logger, NotFoundException, Post } from "@nestjs/common";
 import { z } from "zod";
 import type { SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -21,6 +21,7 @@ const CENTS_PER_RUPIAH = 100n;
 
 @Controller("payments/komerce")
 export class PaymentsController {
+  private readonly log = new Logger(PaymentsController.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly komerce: KomercePaymentService,
@@ -169,21 +170,24 @@ export class PaymentsController {
       select: { providerTxId: true, provider: true },
     });
     if (!payment?.providerTxId || payment.provider !== "komerce") {
-      // Charge hasn't been created yet — nothing to ask Komerce about.
-      return { status: order.status, reconciled: false };
+      this.log.log(
+        `reconcile ${order.humanId} skipped — no komerce payment row (provider=${payment?.provider ?? "null"}, providerTxId=${payment?.providerTxId ?? "null"})`,
+      );
+      return { status: order.status, reconciled: false, reason: "no_charge" };
     }
 
     let komerceStatus = "";
     try {
       const res = await this.komerce.getStatus(payment.providerTxId);
       komerceStatus = res.status.toLowerCase();
+      this.log.log(`reconcile ${order.humanId} → komerce=${komerceStatus} (paymentId=${payment.providerTxId})`);
       if (komerceStatus === "paid" || komerceStatus === "settlement" || komerceStatus === "success") {
         await this.orders.markPaid(order.id, payment.providerTxId, res.raw);
         return { status: "paid", reconciled: true };
       }
-    } catch {
-      // Network / upstream error — leave order in pending_payment, client
-      // will retry on the next poll tick.
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.log.warn(`reconcile ${order.humanId} upstream error (paymentId=${payment.providerTxId}): ${msg}`);
     }
     return { status: order.status, reconciled: false, komerce: komerceStatus || null };
   }

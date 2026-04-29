@@ -198,18 +198,12 @@ export class KomercePaymentService {
     }
 
     // Komerce response shape (per docs):
-    //   { meta: {...}, data: { id, payment_url, qr_string, qr_image_url, expired_at, ... } }
-    // Field names vary across product types — we read defensively.
+    //   { meta: {...}, data: { payment_id, payment_url, qr_string, qr_image_url, expired_at, ... } }
+    // Field names vary across product types — we read every variant we've
+    // seen and log the raw response on the first call so misnamed fields
+    // are obvious in pm2 logs (we kept losing payment_id silently before).
     let json: {
-      data?: {
-        id?: string | number;
-        payment_url?: string;
-        redirect_url?: string;
-        qr_string?: string;
-        qr_image_url?: string;
-        expired_at?: string;
-        expires_at?: string;
-      };
+      data?: Record<string, unknown>;
     };
     try {
       json = JSON.parse(text);
@@ -219,14 +213,26 @@ export class KomercePaymentService {
         message: "Pembayaran balas response tidak valid.",
       });
     }
-    const d = json.data ?? {};
-    return {
-      externalId: String(d.id ?? req.humanId),
-      redirectUrl: d.payment_url ?? d.redirect_url,
-      qrString: d.qr_string,
-      qrImageUrl: d.qr_image_url,
-      expiresAt: d.expired_at ?? d.expires_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-    };
+    const d = (json.data ?? {}) as Record<string, unknown>;
+    const externalId = String(
+      d.payment_id ?? d.id ?? d.transaction_id ?? d.invoice_id ?? d.order_id ?? req.humanId,
+    );
+    const redirectUrl = String(d.payment_url ?? d.redirect_url ?? d.url ?? "") || undefined;
+    const qrString = d.qr_string ? String(d.qr_string) : undefined;
+    const qrImageUrl = d.qr_image_url ? String(d.qr_image_url) : undefined;
+    const expiresAt = String(
+      d.expired_at ?? d.expires_at ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    );
+
+    // Helps us see why reconcile fails in production: if externalId fell
+    // back to humanId, the dashboard payment_id will mismatch and status
+    // lookups will 404. Log keys + first 240 chars so we can spot the
+    // real field name without leaking the whole payload.
+    this.log.log(
+      `Komerce createCharge OK; data keys=[${Object.keys(d).join(",")}] externalId=${externalId}`,
+    );
+
+    return { externalId, redirectUrl, qrString, qrImageUrl, expiresAt };
   }
 
   /**
@@ -238,18 +244,30 @@ export class KomercePaymentService {
     const key = env.KOMERCE_PAYMENT_API_KEY;
     if (!key) throw new ServiceUnavailableException({ code: "payment_not_configured", message: "Pembayaran belum dikonfigurasi." });
     const base = env.KOMERCE_PAYMENT_BASE_URL.replace(/\/$/, "");
-    const res = await fetch(`${base}/user/payment/status/${encodeURIComponent(paymentId)}`, {
-      headers: { "x-api-key": key },
-    });
+    const url = `${base}/user/payment/status/${encodeURIComponent(paymentId)}`;
+    const res = await fetch(url, { headers: { "x-api-key": key } });
     const text = await res.text();
     if (!res.ok) {
+      // 404 here usually means we stored a wrong payment_id (e.g. humanId
+      // fallback instead of Komerce's KPAY-...). Log it so the cause is
+      // obvious — the reconcile flow swallows BadRequest silently.
+      this.log.warn(
+        `Komerce getStatus(${paymentId}) HTTP ${res.status}: ${text.slice(0, 200)}`,
+      );
       throw new BadRequestException({
         code: "payment_upstream_error",
         message: `Komerce HTTP ${res.status}: ${text.slice(0, 200)}`,
       });
     }
-    const json = JSON.parse(text) as { data?: { status?: string } & Record<string, unknown> };
-    return { status: json.data?.status ?? "unknown", raw: json.data };
+    const json = JSON.parse(text) as { data?: Record<string, unknown> };
+    const d = json.data ?? {};
+    const status = String(
+      d.status ?? d.payment_status ?? d.transaction_status ?? "unknown",
+    ).toLowerCase();
+    this.log.log(
+      `Komerce getStatus(${paymentId}) → ${status}; keys=[${Object.keys(d).join(",")}]`,
+    );
+    return { status, raw: d };
   }
 
   /** Cancel a pending charge. Useful when the buyer abandons checkout. */

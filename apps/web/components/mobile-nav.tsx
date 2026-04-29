@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CreatePostLauncher } from "./create-post-launcher";
 
 /**
  * Bottom tab bar for mobile/tablet. Mirrors the most-used items from the
@@ -17,6 +18,9 @@ type Item = {
   /** Optional path-prefix matcher in addition to exact href match. */
   prefix?: string;
 };
+
+/** Sentinel that swaps the cell out for the CreatePostLauncher modal. */
+const CREATE_HREF = "/__create__";
 
 const ITEMS: Item[] = [
   {
@@ -40,15 +44,13 @@ const ITEMS: Item[] = [
     prefix: "/feeds",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>,
   },
+  // Special slot — rendered as a CreatePostLauncher (modal sheet) below.
+  // The href stays here so the active-prefix detector treats it as
+  // non-active for routes other than /upload.
   {
-    href: "/upload",
-    label: "Jual",
-    prefix: "/upload",
-    icon: (
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-flame-500 text-white shadow-[0_8px_20px_-6px_rgba(231,85,159,0.6)]">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </span>
-    ),
+    href: CREATE_HREF,
+    label: "Buat",
+    icon: null,
   },
   {
     href: "/dm",
@@ -84,11 +86,22 @@ export function MobileNav({ username }: { username?: string | null }) {
     >
       <ul className="grid grid-cols-6">
         {items.map((it) => {
+          // Center create-post slot: swap for the launcher modal.
+          if (it.href === CREATE_HREF) {
+            return (
+              <li key={it.href}>
+                <div className="relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-fg">
+                  <span className="-mt-3">
+                    <CreatePostLauncher />
+                  </span>
+                  <span>{it.label}</span>
+                </div>
+              </li>
+            );
+          }
           const active = it.prefix
             ? pathname === it.prefix || pathname.startsWith(`${it.prefix}/`)
             : pathname === it.href;
-          // Center "Jual" tab is visually elevated regardless of active state
-          const isCenter = it.href === "/upload";
           return (
             <li key={it.href}>
               <Link
@@ -96,16 +109,14 @@ export function MobileNav({ username }: { username?: string | null }) {
                 aria-current={active ? "page" : undefined}
                 className={
                   "relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors " +
-                  (isCenter
-                    ? "text-fg"
-                    : active
+                  (active
                     ? "text-brand-500"
                     : "text-fg-muted hover:text-fg")
                 }
               >
-                <span className={isCenter ? "-mt-3" : ""}>{it.icon}</span>
+                <span>{it.icon}</span>
                 <span>{it.label}</span>
-                {active && !isCenter && (
+                {active && (
                   <span
                     aria-hidden
                     className="absolute -top-px h-0.5 w-8 rounded-full bg-gradient-to-r from-brand-500 to-flame-500"

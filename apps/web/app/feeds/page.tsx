@@ -3,9 +3,9 @@ import { AppShell } from "@/components/app-shell";
 import { FeedCard } from "@/components/feed-card";
 import { FeedComposer } from "@/components/feed-composer";
 import { FeedSearchBar } from "@/components/feed-search-bar";
+import { FeedTabs } from "@/components/feed-tabs";
 import { HaulReel, type HaulItem } from "@/components/haul-reel";
 import { ListingCard } from "@/components/listing-card";
-import { PageHero } from "@/components/page-hero";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
 import type { ListingSummary } from "@hoobiq/types";
@@ -42,9 +42,13 @@ export type FeedPost = {
 export default async function FeedsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; include?: string }>;
+  searchParams: Promise<{ q?: string; include?: string; tab?: string }>;
 }) {
   const sp = await searchParams;
+  // The `tab` param is read by the FeedTabs visual switch; on the server
+  // we just use it as a signal for the "Following" hint banner. Real
+  // filtering kicks in when the follow graph lands.
+  const followingTab = sp.tab === "following";
   const rawQ = (sp.q ?? "").trim().toLowerCase();
   // Multi-select filter via `?include=posts,listings,following`. Empty =
   // default (everything). The "following" key is parsed but treated as a
@@ -54,7 +58,7 @@ export default async function FeedsPage({
   const noFilter = include.size === 0;
   const wantsPosts    = noFilter || include.has("posts") || include.has("following");
   const wantsListings = noFilter || include.has("listings");
-  const followingOnly = include.has("following");
+  const followingOnly = include.has("following") || followingTab;
   const listingQuery = sp.q ? `/listings?q=${encodeURIComponent(sp.q)}&limit=12` : "/listings?sort=newest&limit=12";
 
   const [data, listingsRes, me] = await Promise.all([
@@ -132,15 +136,9 @@ export default async function FeedsPage({
 
   return (
     <AppShell active="Feeds">
-      <div className="mx-auto grid max-w-[1100px] gap-8 px-6 pb-8 lg:grid-cols-[1fr_280px] lg:px-10">
-        <section className="flex flex-col gap-6">
-          <PageHero
-            eyebrow="Feeds"
-            title="Komunitas Hoobiq"
-            subtitle="Pamer koleksi, share pull rate, diskusi sub-seri sama kolektor lain."
-            tone="brand"
-            icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>}
-          />
+      <div className="mx-auto grid max-w-[1100px] gap-6 px-4 pb-8 sm:px-6 sm:gap-8 lg:grid-cols-[1fr_280px] lg:px-10">
+        <section className="flex flex-col gap-5">
+          <FeedTabs />
 
           <HaulReel items={hauls} />
 

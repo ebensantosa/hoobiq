@@ -124,9 +124,21 @@ export class AuthService {
     const cached = await this.redis.client.get(cacheKey);
     if (cached) return JSON.parse(cached) as SessionUser;
 
+    // Explicit select instead of `include: { user: true }` — adding new
+    // columns to User (KTP, password timestamps, etc.) shouldn't break
+    // session resolution before `prisma db push` has caught up in prod.
     const session = await this.prisma.session.findUnique({
       where: { tokenHash },
-      include: { user: true },
+      select: {
+        revokedAt: true, expiresAt: true,
+        user: {
+          select: {
+            id: true, username: true, email: true, name: true,
+            avatarUrl: true, role: true, level: true, exp: true,
+            trustScore: true, status: true, deletedAt: true,
+          },
+        },
+      },
     });
     if (!session || session.revokedAt || session.expiresAt < new Date()) return null;
     if (session.user.status !== "active" || session.user.deletedAt) return null;

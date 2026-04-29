@@ -20,7 +20,6 @@ type Post = {
   author: { username: string; level: number };
 };
 
-type Category = { slug: string; name: string; listingCount: number; children?: Category[] };
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +60,9 @@ export default async function LandingPage() {
 
   // All marketing data is real — no hardcoded listings/posts/counts. If a
   // fetch fails the section just renders empty/skipped rather than crash.
-  const [listingsRes, postsRes, tree, t] = await Promise.all([
+  const [listingsRes, postsRes, t] = await Promise.all([
     serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=12"),
     serverApi<{ items: Post[] }>("/posts?limit=3"),
-    serverApi<Category[]>("/categories", { revalidate: 60 }),
     copyFor(),
   ]);
   const listings = listingsRes?.items ?? [];
@@ -77,7 +75,6 @@ export default async function LandingPage() {
       <Nav />
       <Hero picks={heroPicks} t={t} />
       <LatestStrip items={listings.slice(0, 12)} />
-      {tree && tree.length > 0 && <CategoryStrip cats={tree} />}
       <Trending items={trending} />
       {posts.length > 0 && <CommunityPreview posts={posts} />}
       <BottomCTA />
@@ -339,31 +336,6 @@ function SearchBar({ placeholder }: { placeholder: string }) {
   );
 }
 
-/* ---------------- Category strip ---------------- */
-
-function CategoryStrip({ cats }: { cats: Category[] }) {
-  // Top-level categories with real listing counts from the categories tree.
-  const top = cats.slice(0, 6);
-  return (
-    <section className="mx-auto max-w-[1280px] px-6 pb-14 md:px-10">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {top.map((c) => (
-          <Link
-            key={c.slug}
-            href={`/kategori/${c.slug}`}
-            className="group flex items-center justify-between rounded-2xl border border-rule bg-panel/60 p-4 transition-colors hover:border-brand-400/50 hover:bg-panel"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-fg">{c.name}</p>
-              <p className="mt-0.5 text-xs text-fg-subtle">{c.listingCount.toLocaleString("id-ID")} listing</p>
-            </div>
-            <span className="text-fg-subtle transition-colors group-hover:text-brand-400"></span>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 /* ---------------- Trending listings ---------------- */
 

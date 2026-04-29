@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 
-const ACCENT = "#7F77DD"; // Trade Match purple — distinct from marketplace pink
+const ACCENT = "#E7559F"; // Meet Match pink — wishlist-aligned, was Trade purple
 
 export type ListingMini = {
   id: string;
@@ -25,22 +25,19 @@ export type CounterpartyMini = {
   trades: { completed: number; rating: number | null };
 };
 
-/** One card in the swipe deck — a single tradeable listing owned by someone else. */
+/** One card in the Meet Match swipe deck — any active marketplace listing
+ *  owned by someone other than the viewer. */
 export type TradeCard = {
   matchKey: string;
   listing: ListingMini;
   owner: CounterpartyMini;
 };
 
-type SwipeResponse =
-  | { matched: false }
-  | {
-      matched: true;
-      proposalId: string;
-      give: ListingMini;
-      get: ListingMini;
-      counterparty: { username: string; name: string | null };
-    };
+type SwipeResponse = {
+  added: boolean;
+  remaining: number;
+  cap: number;
+};
 
 const fmtIdr = (n: number) =>
   n >= 1_000_000 ? `Rp ${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}jt`
@@ -48,23 +45,27 @@ const fmtIdr = (n: number) =>
     : `Rp ${n.toLocaleString("id-ID")}`;
 
 /**
- * Tinder-style trade deck. Each card is a single tradeable listing from
- * another user. Swipe right = "interested" — server checks if the owner
- * has previously right-swiped any of OUR tradeable listings; if so, an
- * auto-match fires and a TradeProposal is created server-side. Buyer
- * jumps to the proposal page to confirm shipping.
+ * Meet Match deck — Tinder-style discovery surface for marketplace listings.
+ * Swipe right adds the listing to the wishlist (idempotent server-side);
+ * swipe left dismisses. Both sides count against a 25/day cap that the
+ * server enforces; we mirror that meter in the UI so the user can pace.
  */
 export function TradeDeck({
   initial,
+  used: initialUsed,
+  cap,
   targetUsername = null,
 }: {
   initial: TradeCard[];
+  used: number;
+  cap: number;
   targetUsername?: string | null;
 }) {
   const [deck, setDeck]     = useState(initial);
   const [exiting, setExit]  = useState<{ key: string; dir: "left" | "right" } | null>(null);
   const [toast, setToast]   = useState<string | null>(null);
-  const [matchModal, setMatchModal] = useState<SwipeResponse extends infer T ? T : never | null>(null as never);
+  const [used, setUsed]     = useState(initialUsed);
+  const [capped, setCapped] = useState(initialUsed >= cap);
 
   const top   = deck[0];
   const next  = deck[1];
@@ -76,7 +77,7 @@ export function TradeDeck({
   }
 
   async function commit(dir: "left" | "right") {
-    if (!top || exiting) return;
+    if (!top || exiting || capped) return;
     setExit({ key: top.matchKey, dir });
     const consumed = top;
 
@@ -88,23 +89,34 @@ export function TradeDeck({
           method: "POST",
           body: { listingId: consumed.listing.id, direction: dir },
         });
-        if (dir === "right" && res.matched) {
-          setMatchModal(res);
-        } else if (dir === "right") {
-          showToast(`Disukai. Tunggu @${consumed.owner.username} balas swipe.`);
+        setUsed(res.cap - res.remaining);
+        if (res.remaining === 0) setCapped(true);
+        if (dir === "right" && res.added) {
+          showToast("Disimpan ke wishlist.");
         }
-      } catch {
-        if (dir === "right") showToast("Gagal swipe — coba lagi.");
+      } catch (e) {
+        if (e instanceof Error && /daily_cap|sudah swipe/i.test(e.message)) {
+          setCapped(true);
+          setUsed(cap);
+          showToast(`Batas ${cap}/hari tercapai. Lanjut besok ya.`);
+        } else if (dir === "right") {
+          showToast("Gagal menyimpan — coba lagi.");
+        }
       }
     }, 280);
   }
 
+  if (capped && deck.length === 0 && !exiting) {
+    return <CappedDeck cap={cap} />;
+  }
   if (deck.length === 0 && !exiting) {
     return <EmptyDeck targetUsername={targetUsername} />;
   }
 
   return (
     <div className="relative">
+      <DailyMeter used={used} cap={cap} />
+
       <div className="relative mx-auto h-[560px] w-full max-w-[420px] select-none">
         {after && <CardShell key={after.matchKey} card={after} depth={2} />}
         {next  && <CardShell key={next.matchKey}  card={next}  depth={1} />}
@@ -136,7 +148,7 @@ export function TradeDeck({
           </svg>
         </Link>
         <ActionButton
-          aria-label="Tertarik"
+          aria-label="Simpan ke wishlist"
           onClick={() => commit("right")}
           variant="propose"
           icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
@@ -148,16 +160,28 @@ export function TradeDeck({
           {toast}
         </div>
       )}
+    </div>
+  );
+}
 
-      {matchModal && matchModal.matched && (
-        <MatchModal
-          give={matchModal.give}
-          get={matchModal.get}
-          counterparty={matchModal.counterparty}
-          proposalId={matchModal.proposalId}
-          onClose={() => setMatchModal(null as never)}
-        />
-      )}
+function DailyMeter({ used, cap }: { used: number; cap: number }) {
+  const pct = Math.min(100, (used / cap) * 100);
+  return (
+    <div className="mx-auto mb-4 flex max-w-[420px] items-center gap-3">
+      <div className="flex-1">
+        <div className="flex items-baseline justify-between text-[11px] text-fg-muted">
+          <span className="font-mono uppercase tracking-[0.18em]">Hari ini</span>
+          <span className="font-mono tabular-nums">
+            <span className="font-bold text-fg">{used}</span> / {cap}
+          </span>
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-panel-2">
+          <div
+            className="h-full rounded-full transition-[width] duration-300"
+            style={{ width: `${pct}%`, background: ACCENT }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -266,8 +290,8 @@ function CardBody({
       }
       style={{ ["--accent" as string]: ACCENT }}
     >
-      <Stamp text="MAU"  tone="accent" opacity={stampLike} side="left" />
-      <Stamp text="LEWAT" tone="muted" opacity={stampPass} side="right" />
+      <Stamp text="WISHLIST" tone="accent" opacity={stampLike} side="left" />
+      <Stamp text="LEWAT"    tone="muted"  opacity={stampPass} side="right" />
 
       {/* Owner header */}
       <div
@@ -322,7 +346,7 @@ function CardBody({
 
       <div className="flex flex-col gap-1.5 p-5">
         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: ACCENT }}>
-          Available untuk trade
+          Meet Match
         </p>
         <p className="line-clamp-2 text-base font-bold text-fg">{l.title}</p>
         <p className="font-mono text-sm font-semibold text-fg">{fmtIdr(l.priceIdr)}</p>
@@ -397,27 +421,27 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
     >
       <span
         className="grid h-14 w-14 place-items-center rounded-full text-white"
-        style={{ background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)` }}
+        style={{ background: `linear-gradient(135deg, ${ACCENT}, #C13F84)` }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 10l5-5 5 5M7 14l5 5 5-5" />
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
         </svg>
       </span>
       <h3 className="mt-4 text-lg font-bold text-fg">
-        {targetUsername ? `Belum ada barang trade dari @${targetUsername}` : "Deck habis"}
+        {targetUsername ? `Belum ada listing dari @${targetUsername}` : "Sudah lihat semua hari ini"}
       </h3>
       <p className="mt-2 max-w-xs text-sm text-fg-muted">
         {targetUsername
-          ? "User ini belum menandai listing-nya tradeable. Tambahin barang kamu sendiri ke trade pool — siapa tahu mereka mau."
-          : "Belum ada listing tradeable dari user lain. Coba lagi nanti, atau tandai barang kamu sendiri tradeable supaya kamu masuk pool."}
+          ? "User ini belum punya listing aktif. Coba kategori lain atau marketplace umum."
+          : "Kamu sudah swipe semua kartu yang tersedia. Datang lagi besok untuk listing baru."}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <Link
-          href="/jual"
+          href="/marketplace"
           className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
           style={{ background: ACCENT }}
         >
-          Tandai listing tradeable
+          Lihat marketplace
         </Link>
         {targetUsername && (
           <Link
@@ -432,70 +456,39 @@ function EmptyDeck({ targetUsername = null }: { targetUsername?: string | null }
   );
 }
 
-function MatchModal({
-  give, get, counterparty, proposalId, onClose,
-}: {
-  give: ListingMini;
-  get: ListingMini;
-  counterparty: { username: string; name: string | null };
-  proposalId: string;
-  onClose: () => void;
-}) {
+function CappedDeck({ cap }: { cap: number }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={onClose}>
-      <div
-        className="relative w-full max-w-md overflow-hidden rounded-3xl border bg-canvas shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        style={{ borderColor: `${ACCENT}55` }}
+    <div
+      className="mx-auto flex max-w-[420px] flex-col items-center rounded-3xl border border-dashed p-10 text-center"
+      style={{ borderColor: `${ACCENT}55` }}
+    >
+      <span
+        className="grid h-14 w-14 place-items-center rounded-full text-white"
+        style={{ background: `linear-gradient(135deg, ${ACCENT}, #C13F84)` }}
       >
-        <div
-          className="px-6 py-8 text-center text-white"
-          style={{ background: `linear-gradient(135deg, ${ACCENT}, #5C57AB)` }}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+        </svg>
+      </span>
+      <h3 className="mt-4 text-lg font-bold text-fg">Batas {cap}/hari tercapai</h3>
+      <p className="mt-2 max-w-xs text-sm text-fg-muted">
+        Datang lagi besok untuk swipe {cap} kartu lagi. Sementara itu, lihat wishlist kamu atau jelajah marketplace.
+      </p>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <Link
+          href="/wishlist"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
+          style={{ background: ACCENT }}
         >
-          <p className="font-mono text-xs uppercase tracking-[0.3em] opacity-90">It's a match!</p>
-          <h2 className="mt-2 text-3xl font-extrabold">🎉 Match!</h2>
-          <p className="mt-1 text-sm opacity-90">
-            Kamu dan @{counterparty.username} saling tertarik.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 p-5">
-          <MatchPreview label="Kamu kasih" l={give} />
-          <MatchPreview label="Kamu dapet" l={get} />
-        </div>
-
-        <div className="flex gap-3 border-t border-rule px-5 py-4">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-rule px-4 py-2.5 text-sm font-semibold text-fg-muted hover:bg-panel-2"
-          >
-            Lanjut swipe
-          </button>
-          <Link
-            href={`/trades?proposal=${encodeURIComponent(proposalId)}`}
-            className="flex-1 rounded-lg px-4 py-2.5 text-center text-sm font-semibold text-white"
-            style={{ background: ACCENT }}
-          >
-            Buka proposal
-          </Link>
-        </div>
+          Buka wishlist
+        </Link>
+        <Link
+          href="/marketplace"
+          className="rounded-lg border border-rule px-4 py-2 text-sm font-semibold text-fg-muted hover:bg-panel-2"
+        >
+          Marketplace
+        </Link>
       </div>
-    </div>
-  );
-}
-
-function MatchPreview({ label, l }: { label: string; l: ListingMini }) {
-  return (
-    <div className="rounded-xl border border-rule bg-panel p-3">
-      <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-fg-subtle">{label}</p>
-      <div className="mt-2 aspect-square overflow-hidden rounded-lg bg-panel-2">
-        {l.cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={l.cover} alt="" className="h-full w-full object-cover" />
-        ) : null}
-      </div>
-      <p className="mt-2 line-clamp-2 text-xs font-semibold text-fg">{l.title}</p>
-      <p className="mt-0.5 font-mono text-[11px] text-fg-muted">{fmtIdr(l.priceIdr)}</p>
     </div>
   );
 }

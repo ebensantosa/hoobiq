@@ -22,7 +22,7 @@ export async function AppFooter() {
           <FooterCol title="Jelajah">
             <FooterLink href="/feeds">Feeds</FooterLink>
             <FooterLink href="/marketplace">Marketplace</FooterLink>
-            <FooterLink href="/trades">Trades</FooterLink>
+            <FooterLink href="/trades">Meet Match</FooterLink>
           </FooterCol>
 
           <FooterCol title="Akun">

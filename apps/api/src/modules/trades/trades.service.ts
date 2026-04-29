@@ -2,7 +2,8 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
 const CENTS_PER_RUPIAH = 100n;
-const DEFAULT_DECK_SIZE = 20;
+/** Per-spec daily swipe budget for the discovery deck (Meet Match). */
+const DAILY_SWIPE_CAP = 25;
 
 export type ListingMini = {
   id: string;
@@ -31,27 +32,47 @@ export type TradeCard = {
   owner: CounterpartyMini;
 };
 
-export type SwipeResult =
-  | { matched: false }
-  | {
-      matched: true;
-      proposalId: string;
-      give: ListingMini;     // user picked this from their own tradeable items
-      get: ListingMini;
-      counterparty: { username: string; name: string | null };
-    };
+/**
+ * Meet Match swipe result. Right swipes upsert into the user's wishlist;
+ * left swipes just dismiss the card. The mutual-match → TradeProposal
+ * flow has been retired in favor of this simpler wishlist-first model
+ * (sehari batasnya 25, biar bisa lihat semua produk).
+ */
+export type SwipeResult = {
+  /** True when the swipe was right and the listing got into the wishlist. */
+  added: boolean;
+  /** How many of the daily 25-swipe budget remain after this swipe. */
+  remaining: number;
+  /** Total budget — surfaced so the client can render `used / cap`. */
+  cap: number;
+};
+
+/** Deck payload — the cards plus the user's daily-swipe meter. */
+export type DeckResult = {
+  items: TradeCard[];
+  used: number;
+  remaining: number;
+  cap: number;
+};
 
 @Injectable()
 export class TradesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Tinder-style deck: every published listing flagged tradeable, owned by
-   * someone other than the viewer, that the viewer hasn't already swiped.
-   *
-   * Match logic isn't computed here; it fires on right-swipe in `swipe()`.
+   * Meet Match deck: live marketplace listings (any seller other than the
+   * viewer), excluding cards the viewer has already swiped — across all
+   * days, so the deck rolls forward instead of looping. Capped at the
+   * remaining daily budget so we never hand the client more cards than
+   * they can act on.
    */
-  async deck(userId: string, limit = DEFAULT_DECK_SIZE): Promise<TradeCard[]> {
+  async deck(userId: string): Promise<DeckResult> {
+    const used = await this.dailyUsed(userId);
+    const remaining = Math.max(0, DAILY_SWIPE_CAP - used);
+    if (remaining === 0) {
+      return { items: [], used, remaining, cap: DAILY_SWIPE_CAP };
+    }
+
     const swiped = await this.prisma.tradeSwipe.findMany({
       where: { userId },
       select: { targetListingId: true },
@@ -60,7 +81,6 @@ export class TradesService {
 
     const rows = await this.prisma.listing.findMany({
       where: {
-        tradeable: true,
         deletedAt: null,
         isPublished: true,
         moderation: "active",
@@ -68,7 +88,7 @@ export class TradesService {
         id: { notIn: Array.from(skip) },
       },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
-      take: limit,
+      take: remaining,
       include: {
         seller: {
           select: {
@@ -79,9 +99,11 @@ export class TradesService {
       },
     });
 
-    if (rows.length === 0) return [];
+    if (rows.length === 0) return { items: [], used, remaining, cap: DAILY_SWIPE_CAP };
 
-    // Trade-history lookup for "X trade selesai" badge on each card.
+    // Trade-history lookup for "X trade selesai" badge on each card —
+    // kept because it's still a useful trust signal even if the trade
+    // matching itself is gone.
     const sellerIds = Array.from(new Set(rows.map((r) => r.sellerId)));
     const historyCounts = await this.prisma.tradeProposal.groupBy({
       by: ["fromUserId"],
@@ -90,7 +112,7 @@ export class TradesService {
     });
     const historyMap = new Map(historyCounts.map((h) => [h.fromUserId, h._count._all]));
 
-    return rows.map((l) => ({
+    const items = rows.map((l) => ({
       matchKey: l.id,
       listing: toListingMini(l),
       owner: {
@@ -103,21 +125,20 @@ export class TradesService {
         trades: { completed: historyMap.get(l.sellerId) ?? 0, rating: null },
       },
     }));
+
+    return { items, used, remaining, cap: DAILY_SWIPE_CAP };
   }
 
   /**
-   * Record a swipe. Right-swipes trigger a mutual-interest check:
-   * if the target owner has previously right-swiped any of OUR tradeable
-   * listings, we have a match. We auto-create a TradeProposal so the
-   * conversation moves out of the deck and into the proposal inbox.
-   *
-   * The tradeable listing of OURS that gets paired is the one the target
-   * owner expressed interest in earliest (deterministic + reproducible).
+   * Record a swipe. Right swipe → upsert into the user's wishlist (idempotent).
+   * Left swipe → dismiss only. Both sides count against the 25/day budget;
+   * once the cap is hit the request is rejected so the client can show the
+   * "limit reached" state and stop sending swipes.
    */
   async swipe(userId: string, targetListingId: string, direction: "right" | "left"): Promise<SwipeResult> {
     const target = await this.prisma.listing.findUnique({
       where: { id: targetListingId },
-      select: { id: true, sellerId: true, tradeable: true, deletedAt: true, isPublished: true, moderation: true },
+      select: { id: true, sellerId: true, deletedAt: true, isPublished: true, moderation: true },
     });
     if (!target || target.deletedAt) {
       throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
@@ -125,100 +146,51 @@ export class TradesService {
     if (target.sellerId === userId) {
       throw new ForbiddenException({ code: "self_swipe", message: "Tidak bisa swipe listing sendiri." });
     }
-    if (!target.tradeable || !target.isPublished || target.moderation !== "active") {
-      throw new ForbiddenException({ code: "not_tradeable", message: "Listing ini tidak available untuk trade." });
+    if (!target.isPublished || target.moderation !== "active") {
+      throw new ForbiddenException({ code: "not_available", message: "Listing ini sudah tidak tersedia." });
     }
 
+    // Cap check is best-effort — we reject loudly so the UI can lock out
+    // further swipes today instead of silently no-op'ing.
+    const used = await this.dailyUsed(userId);
+    if (used >= DAILY_SWIPE_CAP) {
+      throw new ForbiddenException({
+        code: "daily_cap",
+        message: `Kamu sudah swipe ${DAILY_SWIPE_CAP} kali hari ini. Coba lagi besok.`,
+      });
+    }
+
+    // Track the swipe so the same card doesn't reappear in tomorrow's deck.
+    // Reusing tradeSwipe (instead of adding a new table) — the column names
+    // are generic enough for "any swipe direction on any listing" semantics.
     await this.prisma.tradeSwipe.upsert({
       where: { userId_targetListingId: { userId, targetListingId } },
       create: { userId, targetListingId, targetOwnerId: target.sellerId, direction },
       update: { direction },
     });
 
-    if (direction !== "right") return { matched: false };
-
-    // Mutual check — has the target owner right-swiped any of MY tradeable
-    // listings that's still live?
-    const reverse = await this.prisma.tradeSwipe.findFirst({
-      where: {
-        userId: target.sellerId,
-        targetOwnerId: userId,
-        direction: "right",
-      },
-      orderBy: { createdAt: "asc" },
-    });
-    if (!reverse) return { matched: false };
-
-    // Verify both listings are still tradeable + active before pairing — one
-    // could have been pulled or sold while we were swiping.
-    const [give, get] = await Promise.all([
-      this.prisma.listing.findFirst({
-        where: {
-          id: reverse.targetListingId, sellerId: userId,
-          tradeable: true, isPublished: true, moderation: "active", deletedAt: null,
-        },
-      }),
-      this.prisma.listing.findUnique({ where: { id: targetListingId } }),
-    ]);
-    if (!give || !get) return { matched: false };
-
-    // Don't double-create a proposal if one is already pending for this pair.
-    const existing = await this.prisma.tradeProposal.findFirst({
-      where: {
-        status: "pending",
-        OR: [
-          { fromListingId: give.id, toListingId: get.id },
-          { fromListingId: get.id, toListingId: give.id },
-        ],
-      },
-    });
-
-    let proposal = existing;
-    if (!proposal) {
-      proposal = await this.prisma.tradeProposal.create({
-        data: {
-          fromUserId: userId,
-          toUserId: target.sellerId,
-          fromListingId: give.id,
-          toListingId: get.id,
-          message: null,
-        },
+    let added = false;
+    if (direction === "right") {
+      // Idempotent — re-swiping right won't create duplicate wishlist rows.
+      await this.prisma.wishlistItem.upsert({
+        where: { userId_listingId: { userId, listingId: targetListingId } },
+        update: {},
+        create: { userId, listingId: targetListingId },
       });
-      // Notify both sides of the auto-match.
-      await Promise.all([
-        this.prisma.notification.create({
-          data: {
-            userId: target.sellerId,
-            kind: "trade_match",
-            title: "Match trade!",
-            body: `Kalian saling tertarik. Buka proposal untuk kirim & terima.`,
-            dataJson: JSON.stringify({ proposalId: proposal.id }),
-          },
-        }).catch(() => undefined),
-        this.prisma.notification.create({
-          data: {
-            userId,
-            kind: "trade_match",
-            title: "Match trade!",
-            body: `Kalian saling tertarik. Buka proposal untuk kirim & terima.`,
-            dataJson: JSON.stringify({ proposalId: proposal.id }),
-          },
-        }).catch(() => undefined),
-      ]);
+      added = true;
     }
 
-    const owner = await this.prisma.user.findUnique({
-      where: { id: target.sellerId },
-      select: { username: true, name: true },
-    });
+    const remaining = Math.max(0, DAILY_SWIPE_CAP - (used + 1));
+    return { added, remaining, cap: DAILY_SWIPE_CAP };
+  }
 
-    return {
-      matched: true,
-      proposalId: proposal.id,
-      give: toListingMini(give),
-      get: toListingMini(get),
-      counterparty: { username: owner?.username ?? "", name: owner?.name ?? null },
-    };
+  /** Count swipes the user has made since local-day midnight (server TZ). */
+  private async dailyUsed(userId: string): Promise<number> {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return this.prisma.tradeSwipe.count({
+      where: { userId, createdAt: { gte: start } },
+    });
   }
 
   async propose(userId: string, input: { fromListingId: string; toListingId: string; message?: string }) {

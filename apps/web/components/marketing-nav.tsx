@@ -7,7 +7,7 @@ import { UserMenu } from "./user-menu";
 export async function MarketingNav() {
   const user = await getSessionUser();
   return (
-    <header className="header-glow fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
         <Link
           href={user ? "/marketplace" : "/"}

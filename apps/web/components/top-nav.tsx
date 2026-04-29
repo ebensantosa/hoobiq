@@ -16,7 +16,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
   const t = resolveCopy(settings.copy);
 
   return (
-    <header className="header-glow fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
         {/* Per spec: clicking the logo always goes to Home (/), not the
             marketplace. Anonymous users see the marketing landing; logged-in
@@ -40,7 +40,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
             <NavPill href="/">Home</NavPill>
             <NavPill href="/feeds">Feeds</NavPill>
             <NavPill href="/marketplace">Marketplace</NavPill>
-            <NavPill href="/trades">Trades</NavPill>
+            <NavPill href="/trades">Meet Match</NavPill>
           </nav>
         )}
 

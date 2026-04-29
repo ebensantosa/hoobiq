@@ -62,7 +62,7 @@ export async function Sidebar() {
           <li><SidebarItem href="/"            label="Home"        icon={ic.home}  accent="flame" /></li>
           <li><SidebarItem href="/feeds"       label="Feeds"       icon={ic.feeds} accent="brand" /></li>
           <li><SidebarItem href="/marketplace" label="Marketplace" icon={ic.shop}  accent="ultra" /></li>
-          <li><SidebarItem href="/trades"      label="Trade"       icon={ic.trade} accent="ultra" /></li>
+          <li><SidebarItem href="/trades"      label="Meet Match"  icon={ic.trade} accent="brand" /></li>
         </ul>
       </Section>
 

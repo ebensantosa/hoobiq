@@ -28,13 +28,17 @@ export async function AppShell({
       {/* Header height: 56px on mobile (h-14) and 64px on sm+ (h-16).
           The spacer matches both so content never tucks under the bar. */}
       <div className="pt-14 sm:pt-16" />
-      <div className="mx-auto flex w-full max-w-[1440px] flex-1">
+      {/* No `flex-1` here — we want the footer to follow the content
+          immediately, not get pushed to the bottom of the viewport on
+          short pages (which produced a huge empty band between the
+          last card and the footer). */}
+      <div className="mx-auto flex w-full max-w-[1440px]">
         {withSidebar && <Sidebar />}
         {/* `pt-4 sm:pt-6` keeps tighter spacing on mobile, looser on
             desktop. Pages should NOT add their own `pt-*` — keep all
             top spacing centralized so the gap matches across the app.
             `pb-20 lg:pb-0` reserves space for the mobile bottom nav. */}
-        <main className="flex-1 min-w-0 pt-4 pb-20 sm:pt-6 lg:pb-0">{children}</main>
+        <main className="min-w-0 flex-1 pt-4 pb-20 sm:pt-6 lg:pb-0">{children}</main>
       </div>
       {withFooter && <AppFooter />}
       {user && <MobileNav username={user.username} />}

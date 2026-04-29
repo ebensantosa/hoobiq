@@ -91,41 +91,10 @@ html.dark {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
 }
 
-/* Premium header — animated gradient bar under bottom border.
-   No `isolation: isolate` here (would create a new stacking context that
-   can break sticky/z-index in some browsers). Pseudo-element kept above
-   content with default z-stacking so the glow doesn't disappear behind body. */
-@keyframes brand-slide {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
-}
-@keyframes header-shimmer {
-  0%, 100% { opacity: 0.7; }
-  50%      { opacity: 1; }
-}
-/* No `position: relative` here — the header element itself uses Tailwind's
-   `fixed` utility, which provides the positioning context for `::after`.
-   Adding `position: relative` as an unlayered rule would beat the layered
-   `.fixed` utility in the cascade and make the header scroll away. */
-.header-glow::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -2px 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #6B61AB    18%,
-    #E7559F    42%,
-    #FAA74A    62%,
-    #E7559F    82%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: brand-slide 6s linear infinite, header-shimmer 3s ease-in-out infinite;
-  pointer-events: none;
-  filter: drop-shadow(0 0 8px rgba(231, 85, 159, 0.5));
-}
+/* Header gradient bar — previously animated continuously; now a no-op
+   so the header sits quiet by default. NavProgress already renders the
+   page-transition indicator, which is the only place the animated
+   gradient was actually communicating something useful. */
 
 /* Pulsing dot — used on icon buttons that have unread items. */
 @keyframes dot-pulse {

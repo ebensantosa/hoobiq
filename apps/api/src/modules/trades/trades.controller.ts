@@ -7,17 +7,16 @@ import { TradesService } from "./trades.service";
 export class TradesController {
   constructor(private readonly svc: TradesService) {}
 
-  /** Card deck for the swipe view. */
+  /** Card deck for the Meet Match swipe view + daily-budget meter. */
   @Get("matches")
   async matches(@CurrentUser() user: SessionUser) {
-    const items = await this.svc.deck(user.id);
-    return { items };
+    return this.svc.deck(user.id);
   }
 
   /**
-   * Tinder-style swipe. Right-swipes may auto-create a TradeProposal if
-   * the target owner has previously right-swiped one of our tradeable
-   * listings — see TradesService.swipe.
+   * Meet Match swipe. Right → adds the listing to the user's wishlist.
+   * Both directions count against the 25/day budget; the response carries
+   * the updated meter so the client can render `used / cap`.
    */
   @Post("swipe")
   @HttpCode(200)

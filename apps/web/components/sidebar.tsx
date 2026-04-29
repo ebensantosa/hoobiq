@@ -62,14 +62,7 @@ export async function Sidebar() {
         </ul>
       </Section>
 
-      <Section
-        title="Kategori"
-        action={
-          <a href="/kategori" className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-fg-subtle transition-colors hover:text-brand-500">
-            Semua →
-          </a>
-        }
-      >
+      <Section title="Kategori">
         {explore.length === 0 ? (
           <p className="px-2 text-xs text-fg-subtle">Belum ada kategori.</p>
         ) : (
@@ -90,6 +83,19 @@ export async function Sidebar() {
             ))}
           </ul>
         )}
+        {/* Proper button rather than the cramped "SEMUA →" header pill —
+            sits below the list so the eye flows top-to-bottom and the
+            visual weight matches a real CTA. */}
+        <a
+          href="/kategori"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-rule bg-panel px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:bg-brand-400/5 hover:text-brand-500"
+        >
+          Lihat semua kategori
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="m13 5 7 7-7 7" />
+          </svg>
+        </a>
       </Section>
 
       {user && (

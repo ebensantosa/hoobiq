@@ -69,17 +69,27 @@ async function main() {
   await upsertCat("fanart",    "Fanart",         3, artFan.id, 3);
 
   // Toys sub-categories
-  await upsertCat("action-figure", "Action Figure", 2, toysRoot.id, 1);
-  await upsertCat("blind-box",     "Blind Box",     2, toysRoot.id, 2);
+  const actionFigure = await upsertCat("action-figure", "Action Figure", 2, toysRoot.id, 1);
+  const blindBoxCat  = await upsertCat("blind-box",     "Blind Box",     2, toysRoot.id, 2);
   await upsertCat("hot-wheels",    "Hot Wheels",    2, toysRoot.id, 3);
 
   // Others sub-categories
-  await upsertCat("komik",   "Komik",   2, others.id, 1);
+  const komikCat = await upsertCat("komik", "Komik", 2, others.id, 1);
   await upsertCat("novel",   "Novel",   2, others.id, 2);
   await upsertCat("cosplay", "Cosplay", 2, others.id, 3);
 
-  // Silence unused-warnings — both roots are referenced via children only.
-  void collection; void trading;
+  /* Map legacy seed-listing category names onto the current taxonomy so
+   * the sample listings still upsert without dangling categoryIds. Each
+   * alias points to the closest valid Category row created above. */
+  const pokemon  = trading;       // Pokémon TCG          → Trading Cards
+  const onepiece = trading;       // One Piece TCG         → Trading Cards
+  const genshin  = actionFigure;  // Genshin Impact figure → Action Figure
+  const popmart  = blindBoxCat;   // Pop Mart blind box    → Blind Box
+  const manga    = komikCat;      // Manga                 → Komik
+  const figure   = actionFigure;  // Generic figures       → Action Figure
+
+  // Silence unused-warnings — `collection` is referenced via children only.
+  void collection;
 
   /* ---------- Users ---------- */
   const adminHash  = await bcrypt.hash("Admin123!"  + PEPPER, 12);

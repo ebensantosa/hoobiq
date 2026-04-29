@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Card } from "@hoobiq/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { ListingCard } from "@/components/listing-card";
+import { HomeFeed } from "@/components/home-feed";
 import { BrandLogo } from "@/components/brand-logo";
 import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
@@ -26,7 +26,36 @@ export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
   const user = await getSessionUser();
-  if (user) redirect("/marketplace");
+
+  // Logged-in users land on the new HOME page (different from /marketplace
+  // and /feeds per spec). Anonymous visitors still see the marketing
+  // landing below.
+  if (user) {
+    const [trendingRes, freshRes, popularRes] = await Promise.all([
+      serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=24"),
+      serverApi<{ items: ListingSummary[] }>("/listings?sort=newest&limit=12"),
+      // "Popular" reuses trending with an offset trick — the first 8 went
+      // to the trending strip, so we slice 8..16 from the same list to
+      // surface the next tier without firing a duplicate query.
+      Promise.resolve(null),
+    ]);
+    const trendingAll = trendingRes?.items ?? [];
+    const fresh = freshRes?.items ?? [];
+    void popularRes;
+    const boosted = trendingAll.filter((l) => l.boosted);
+    const trending = trendingAll.filter((l) => !l.boosted).slice(0, 8);
+    const popular = trendingAll.slice(8, 16);
+
+    return (
+      <HomeFeed
+        username={user.username}
+        boosted={boosted}
+        trending={trending}
+        popular={popular}
+        fresh={fresh}
+      />
+    );
+  }
 
   // All marketing data is real — no hardcoded listings/posts/counts. If a
   // fetch fails the section just renders empty/skipped rather than crash.

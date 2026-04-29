@@ -53,12 +53,12 @@ export default function RegisterPage() {
       sideBullets={[
         "Listing, Pesan, post komunitas — gratis selamanya.",
         "Transaksi di atas Rp 100rb wajib via Hoobiq Pay. Dana aman sampai barang diterima.",
-        "1.000 member pertama dapat Early Member badge + 100 EXP.",
+        "5.000 member pertama dapat Early Member badge + 100 EXP.",
       ]}
     >
       <div className="mb-6 flex items-center gap-2">
         <Badge tone="solid" size="sm">Early Member</Badge>
-        <span className="text-xs text-fg-muted">742 / 1000 sudah diklaim</span>
+        <span className="text-xs text-fg-muted">Slot terbatas — 5.000 pertama</span>
       </div>
 
       <h1 className="text-3xl font-bold text-fg md:text-4xl">Daftar gratis.</h1>

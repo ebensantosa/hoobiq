@@ -245,8 +245,48 @@ export function PassportHero({
           )}
         </dl>
 
+        {passport.badges.length > 0 && <BadgeStrip badges={passport.badges} username={user.username} />}
       </div>
     </section>
+  );
+}
+
+/**
+ * Prominent badge row at the bottom of the passport. Per spec: "pas
+ * dapat badge, UI nya yang keliatan banget" — bigger glyphs, named
+ * label, soft tinted card, with a clear "Lihat koleksi badge" CTA so
+ * the visitor can land on the full collection page.
+ */
+function BadgeStrip({ badges, username }: { badges: Badge[]; username: string }) {
+  return (
+    <div className="mt-6 rounded-2xl border border-rule bg-gradient-to-br from-brand-50 to-ultra-50 p-4 dark:from-brand-400/10 dark:to-ultra-400/10">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand-500">
+          Achievements
+        </h3>
+        <a
+          href={`/u/${encodeURIComponent(username)}/badges`}
+          className="text-xs font-semibold text-brand-500 hover:underline"
+        >
+          Lihat koleksi badge →
+        </a>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-3">
+        {badges.map((b) => (
+          <div
+            key={b.key}
+            className="flex items-center gap-2 rounded-xl border border-rule bg-panel/85 px-3 py-2 shadow-sm backdrop-blur transition-transform hover:-translate-y-0.5"
+            title={b.label}
+          >
+            <span className="text-2xl leading-none">{b.glyph}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-tight text-fg">{b.label}</p>
+              <p className="text-[10px] uppercase tracking-wider text-fg-subtle">{b.tone}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

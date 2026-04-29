@@ -17,7 +17,10 @@ export async function TopNav({ active: _active }: { active?: string }) {
   return (
     <header className="header-glow fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
       <div className="mx-auto flex h-20 max-w-[1440px] items-center gap-4 px-6">
-        <Link href={user ? "/marketplace" : "/"} className="shrink-0 inline-flex items-center" aria-label={settings.brandName}>
+        {/* Per spec: clicking the logo always goes to Home (/), not the
+            marketplace. Anonymous users see the marketing landing; logged-in
+            users see the new HomeFeed (boosted/trending/popular grids). */}
+        <Link href="/" className="shrink-0 inline-flex items-center" aria-label={settings.brandName}>
           <BrandLogo size="md" />
         </Link>
 

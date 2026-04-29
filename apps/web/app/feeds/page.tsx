@@ -2,10 +2,13 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { FeedCard } from "@/components/feed-card";
 import { FeedComposer } from "@/components/feed-composer";
+import { FeedSearchBar } from "@/components/feed-search-bar";
 import { HaulReel, type HaulItem } from "@/components/haul-reel";
+import { ListingCard } from "@/components/listing-card";
 import { PageHero } from "@/components/page-hero";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
+import type { ListingSummary } from "@hoobiq/types";
 
 export const dynamic = "force-dynamic";
 
@@ -36,15 +39,38 @@ export type FeedPost = {
   } | null;
 };
 
-export default async function FeedsPage() {
+export default async function FeedsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; show?: string }>;
+}) {
+  const sp = await searchParams;
+  const rawQ = (sp.q ?? "").trim().toLowerCase();
+  const show = (sp.show ?? "all") as "all" | "posts" | "listings" | "following";
+
   // Fetch a wider sample so the right-rail trending + top-collectors widgets
-  // have enough signal. The visible feed still slices to 24.
-  const [data, me] = await Promise.all([
+  // have enough signal. The visible feed slices to 24 after filtering.
+  // We always fetch posts for the trending/collectors aggregates, even
+  // when the buyer chose "listings only" — the right rail keeps working.
+  const wantsListings = show === "all" || show === "listings";
+  const wantsPosts = show === "all" || show === "posts" || show === "following";
+  const listingQuery = sp.q ? `/listings?q=${encodeURIComponent(sp.q)}&limit=12` : "/listings?sort=newest&limit=12";
+
+  const [data, listingsRes, me] = await Promise.all([
     serverApi<{ items: FeedPost[] }>("/posts?limit=60"),
+    wantsListings ? serverApi<{ items: ListingSummary[] }>(listingQuery) : Promise.resolve(null),
     getSessionUser(),
   ]);
   const allPosts = data?.items ?? [];
-  const items = allPosts.slice(0, 24);
+  const filteredPosts = rawQ
+    ? allPosts.filter((p) =>
+        p.body?.toLowerCase().includes(rawQ) ||
+        p.author.username.toLowerCase().includes(rawQ) ||
+        (p.author.name ?? "").toLowerCase().includes(rawQ),
+      )
+    : allPosts;
+  const items = wantsPosts ? filteredPosts.slice(0, 24) : [];
+  const listingItems = wantsListings ? (listingsRes?.items ?? []) : [];
 
   // Trending hashtags — extract #foo / #bar from post bodies, count, top 5.
   // Falls back to empty (rendered as "no data") if no posts contain tags.
@@ -117,19 +143,52 @@ export default async function FeedsPage() {
 
           <HaulReel items={hauls} />
 
-          {me && <FeedComposer me={{ username: me.username, name: me.name, avatarUrl: me.avatarUrl }} />}
+          <FeedSearchBar />
 
-          {items.length === 0 ? (
+          {me && show !== "listings" && (
+            <FeedComposer me={{ username: me.username, name: me.name, avatarUrl: me.avatarUrl }} />
+          )}
+
+          {show === "following" && (
+            <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+              Filter “Yang diikuti” akan aktif begitu fitur follow-kolektor selesai
+              — sementara tampil semua post terbaru.
+            </div>
+          )}
+
+          {/* Mixed feed: posts on top, then matching listings underneath when
+              the buyer asked for "Semua" or "Listing". When show="listings"
+              only listings render; when show="posts" only posts render. */}
+          {items.length === 0 && listingItems.length === 0 ? (
             <div className="rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
-              <p className="text-base font-medium text-fg">Feed masih sepi</p>
+              <p className="text-base font-medium text-fg">
+                {rawQ ? `Tidak ada hasil untuk “${sp.q}”` : "Feed masih sepi"}
+              </p>
               <p className="mt-1 text-sm">
-                Jadi yang pertama nge-post! Atau lihat{" "}
-                <Link href="/marketplace" className="text-brand-500 hover:underline">marketplace</Link> dulu.
+                {rawQ
+                  ? "Coba kata kunci lain, atau ganti filter."
+                  : <>Jadi yang pertama nge-post! Atau lihat{" "}
+                      <Link href="/marketplace" className="text-brand-500 hover:underline">marketplace</Link> dulu.</>}
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-6">
               {items.map((p) => <FeedCard key={p.id} post={p} meUsername={me?.username} />)}
+              {listingItems.length > 0 && (
+                <section className="rounded-2xl border border-rule bg-panel">
+                  <header className="flex items-center justify-between border-b border-rule px-5 py-3">
+                    <h3 className="text-sm font-bold text-fg">Listing terbaru</h3>
+                    <Link href="/marketplace" className="text-xs font-semibold text-brand-500 hover:underline">
+                      Buka marketplace →
+                    </Link>
+                  </header>
+                  <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3">
+                    {listingItems.map((l) => (
+                      <ListingCard key={l.id} l={l} meUsername={me?.username ?? null} />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </section>

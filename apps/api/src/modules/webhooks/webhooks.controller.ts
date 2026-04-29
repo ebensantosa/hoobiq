@@ -13,6 +13,7 @@ import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
 import { OrdersService } from "../orders/orders.service";
+import { BoostService, BOOST_PREFIX } from "../boost/boost.service";
 
 /**
  * Webhook handlers — CSRF-exempt (set in CsrfMiddlewareModule) but every
@@ -24,6 +25,7 @@ export class WebhooksController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
+    private readonly boost: BoostService,
     @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider
   ) {}
 
@@ -48,9 +50,17 @@ export class WebhooksController {
     const orderHumanId = String(payload.order_id ?? "");
     const status = String(payload.transaction_status ?? "");
     if (status === "settlement" || status === "capture") {
-      const order = await this.prisma.order.findUnique({ where: { humanId: orderHumanId } });
-      if (order && order.status === "pending_payment") {
-        await this.orders.markPaid(order.id, String(payload.transaction_id ?? ""), payload);
+      // Boost purchases ride on the same Midtrans webhook stream — we
+      // tag them with a "BST-" prefix at charge time so the router can
+      // dispatch to the right service. Regular orders fall through to
+      // OrdersService.markPaid as before.
+      if (orderHumanId.startsWith(BOOST_PREFIX)) {
+        await this.boost.markPaid(orderHumanId);
+      } else {
+        const order = await this.prisma.order.findUnique({ where: { humanId: orderHumanId } });
+        if (order && order.status === "pending_payment") {
+          await this.orders.markPaid(order.id, String(payload.transaction_id ?? ""), payload);
+        }
       }
     }
     return { received: true };

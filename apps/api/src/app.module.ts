@@ -28,6 +28,7 @@ import { ShippingModule } from "./modules/shipping/shipping.module";
 import { HealthModule } from "./modules/health/health.module";
 import { CartModule } from "./modules/cart/cart.module";
 import { EmailModule } from "./modules/email/email.module";
+import { BoostModule } from "./modules/boost/boost.module";
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { EmailModule } from "./modules/email/email.module";
     PostsModule,
     CartModule,
     EmailModule,
+    BoostModule,
     WalletModule,
     DmModule,
     BanksModule,

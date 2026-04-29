@@ -5,6 +5,7 @@ import { Avatar, Card } from "@hoobiq/ui";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingCard } from "@/components/listing-card";
 import { ListingReviews } from "@/components/listing-reviews";
+import { BoostTrigger } from "@/components/boost-trigger";
 import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
@@ -125,16 +126,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 <>
                   <Link
                     href={`/jual/${encodeURIComponent(listing.slug)}/edit`}
-                    className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-brand-400 px-6 text-sm font-semibold text-white hover:bg-brand-500"
+                    className="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
                   >
                     Edit listing
                   </Link>
-                  <Link
-                    href="/jual"
-                    className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-rule px-6 text-sm font-medium text-fg hover:border-brand-400/60"
-                  >
-                    Dashboard
-                  </Link>
+                  <BoostTrigger listingId={listing.id} />
                 </>
               ) : listing.stock <= 0 ? (
                 <span className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-dashed border-rule px-6 text-sm font-medium text-fg-subtle">

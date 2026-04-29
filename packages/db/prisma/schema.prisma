@@ -218,6 +218,7 @@ model Listing {
   reviews  ListingReview[]
   cartItems CartItem[]
   offerMessages Message[] @relation("MessageOfferListing")
+  boostPurchases BoostPurchase[]
 
   @@index([sellerId, createdAt])
   @@index([categoryId, createdAt])
@@ -729,4 +730,30 @@ model SiteSettings {
   updatedById    String?  @map("updated_by_id")
 
   @@map("site_settings")
+}
+
+// Boost purchase — seller buys a "promote my listing for N days" SKU.
+// On Midtrans webhook settle, OrdersService extends Listing.boostedUntil
+// from now() (or current boostedUntil if already boosted) by durationDays.
+// providerTxId is the Midtrans order_id, prefixed with "BST-" so the
+// webhook router can distinguish from regular orders.
+model BoostPurchase {
+  id             String   @id @default(cuid())
+  listingId      String   @map("listing_id")
+  userId         String   @map("user_id")
+  durationDays   Int      @map("duration_days")
+  priceCents     BigInt   @map("price_cents")
+  providerTxId   String   @unique @map("provider_tx_id")
+  status         String   @default("pending") // pending | paid | failed | cancelled
+  paidAt         DateTime? @map("paid_at")
+  startsAt       DateTime? @map("starts_at")
+  endsAt         DateTime? @map("ends_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([listingId, status])
+  @@map("boost_purchases")
 }

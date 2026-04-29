@@ -6,9 +6,9 @@ import { cn } from "./lib/cn";
 // frame height and let aspect-ratio set the width. No more overflow/crop
 // hacks; flex `items-center` centers it vertically inside the header.
 const frame = {
-  sm: 32,
-  md: 32,
-  lg: 56,
+  sm: 44,
+  md: 44,
+  lg: 72,
 };
 
 /**

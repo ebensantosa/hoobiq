@@ -8,15 +8,15 @@ import { cn } from "./lib/cn";
 // optical center. Frame height is what flex `items-center` actually sees,
 // so the logo is properly centered in any header that uses items-center.
 const frame = {
-  sm: 40,
-  md: 40,
-  lg: 64,
+  sm: 26,
+  md: 26,
+  lg: 44,
 };
 
 const imageH = {
-  sm: 60,
-  md: 60,
-  lg: 96,
+  sm: 40,
+  md: 40,
+  lg: 66,
 };
 
 /**
@@ -43,10 +43,10 @@ export function Logo({
         src="/logo.PNG"
         alt="Hoobiq"
         height={imgH}
-        // Push the image down 3px so the wordmark's optical center lands
+        // Push the image down 2px so the wordmark's optical center lands
         // on the menu-text baseline. Tagline at the bottom of the asset
         // gets clipped by the frame's overflow:hidden.
-        style={{ height: imgH, width: "auto", marginTop: 3 }}
+        style={{ height: imgH, width: "auto", marginTop: 2 }}
         className={cn(
           "max-w-none select-none object-contain transition-transform duration-300 ease-out",
           "hover:scale-[1.03]",

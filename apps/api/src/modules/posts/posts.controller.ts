@@ -6,9 +6,19 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
+// Mirror CreateListingInput.images: accept http(s) URLs *or* data:image
+// URIs. The web composer hands us raw data: URIs in dev (no R2 configured)
+// and either form in prod, so a strict .url() rejected the dev path and
+// posting silently failed with a 400. The minimum is also bumped to allow
+// posts with multiple photos per spec — same upper bound as before.
+const ImageStr = z.string().refine(
+  (s) => /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
+  { message: "Harus berupa URL http(s) atau data:image URI" },
+);
+
 const CreatePost = z.object({
   body: z.string().min(2).max(2000),
-  images: z.array(z.string().url()).max(8).default([]),
+  images: z.array(ImageStr).max(8).default([]),
   categoryId: z.string().cuid().optional(),
 });
 
@@ -18,7 +28,7 @@ const CreateComment = z.object({
 
 const UpdatePost = z.object({
   body: z.string().min(2).max(2000).optional(),
-  images: z.array(z.string().url()).max(8).optional(),
+  images: z.array(ImageStr).max(8).optional(),
 });
 
 const ReportPost = z.object({

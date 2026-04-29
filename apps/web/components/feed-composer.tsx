@@ -2,13 +2,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, Button } from "@hoobiq/ui";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
 import { uploadImages } from "@/lib/api/uploads";
-import { EmojiGifPicker, insertAtCaret } from "./emoji-gif-picker";
 
-const MAX_IMAGES = 4;
+// Up to 8 photos per post — matches the listing limit and what the API
+// schema enforces. Spec dropped the GIF picker entirely; emoji input is
+// handled by the OS keyboard, no in-app picker needed.
+const MAX_IMAGES = 8;
 const MAX_BODY = 2000;
-const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 /**
@@ -74,7 +76,10 @@ export function FeedComposer({ me }: { me: { username: string; name: string | nu
         reset();
         router.refresh();
       } catch (e) {
-        setErr(e instanceof Error ? e.message : "Gagal kirim post.");
+        // Surface the real reason (rate limit, validation, upload error)
+        // rather than the generic fallback so the user knows how to fix it.
+        const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal kirim post.";
+        setErr(msg);
       }
     });
   }
@@ -117,22 +122,6 @@ export function FeedComposer({ me }: { me: { username: string; name: string | nu
               onClick={() => { setOpen(true); pickFiles(); }}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
-              }
-            />
-            <IconShortcut
-              label="Emoji"
-              tone="amber"
-              onClick={() => setOpen(true)}
-              icon={
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-              }
-            />
-            <IconShortcut
-              label="GIF"
-              tone="violet"
-              onClick={() => setOpen(true)}
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><text x="12" y="15" textAnchor="middle" fontSize="6.5" fontWeight="700" fill="currentColor" stroke="none">GIF</text></svg>
               }
             />
           </div>
@@ -207,20 +196,6 @@ export function FeedComposer({ me }: { me: { username: string; name: string | nu
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
         </button>
-        <EmojiGifPicker
-          size="sm"
-          align="left"
-          direction="up"
-          onEmoji={(e) => insertAtCaret(taRef.current, e, body, setBody)}
-          onGif={(url) => {
-            if (images.length >= MAX_IMAGES) {
-              setErr(`Maksimum ${MAX_IMAGES} foto/GIF.`);
-              return;
-            }
-            setImages((prev) => [...prev, url]);
-            setErr(null);
-          }}
-        />
       </div>
 
       {/* Footer */}

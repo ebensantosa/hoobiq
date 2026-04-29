@@ -44,6 +44,8 @@ model User {
   bankAccounts     BankAccount[]
   wishlist         WishlistItem[]
   postsAuthored    Post[]
+  categoryRequestsSubmitted CategoryRequest[] @relation("CategoryRequestUser")
+  categoryRequestsDecided   CategoryRequest[] @relation("CategoryRequestDecider")
   disputesAsBuyer  Dispute[]       @relation("BuyerDisputes")
   disputesAsSeller Dispute[]       @relation("SellerDisputes")
   reportsFiled     Report[]        @relation("ReporterReports")
@@ -126,9 +128,41 @@ model Category {
   createdAt DateTime   @default(now()) @map("created_at")
 
   listings Listing[]
+  requests CategoryRequest[]
 
   @@index([parentId])
   @@map("categories")
+}
+
+// User-submitted request to add a new sub-category (or sub-sub-category)
+// to the catalog. The user picks a parent (must be an existing Category),
+// proposes a name + suggested slug, and an admin either approves (which
+// inserts a real Category and links it) or rejects. Approved requests
+// carry `categoryId` pointing to the freshly-created row.
+model CategoryRequest {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  parentId    String   @map("parent_id")
+  name        String
+  // Optional slug suggestion; admin can override on approve.
+  slugHint    String?  @map("slug_hint")
+  description String?
+  status      String   @default("pending") // pending | approved | rejected
+  rejectNote  String?  @map("reject_note")
+  // Set when status flips to "approved" — points at the new Category.
+  categoryId  String?  @map("category_id")
+  decidedById String?  @map("decided_by_id")
+  decidedAt   DateTime? @map("decided_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation("CategoryRequestUser",   fields: [userId],     references: [id], onDelete: Cascade)
+  parent   Category  @relation(                          fields: [parentId],   references: [id])
+  decidedBy User?    @relation("CategoryRequestDecider", fields: [decidedById],references: [id])
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("category_requests")
 }
 
 model Listing {

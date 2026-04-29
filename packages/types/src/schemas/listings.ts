@@ -112,6 +112,10 @@ export const CreateListingInput = z.object({
   // Accept http(s) URLs (production R2) AND data:image URIs (dev — image
   // preview is encoded into the JSON body until R2 signed-uploads land).
   // Zod's `.url()` rejects `data:` schemes by design, so we refine manually.
+  // Minimum 3 photos per spec — single-photo listings looked broken on
+  // the detail page (cover is large, gallery thumbnails empty), and
+  // buyers consistently asked for more angles before paying. Cap stays
+  // at 8 to keep the upload payload bounded.
   images: z
     .array(
       z.string().refine(
@@ -119,7 +123,7 @@ export const CreateListingInput = z.object({
         { message: "Harus berupa URL http(s) atau data:image URI" }
       )
     )
-    .min(1)
+    .min(3, "Minimal 3 foto.")
     .max(8),
   weightGrams: z.number().int().min(10).max(50_000).default(500),
   // Shipping (RajaOngkir/Komerce). couriers is the set the seller will accept;

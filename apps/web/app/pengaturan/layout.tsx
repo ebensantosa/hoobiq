@@ -7,6 +7,7 @@ const sections = [
   { href: "/pengaturan/rekening", label: "Rekening payout" },
   { href: "/pengaturan/keamanan", label: "Keamanan" },
   { href: "/pengaturan/notifikasi", label: "Notifikasi" },
+  { href: "/pengaturan/kategori-baru", label: "Request kategori" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

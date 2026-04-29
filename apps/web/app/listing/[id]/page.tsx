@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { Avatar, Badge, Card } from "@hoobiq/ui";
+import { Avatar, Card } from "@hoobiq/ui";
 import { ListingGallery } from "@/components/listing-gallery";
+import { ListingCard } from "@/components/listing-card";
 import { ListingReviews } from "@/components/listing-reviews";
+import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
-import type { ListingDetail } from "@hoobiq/types";
+import type { ListingDetail, ListingSummary } from "@hoobiq/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const isOwn = me?.username === listing.seller.username;
   const ratingAvg = listing.rating?.avg ?? null;
   const ratingCount = listing.rating?.count ?? 0;
+  const cond = conditionBadge(listing.condition);
+
+  // "Lihat produk lain" — same category first, then fall back to whatever
+  // the marketplace surfaces. Filtered to drop the listing itself + the
+  // seller's other items (those have a dedicated section on /u/[username]).
+  const relatedRes = await serverApi<{ items: ListingSummary[] }>(
+    `/listings?categorySlug=${encodeURIComponent(listing.category.slug)}&limit=12`,
+  );
+  const related = (relatedRes?.items ?? [])
+    .filter((l) => l.id !== listing.id && l.seller.username !== listing.seller.username)
+    .slice(0, 8);
 
   return (
     <AppShell active="Marketplace">
@@ -41,7 +54,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <ListingGallery
               images={listing.images}
               title={listing.title}
-              condition={listing.condition}
             />
 
             {/* Description */}
@@ -52,12 +64,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </p>
             </section>
 
-            {/* Specs */}
-            <section className="mt-8 grid grid-cols-2 gap-x-8 gap-y-5 rounded-2xl border border-rule bg-panel p-5 sm:grid-cols-4">
-              <Spec label="Kondisi"  value={listing.condition.replace("_", " ")} />
-              <Spec label="Stok"     value={String(listing.stock)} />
-              <Spec label="Berat"    value={`${listing.weightGrams} gr`} />
-              <Spec label="Kategori" value={listing.category.name} />
+            {/* Specs — radius 4 (rounded-md) per spec, no oversized lozenges.
+                Each cell has a defined card-style border + bg so the
+                "Brand New / kondisi" info is visually distinct from the
+                surrounding text. */}
+            <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <SpecCard label="Kondisi"  value={cond.label} accent />
+              <SpecCard label="Stok"     value={String(listing.stock)} />
+              <SpecCard label="Berat"    value={`${listing.weightGrams} gr`} />
+              <SpecCard label="Kategori" value={listing.category.name} />
             </section>
 
             {/* Reviews — anchored for the "review →" link in the aside.
@@ -143,8 +158,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
-            {/* Seller card — uses real avatar, separates trustScore label so
-                it's not confused with listing's own review rating. */}
+            {/* Seller card with a "Pesan sekarang" CTA per spec — buyer
+                can ping the seller directly from the listing detail
+                without round-tripping through the seller's profile. */}
             <Card className="mt-6">
               <div className="flex items-center gap-3 p-5">
                 <Avatar
@@ -155,8 +171,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   alt={`Avatar @${listing.seller.username}`}
                 />
                 <div className="min-w-0 flex-1">
-                  {/* Per spec: show seller name + location only, no @username
-                      tag. Profile link is the avatar / "Profil →" CTA. */}
                   <p className="truncate font-semibold text-fg">
                     {listing.seller.name ?? listing.seller.username}
                   </p>
@@ -172,6 +186,19 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Profil →
                 </Link>
               </div>
+              {!isOwn && (
+                <div className="border-t border-rule px-5 py-3">
+                  <Link
+                    href={`/dm?to=${encodeURIComponent(listing.seller.username)}&listing=${encodeURIComponent(listing.slug)}`}
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-fg text-canvas text-sm font-semibold transition-colors hover:bg-fg/90"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Pesan sekarang
+                  </Link>
+                </div>
+              )}
             </Card>
 
             {/* Protection */}
@@ -199,6 +226,32 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </aside>
         </div>
 
+        {related.length > 0 && (
+          <section className="mt-14 border-t border-rule pt-10">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">
+                  Eksplor lebih
+                </span>
+                <h2 className="mt-1 text-2xl font-bold text-fg">Lihat produk lain</h2>
+                <p className="mt-1 text-sm text-fg-muted">
+                  Item lain di kategori {listing.category.name} dari kolektor berbeda.
+                </p>
+              </div>
+              <Link
+                href={`/kategori/${encodeURIComponent(listing.category.slug)}`}
+                className="text-sm font-semibold text-brand-500 hover:underline"
+              >
+                Lihat semua →
+              </Link>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+              {related.map((l) => (
+                <ListingCard key={l.id} l={l} meUsername={me?.username ?? null} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </AppShell>
   );
@@ -209,6 +262,30 @@ function Spec({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">{label}</p>
       <p className="mt-1 text-sm font-medium text-fg">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Spec cell rendered as its own little card. Per spec: radius 4 (Tailwind
+ * `rounded-md` ≈ 6px is the closest scale token; `rounded` is 4px). The
+ * "Kondisi" cell uses `accent=true` so brand-new / used info reads
+ * unmistakably even at a glance.
+ */
+function SpecCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div
+      className={
+        "rounded p-3 " +
+        (accent
+          ? "border border-brand-400/50 bg-brand-400/10"
+          : "border border-rule bg-panel")
+      }
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">{label}</p>
+      <p className={"mt-1 text-sm font-semibold " + (accent ? "text-brand-500" : "text-fg")}>
+        {value}
+      </p>
     </div>
   );
 }

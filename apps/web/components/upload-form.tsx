@@ -83,7 +83,7 @@ function validate(state: FormState, images: string[], condition: string): Errors
   else if (weight > 50_000)                       e.weight = "Maksimal 50.000 gr.";
 
   if (!state.categoryId)                          e.categoryId = "Pilih kategori.";
-  if (images.length === 0)                        e.images = "Upload minimal 1 foto.";
+  if (images.length < 3)                          e.images = "Upload minimal 3 foto.";
   if (!conditions.includes(condition as Condition)) e.condition = "Pilih kondisi.";
 
   return e;
@@ -223,6 +223,12 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           onChange={(id) => { set("categoryId", id); blur("categoryId"); }}
           error={showErr("categoryId")}
         />
+        <p className="-mt-3 text-[11px] text-fg-subtle">
+          Belum ada series/anime yang kamu cari?{" "}
+          <a href="/pengaturan/kategori-baru" className="text-brand-500 hover:underline">
+            Request kategori baru →
+          </a>
+        </p>
 
         <div className="grid gap-5 md:grid-cols-3">
           <Field label="Harga (Rp)" error={showErr("price")}>

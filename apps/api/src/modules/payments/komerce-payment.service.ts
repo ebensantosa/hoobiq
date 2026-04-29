@@ -151,8 +151,10 @@ export class KomercePaymentService {
       items: req.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.priceIdr })),
       expiry_duration: 24 * 3600,                            // 24h to pay (matches our auto-cancel window)
       callback_url: req.notifyUrl,
-      // Note the casing — Komerce docs spell this exactly as
-      // "callback_API_KEY", not "callback_api_key". Don't normalize.
+      // Per official Komerce sandbox curl example the field is lowercase
+      // `callback_api_key`. An older docs page used `callback_API_KEY`,
+      // so we send both to be safe — Komerce ignores unknown fields.
+      callback_api_key: req.callbackKey,
       callback_API_KEY: req.callbackKey,
       // Browser-side bounce after a successful payment. Komerce's docs use
       // `return_url`; we also send `redirect_url`/`success_url` defensively

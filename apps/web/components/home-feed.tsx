@@ -157,7 +157,11 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           Lihat semua →
         </Link>
       </div>
-      <div className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+      {/* py-2 keeps the hover lift + brand ring from being clipped by
+          the scroll container — overflow-x-auto forces overflow-y to
+          auto/hidden in browsers, so we have to bake the breathing
+          room into the strip's own box. */}
+      <div className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
         {categories.map((c) => (
           <Link
             key={c.id}

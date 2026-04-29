@@ -31,6 +31,7 @@ const CategoryUpsert = z.object({
   parentId: z.string().nullable().optional(),
   level:    z.number().int().min(1).max(3).optional(),
   order:    z.number().int().min(0).max(9999).optional(),
+  imageUrl: z.string().url().nullable().optional(),
 });
 type CategoryUpsert = z.infer<typeof CategoryUpsert>;
 
@@ -402,9 +403,10 @@ export class AdminController {
         parentId: input.parentId ?? null,
         level: input.level ?? (input.parentId ? 2 : 1),
         order: input.order ?? 0,
+        imageUrl: input.imageUrl ?? null,
       },
     });
-    await this.redis.del("categories:tree:v2");
+    await this.redis.del("categories:tree:v3");
     await this.writeAudit(user.id, "category.create", `category:${created.id}`, input);
     return { id: created.id };
   }
@@ -418,7 +420,7 @@ export class AdminController {
     const exists = await this.prisma.category.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw new NotFoundException({ code: "not_found", message: "Kategori tidak ditemukan." });
     await this.prisma.category.update({ where: { id }, data: input });
-    await this.redis.del("categories:tree:v2");
+    await this.redis.del("categories:tree:v3");
     await this.writeAudit(user.id, "category.update", `category:${id}`, input);
     return { ok: true };
   }
@@ -437,7 +439,7 @@ export class AdminController {
       });
     }
     await this.prisma.category.delete({ where: { id } });
-    await this.redis.del("categories:tree:v2");
+    await this.redis.del("categories:tree:v3");
     await this.writeAudit(user.id, "category.delete", `category:${id}`);
   }
 
@@ -452,6 +454,7 @@ export class AdminController {
       items: rows.map((c) => ({
         id: c.id, slug: c.slug, name: c.name, level: c.level, order: c.order,
         parentId: c.parentId, parentName: c.parent?.name ?? null,
+        imageUrl: c.imageUrl,
         listingCount: c._count.listings,
         childCount: c._count.children,
       })),

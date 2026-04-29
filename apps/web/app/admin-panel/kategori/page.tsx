@@ -13,6 +13,7 @@ type AdminCategory = {
   order: number;
   parentId: string | null;
   parentName: string | null;
+  imageUrl: string | null;
   listingCount: number;
   childCount: number;
 };

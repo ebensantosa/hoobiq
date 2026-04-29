@@ -24,6 +24,7 @@ type Node = {
   name: string;
   level: number;
   parentId: string | null;
+  imageUrl: string | null;
   listingCount: number;
   children: Node[];
 };
@@ -43,7 +44,7 @@ export class CategoriesController {
   @Public()
   @Get()
   async tree() {
-    return this.redis.cached("categories:tree:v2", 60, async () => {
+    return this.redis.cached("categories:tree:v3", 60, async () => {
       const [rows, counts] = await Promise.all([
         this.prisma.category.findMany({
           orderBy: [{ level: "asc" }, { order: "asc" }, { name: "asc" }],
@@ -63,6 +64,7 @@ export class CategoriesController {
         map.set(r.id, {
           id: r.id, slug: r.slug, name: r.name, level: r.level,
           parentId: r.parentId,
+          imageUrl: r.imageUrl,
           listingCount: directCount.get(r.id) ?? 0,
           children: [],
         });
@@ -247,7 +249,7 @@ export class CategoriesController {
       return cat;
     });
 
-    await this.redis.client.del("categories:tree:v2").catch(() => undefined);
+    await this.redis.client.del("categories:tree:v3").catch(() => undefined);
     return { id: newCat.id, slug: newCat.slug, name: newCat.name, level: newCat.level };
   }
 

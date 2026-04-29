@@ -10,6 +10,7 @@ export type HomeCategory = {
   slug: string;
   name: string;
   level: number;
+  imageUrl: string | null;
   listingCount: number;
   children: HomeCategory[];
 };
@@ -144,10 +145,14 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           Lihat semua
         </Link>
       </div>
-      {/* Responsive grid — no horizontal scroll. Mobile = 2 cols, sm =
-          3, lg = 5 (one slot per top-level category). py-2 keeps the
-          hover lift + ring from being clipped by the section box. */}
-      <div className="mt-3 grid grid-cols-2 gap-3 py-2 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Horizontal slider — snap-based scroll on every breakpoint so
+          buyers can flick through categories with one thumb on mobile,
+          and admin-uploaded hero images get room to breathe on desktop.
+          Each card is a fixed pixel width so widths stay consistent
+          regardless of category name length. */}
+      <div
+        className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {categories.map((c) => {
           const tone = CATEGORY_TONE[c.slug] ?? FALLBACK_TONE;
           return (
@@ -155,17 +160,38 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
               key={c.id}
               href={`/kategori/${c.slug}`}
               className={
-                "group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 bg-gradient-to-br " +
-                tone.bg + " " + tone.border + " " + tone.shadow
+                "group relative flex w-44 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border transition-all hover:-translate-y-0.5 sm:w-48 " +
+                tone.border + " " + tone.shadow
               }
             >
-              <span className={"grid h-10 w-10 place-items-center rounded-lg shadow-sm backdrop-blur " + tone.iconBg}>
-                <span className={tone.iconColor}>{categoryIcon(c.slug)}</span>
-              </span>
-              <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
-              <p className="font-mono text-[10px] text-fg-muted">
-                {c.listingCount.toLocaleString("id-ID")} listing
-              </p>
+              {/* Image (or gradient fallback) header — 4:3 keeps the
+                  card compact while still giving the photo enough room
+                  to read. */}
+              <div className={"relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br " + tone.bg}>
+                {c.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.imageUrl}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <span
+                    className={
+                      "absolute inset-0 grid place-items-center " + tone.iconColor
+                    }
+                  >
+                    <span className="scale-150">{categoryIcon(c.slug)}</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-1 p-3">
+                <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
+                <p className="font-mono text-[10px] text-fg-muted">
+                  {c.listingCount.toLocaleString("id-ID")} listing
+                </p>
+              </div>
             </Link>
           );
         })}

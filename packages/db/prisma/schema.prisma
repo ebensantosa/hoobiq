@@ -162,6 +162,10 @@ model Category {
   children  Category[] @relation("CategoryTree")
   level     Int        @default(1)
   order     Int        @default(0)
+  // Optional admin-uploaded hero image used by the home category strip
+  // (and any future surface that wants a richer thumbnail than the icon).
+  // Falls back to the slug-keyed icon + tone gradient when null.
+  imageUrl  String?    @map("image_url")
   createdAt DateTime   @default(now()) @map("created_at")
 
   listings Listing[]

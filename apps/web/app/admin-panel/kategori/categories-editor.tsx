@@ -3,6 +3,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input, Label } from "@hoobiq/ui";
 import { api } from "@/lib/api/client";
+import { uploadImage } from "@/lib/api/uploads";
 
 type Cat = {
   id: string;
@@ -12,6 +13,7 @@ type Cat = {
   order: number;
   parentId: string | null;
   parentName: string | null;
+  imageUrl: string | null;
   listingCount: number;
   childCount: number;
 };
@@ -124,7 +126,21 @@ function CategoryForm({
   const [name, setName]         = React.useState(initial?.name ?? "");
   const [parentId, setParentId] = React.useState(initial?.parentId ?? "");
   const [order, setOrder]       = React.useState(initial?.order ?? 0);
+  const [imageUrl, setImageUrl] = React.useState<string | null>(initial?.imageUrl ?? null);
   const [busy, setBusy]         = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+
+  async function pickImage(file: File) {
+    setUploading(true);
+    try {
+      const url = await uploadImage(file, "branding");
+      setImageUrl(url);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Upload gagal");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function submit() {
     setBusy(true);
@@ -134,6 +150,7 @@ function CategoryForm({
         name: name.trim(),
         parentId: parentId || null,
         order: Number(order) || 0,
+        imageUrl,
         // Level inferred client-side from parent depth; API will validate.
         level: parentId ? Math.min(3, (parents.find((p) => p.id === parentId)?.label.split("— ").length ?? 1) + 1) : 1,
       };
@@ -172,11 +189,66 @@ function CategoryForm({
         <Label>Urutan (kecil = lebih dulu)</Label>
         <Input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} />
       </div>
+      <div className="flex flex-col gap-1.5 md:col-span-2">
+        <Label>Gambar (slider home)</Label>
+        <CategoryImagePicker
+          url={imageUrl}
+          uploading={uploading}
+          onPick={pickImage}
+          onClear={() => setImageUrl(null)}
+        />
+      </div>
       <div className="flex justify-end gap-2 md:col-span-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>Batal</Button>
         <Button variant="primary" size="sm" onClick={submit} disabled={busy || !slug || !name}>
           {busy ? "Menyimpan…" : mode === "create" ? "Buat" : "Simpan"}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function CategoryImagePicker({
+  url, uploading, onPick, onClear,
+}: {
+  url: string | null;
+  uploading: boolean;
+  onPick: (f: File) => void;
+  onClear: () => void;
+}) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-20 w-28 items-center justify-center overflow-hidden rounded-lg border border-rule bg-panel/40">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-[11px] text-fg-subtle">Belum diset</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+          className="text-xs font-semibold text-brand-400 disabled:opacity-50"
+        >
+          {uploading ? "Mengupload…" : url ? "Ganti…" : "Upload…"}
+        </button>
+        {url && (
+          <button type="button" onClick={onClear} className="text-xs text-fg-muted hover:text-crim-400">
+            Hapus
+          </button>
+        )}
+        <span className="text-[11px] text-fg-subtle">JPG/PNG ≤ 2MB. Rasio 4:3 dianjurkan.</span>
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.currentTarget.value = ""; }}
+        />
       </div>
     </div>
   );

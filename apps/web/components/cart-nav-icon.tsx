@@ -3,25 +3,29 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cartApi } from "@/lib/api/cart";
+import { onCartChanged } from "@/lib/cart-events";
 
 /**
  * Cart icon in the top nav with a live count badge. Refetches the count
- * whenever the route changes (cheap GET /cart/count) so adding to cart
- * from a listing card updates the badge after the resulting
- * router.refresh(). Polling isn't needed — every meaningful cart
- * mutation triggers either a refresh or a navigation.
+ * whenever the route changes (cheap GET /cart/count) AND whenever any
+ * client surface emits the `hoobiq:cart:changed` event after an
+ * add/update/remove. That removes the "I need to reload to see the
+ * badge" feel — the icon now updates the moment the buyer hits "+".
  */
 export function CartNavIcon() {
   const pathname = usePathname();
   const [count, setCount] = React.useState(0);
 
-  React.useEffect(() => {
+  const refetch = React.useCallback(() => {
     let alive = true;
     cartApi.count()
       .then((r) => { if (alive) setCount(r.totalQty); })
       .catch(() => { /* anonymous = no count, keep 0 */ });
     return () => { alive = false; };
-  }, [pathname]);
+  }, []);
+
+  React.useEffect(() => refetch(), [pathname, refetch]);
+  React.useEffect(() => onCartChanged(refetch), [refetch]);
 
   return (
     <Link

@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cartApi, type CartItem } from "@/lib/api/cart";
+import { emitCartChanged } from "@/lib/cart-events";
 import { conditionBadge } from "@/lib/condition-badge";
 
 /**
@@ -42,6 +43,7 @@ export function CartList({
     setItems((arr) => arr.map((i) => (i.id === id ? { ...i, qty } : i)));
     try {
       await cartApi.update(id, qty);
+      emitCartChanged();
     } catch (e) {
       setItems(prev);
       setErr(e instanceof Error ? e.message : "Gagal update qty.");
@@ -57,6 +59,7 @@ export function CartList({
     setItems((arr) => arr.filter((i) => i.id !== id));
     try {
       await cartApi.remove(id);
+      emitCartChanged();
       router.refresh();
     } catch (e) {
       setItems(prev);

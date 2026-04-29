@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@hoobiq/ui";
 import { serverApi } from "@/lib/server/api";
+import { PendingOrdersReconciler } from "@/components/pending-orders-reconciler";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,13 @@ const statusMap: Record<string, { label: string; tone: "mint" | "crim" | "ghost"
 export default async function PesananPage() {
   const data = await serverApi<{ items: OrderRow[] }>("/orders?role=buyer");
   const items = data?.items ?? [];
+  const pendingHumanIds = items
+    .filter((o) => o.status === "pending_payment")
+    .map((o) => o.humanId);
 
   return (
     <AppShell active="Marketplace">
+      <PendingOrdersReconciler humanIds={pendingHumanIds} />
       <div className="px-6 pb-8 lg:px-10">
         <header className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg">Pesanan saya</h1>

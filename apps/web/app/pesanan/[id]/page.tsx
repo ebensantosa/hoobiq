@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Avatar, Badge, Card } from "@hoobiq/ui";
 import { OrderActions } from "@/components/order-actions";
 import { TrackingTimeline } from "@/components/tracking-timeline";
+import { PendingOrdersReconciler } from "@/components/pending-orders-reconciler";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 
@@ -126,6 +127,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <AppShell active="Marketplace">
+      {o.status === "pending_payment" && (
+        <PendingOrdersReconciler humanIds={[o.humanId]} />
+      )}
       <div className="px-6 pb-8 lg:px-10">
         <nav className="mb-6 text-xs text-fg-subtle">
           <Link href="/pesanan" className="hover:text-fg">Pesanan</Link>

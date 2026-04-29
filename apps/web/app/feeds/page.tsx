@@ -42,18 +42,19 @@ export type FeedPost = {
 export default async function FeedsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; show?: string }>;
+  searchParams: Promise<{ q?: string; include?: string }>;
 }) {
   const sp = await searchParams;
   const rawQ = (sp.q ?? "").trim().toLowerCase();
-  const show = (sp.show ?? "all") as "all" | "posts" | "listings" | "following";
-
-  // Fetch a wider sample so the right-rail trending + top-collectors widgets
-  // have enough signal. The visible feed slices to 24 after filtering.
-  // We always fetch posts for the trending/collectors aggregates, even
-  // when the buyer chose "listings only" — the right rail keeps working.
-  const wantsListings = show === "all" || show === "listings";
-  const wantsPosts = show === "all" || show === "posts" || show === "following";
+  // Multi-select filter via `?include=posts,listings,following`. Empty =
+  // default (everything). The "following" key is parsed but treated as a
+  // pass-through until the follow graph lands.
+  const includeRaw = (sp.include ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const include = new Set(includeRaw);
+  const noFilter = include.size === 0;
+  const wantsPosts    = noFilter || include.has("posts") || include.has("following");
+  const wantsListings = noFilter || include.has("listings");
+  const followingOnly = include.has("following");
   const listingQuery = sp.q ? `/listings?q=${encodeURIComponent(sp.q)}&limit=12` : "/listings?sort=newest&limit=12";
 
   const [data, listingsRes, me] = await Promise.all([
@@ -145,13 +146,13 @@ export default async function FeedsPage({
 
           <FeedSearchBar />
 
-          {me && show !== "listings" && (
+          {me && wantsPosts && (
             <FeedComposer me={{ username: me.username, name: me.name, avatarUrl: me.avatarUrl }} />
           )}
 
-          {show === "following" && (
+          {followingOnly && (
             <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-              Filter “Yang diikuti” akan aktif begitu fitur follow-kolektor selesai
+              Filter “Hanya yang diikuti” akan aktif begitu fitur follow-kolektor selesai
               — sementara tampil semua post terbaru.
             </div>
           )}
@@ -264,8 +265,8 @@ function SpotlightCollectors({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-fg">{c.name ?? `@${c.username}`}</p>
-                  <p className="truncate text-[11px] text-fg-muted">@{c.username} · {c.posts} post · {c.score} eng</p>
+                  <p className="truncate font-medium text-fg">{c.name ?? c.username}</p>
+                  <p className="truncate text-[11px] text-fg-muted">{c.posts} post · {c.score} eng</p>
                 </div>
               </Link>
             </li>

@@ -9,12 +9,25 @@ export type Badge = {
   tone: "tcg" | "popmart" | "manga" | "figure" | "merch" | "trader" | "creator" | "veteran";
 };
 
+export type ProfileReview = {
+  id: string;
+  rating: number;
+  body: string | null;
+  createdAt: string;
+  buyer: { username: string; name: string | null; avatarUrl: string | null };
+  listing: { slug: string; title: string };
+};
+
 export type Passport = {
   collectionValueIdr: number;
   collectionCount: number;
   postsCount: number;
   tradesCompleted: number;
   tradeRating: number;
+  /** Total reviews used to compute tradeRating. 0 means rating is the
+   *  legacy trustScore proxy and should be marked as "belum direview". */
+  reviewCount?: number;
+  reviews?: ProfileReview[];
   badges: Badge[];
 };
 
@@ -54,7 +67,10 @@ export function PassportHero({
 }) {
   const joined = new Date(user.createdAt).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const isVerified = user.role === "verified" || user.role === "admin";
-  const showRating = passport.tradesCompleted > 0;
+  // Rating tile shows when there's any signal worth showing — either real
+  // buyer reviews on this seller's listings, or completed trades (legacy
+  // trustScore proxy). Otherwise the third tile falls back to "Postingan".
+  const showRating = (passport.reviewCount ?? 0) > 0 || passport.tradesCompleted > 0;
 
   return (
     <section
@@ -133,10 +149,10 @@ export function PassportHero({
             <div className="min-w-0 flex-1 pt-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-fg md:text-[32px]">
-                  {user.name ?? `@${user.username}`}
+                  {user.name ?? user.username}
                 </h1>
               </div>
-              <p className="mt-0.5 text-sm font-medium text-fg-subtle">@{user.username}</p>
+              <p className="mt-0.5 text-sm font-medium text-fg-subtle">{user.username}</p>
 
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
                 {user.city && (
@@ -227,11 +243,15 @@ export function PassportHero({
               <StatCell label="Rating"
                 value={
                   <span className="inline-flex items-center gap-1.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-amber-500"><path d="M12 .587l3.668 7.568L24 9.75l-6 5.91L19.336 24 12 19.897 4.664 24 6 15.66 0 9.75l8.332-1.595z"/></svg>
-                    {passport.tradeRating.toFixed(1)}
+                    <Stars value={passport.tradeRating} size={14} />
+                    <span>{passport.tradeRating.toFixed(1)}</span>
                   </span>
                 }
-                hint={`${passport.tradesCompleted} trade selesai`}
+                hint={
+                  (passport.reviewCount ?? 0) > 0
+                    ? `${passport.reviewCount} review`
+                    : `${passport.tradesCompleted} trade selesai`
+                }
               />
               <StatCell label="Koleksi" value={passport.collectionCount.toLocaleString("id-ID")} hint="item aktif" />
               <StatCell label="Total nilai" value={fmtIdrCompact(passport.collectionValueIdr)} hint="harga listing" />
@@ -246,8 +266,86 @@ export function PassportHero({
         </dl>
 
         {passport.badges.length > 0 && <BadgeStrip badges={passport.badges} username={user.username} />}
+
+        {(passport.reviews?.length ?? 0) > 0 && (
+          <ReviewsStrip reviews={passport.reviews ?? []} />
+        )}
       </div>
     </section>
+  );
+}
+
+/** Star row, half-stars rounded to nearest .5. Pure presentational. */
+function Stars({ value, size = 14 }: { value: number; size?: number }) {
+  const full = Math.floor(value);
+  const half = value - full >= 0.5;
+  return (
+    <span className="inline-flex" aria-label={`${value.toFixed(1)} dari 5`}>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const fill = i < full || (i === full && half);
+        return (
+          <svg
+            key={i}
+            width={size} height={size} viewBox="0 0 24 24"
+            fill={fill ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.6"
+            className="text-amber-500"
+          >
+            <path d="M12 .587l3.668 7.568L24 9.75l-6 5.91L19.336 24 12 19.897 4.664 24 6 15.66 0 9.75l8.332-1.595z"/>
+          </svg>
+        );
+      })}
+    </span>
+  );
+}
+
+/**
+ * Recent buyer reviews shown under the badge strip on the seller's
+ * profile. Up to 5 most recent — anything older lives on the listing
+ * detail page itself.
+ */
+function ReviewsStrip({ reviews }: { reviews: ProfileReview[] }) {
+  return (
+    <div className="mt-6 rounded-2xl border border-rule bg-panel">
+      <header className="flex items-center justify-between border-b border-rule px-5 py-3">
+        <h3 className="text-sm font-bold text-fg">Review terbaru dari pembeli</h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+          {reviews.length} terakhir
+        </span>
+      </header>
+      <ul className="divide-y divide-rule">
+        {reviews.map((r) => (
+          <li key={r.id} className="px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-panel-2 font-bold text-fg-muted">
+                {r.buyer.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.buyer.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  (r.buyer.name ?? r.buyer.username)[0]?.toUpperCase()
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-fg">{r.buyer.name ?? r.buyer.username}</p>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <Stars value={r.rating} size={12} />
+                  <Link href={`/listing/${r.listing.slug}`} className="truncate text-[11px] text-fg-subtle hover:underline">
+                    {r.listing.title}
+                  </Link>
+                </div>
+              </div>
+              <span className="font-mono text-[10px] text-fg-subtle">
+                {new Date(r.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+              </span>
+            </div>
+            {r.body && (
+              <p className="mt-2 line-clamp-3 text-sm text-fg-muted">{r.body}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

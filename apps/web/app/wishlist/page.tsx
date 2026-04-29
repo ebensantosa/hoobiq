@@ -58,7 +58,7 @@ export default async function WishlistPage() {
                 </div>
                 <div className="p-4">
                   <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-fg">{w.listing.title}</p>
-                  <p className="mt-1 text-xs text-fg-subtle">@{w.listing.seller.username}</p>
+                  <p className="mt-1 text-xs text-fg-subtle">{w.listing.seller.city ?? "Lokasi belum diisi"}</p>
                   <p className="mt-3 text-base font-bold text-fg">Rp {w.listing.priceIdr.toLocaleString("id-ID")}</p>
                 </div>
               </Link>

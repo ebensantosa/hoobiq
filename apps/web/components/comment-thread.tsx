@@ -80,7 +80,7 @@ export function CommentThread({
             <li key={c.id} className="flex gap-3">
               <Avatar letter={c.author.username[0]?.toUpperCase() ?? "U"} size="sm" />
               <div className="flex-1 rounded-xl bg-panel px-3 py-2 text-sm">
-                <p className="font-semibold text-fg">@{c.author.username}</p>
+                <p className="font-semibold text-fg">{c.author.username}</p>
                 <CommentBody body={c.body} />
                 <p className="mt-1 text-[11px] text-fg-subtle">{timeAgo(c.createdAt)}</p>
               </div>

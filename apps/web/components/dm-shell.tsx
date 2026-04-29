@@ -173,7 +173,7 @@ export function DMShell({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                       <p className="truncate text-sm font-semibold text-fg">
-                        @{c.counterpart?.username ?? "—"}
+                        {c.counterpart?.username ?? "—"}
                       </p>
                       <span className="font-mono text-[10px] text-fg-subtle">
                         {c.lastMessage ? timeAgo(c.lastMessage.at) : ""}
@@ -203,7 +203,7 @@ export function DMShell({
           <header className="flex items-center gap-3 border-b border-rule px-6 py-4">
             <Avatar letter={active.counterpart?.username[0] ?? "U"} size="md" />
             <div className="flex-1">
-              <p className="font-semibold text-fg">@{active.counterpart?.username}</p>
+              <p className="font-semibold text-fg">{active.counterpart?.username}</p>
               <p className="text-xs text-fg-subtle">
                 {active.counterpart?.city ?? "—"}
                 {typingFrom && <span className="ml-2 text-brand-500">sedang mengetik…</span>}
@@ -216,7 +216,7 @@ export function DMShell({
               <div className="text-center text-sm text-fg-subtle">Memuat pesan…</div>
             ) : messages.length === 0 ? (
               <div className="text-center text-sm text-fg-subtle">
-                Mulai percakapan — sapa @{active.counterpart?.username} dengan pesan pertama.
+                Mulai percakapan — sapa {active.counterpart?.username} dengan pesan pertama.
               </div>
             ) : (
               messages.map((m) => {

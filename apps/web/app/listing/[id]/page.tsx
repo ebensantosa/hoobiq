@@ -155,10 +155,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   alt={`Avatar @${listing.seller.username}`}
                 />
                 <div className="min-w-0 flex-1">
+                  {/* Per spec: show seller name + location only, no @username
+                      tag. Profile link is the avatar / "Profil →" CTA. */}
                   <p className="truncate font-semibold text-fg">
-                    {listing.seller.name ?? `@${listing.seller.username}`}
+                    {listing.seller.name ?? listing.seller.username}
                   </p>
-                  <p className="truncate text-xs text-fg-subtle">@{listing.seller.username}</p>
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
                     <span>Trust {listing.seller.trustScore.toFixed(1)}</span>
                     {listing.seller.city && <span>· {listing.seller.city}</span>}
@@ -192,7 +193,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 href={`/trades?to=${encodeURIComponent(listing.seller.username)}`}
                 className="font-semibold text-brand-500 hover:underline"
               >
-                Coba trade dengan @{listing.seller.username}
+                Coba trade dengan {listing.seller.name ?? listing.seller.username}
               </Link>
             </div>
           </aside>

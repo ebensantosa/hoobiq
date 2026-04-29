@@ -442,7 +442,7 @@ function CommunityPreview({ posts }: { posts: Post[] }) {
                 </div>
                 <div className="p-4">
                   <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                    @{p.author.username}
+                    {p.author.username}
                     <span className="rounded-full bg-flame-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-flame-400">
                       LV {p.author.level}
                     </span>

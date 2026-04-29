@@ -5,34 +5,34 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * Client-side controls for /feeds: a search box (writes ?q=) and a set
- * of view-mode pills (writes ?show=). The server reads these params and
- * decides what to fetch + render.
+ * of independent view-mode checkboxes (?include=posts,listings,following).
+ * Multi-select per spec — buyers can tick "Yang diikuti" + "Listing"
+ * simultaneously and the server combines the streams.
  *
- * Per spec:
- *   - default ("all"): random/latest mix of posts + marketplace listings
- *   - "posts": just user posts (sharing/photos)
- *   - "listings": just marketplace listings
- *   - "following": only authors the buyer follows — disabled until the
- *     follow graph lands in the schema; left as a labelled pill so the
- *     intent is obvious in the UI.
+ *   - posts:     user posts (sharing/photos) appear in the timeline
+ *   - listings:  marketplace listings appear in the timeline
+ *   - following: only authors the buyer follows — gated until the follow
+ *     graph lands; the pill stays disabled with a "soon" hint.
+ *
+ * No checkbox ticked = default behaviour: show everything (posts + listings).
  */
-const VIEW_OPTIONS: { key: string; label: string; disabled?: boolean; hint?: string }[] = [
-  { key: "all",       label: "Semua" },
-  { key: "posts",     label: "Feeds" },
-  { key: "listings",  label: "Listing" },
-  { key: "following", label: "Yang diikuti", disabled: true, hint: "Coming soon" },
+const FILTERS: { key: string; label: string; disabled?: boolean; hint?: string }[] = [
+  { key: "posts",     label: "Tampilkan feeds" },
+  { key: "listings",  label: "Tampilkan listing" },
+  { key: "following", label: "Hanya yang diikuti", disabled: true, hint: "Coming soon" },
 ];
 
 export function FeedSearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
   const initialQ = sp.get("q") ?? "";
-  const show = sp.get("show") ?? "all";
+  // `include` is comma-separated. Empty = default (everything).
+  const includeRaw = sp.get("include") ?? "";
+  const include = new Set(includeRaw.split(",").filter(Boolean));
 
   const [q, setQ] = React.useState(initialQ);
   const debounceRef = React.useRef<number | null>(null);
 
-  // Keep the input in sync if URL changes externally (back/forward nav).
   React.useEffect(() => { setQ(initialQ); }, [initialQ]);
 
   function pushParams(next: Record<string, string | null>) {
@@ -47,15 +47,16 @@ export function FeedSearchBar() {
   function onSearchChange(v: string) {
     setQ(v);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    // 300ms debounce — same feel as a typeahead, doesn't hammer the server
-    // on every keystroke.
     debounceRef.current = window.setTimeout(() => {
       pushParams({ q: v.trim() || null });
     }, 300);
   }
 
-  function onPickShow(key: string) {
-    pushParams({ show: key === "all" ? null : key });
+  function toggleFilter(key: string) {
+    const next = new Set(include);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    pushParams({ include: next.size > 0 ? Array.from(next).join(",") : null });
   }
 
   return (
@@ -78,28 +79,43 @@ export function FeedSearchBar() {
           className="h-11 w-full rounded-xl border border-rule bg-panel-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-brand-400 focus:outline-none"
         />
       </label>
-      <div className="flex flex-wrap gap-1.5">
-        {VIEW_OPTIONS.map((opt) => {
-          const active = show === opt.key;
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => {
+          const checked = include.has(f.key);
           return (
             <button
-              key={opt.key}
+              key={f.key}
               type="button"
-              disabled={opt.disabled}
-              onClick={() => !opt.disabled && onPickShow(opt.key)}
-              title={opt.hint}
+              role="checkbox"
+              aria-checked={checked}
+              disabled={f.disabled}
+              onClick={() => !f.disabled && toggleFilter(f.key)}
+              title={f.hint}
               className={
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " +
-                (opt.disabled
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " +
+                (f.disabled
                   ? "cursor-not-allowed border-rule bg-panel-2 text-fg-subtle"
-                  : active
+                  : checked
                     ? "border-brand-400 bg-brand-400/10 text-brand-500"
                     : "border-rule bg-panel text-fg-muted hover:border-brand-300 hover:text-fg")
               }
             >
-              {opt.label}
-              {opt.disabled && opt.hint && (
-                <span className="ml-1 text-[9px] uppercase tracking-wider text-fg-subtle">soon</span>
+              <span
+                aria-hidden
+                className={
+                  "grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border transition-colors " +
+                  (checked ? "border-brand-500 bg-brand-500 text-white" : "border-rule bg-panel")
+                }
+              >
+                {checked && (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                )}
+              </span>
+              {f.label}
+              {f.disabled && (
+                <span className="text-[9px] uppercase tracking-wider text-fg-subtle">soon</span>
               )}
             </button>
           );

@@ -42,8 +42,10 @@ export class UsersController {
     });
     if (!user || user.username !== username) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
 
-    // Passport stats — collection value, trades, post count, top categories
-    const [valueAgg, listingsCount, postsCount, tradesCount, byCategory] = await Promise.all([
+    // Passport stats — collection value, trades, post count, top categories,
+    // and seller rating from real ListingReview rows on listings this user
+    // sold (not the user's trustScore proxy used previously).
+    const [valueAgg, listingsCount, postsCount, tradesCount, byCategory, reviewAgg, recentReviews] = await Promise.all([
       this.prisma.listing.aggregate({
         where: { sellerId: user.id, deletedAt: null, isPublished: true, moderation: "active", stock: { gt: 0 } },
         _sum: { priceCents: true },
@@ -60,6 +62,24 @@ export class UsersController {
         where: { sellerId: user.id, deletedAt: null, isPublished: true, moderation: "active" },
         _count: { _all: true },
       }),
+      // Real seller rating: avg of every ListingReview on a listing this
+      // user sold. `_count.rating` gives total review count for the
+      // "ratings on N reviews" display.
+      this.prisma.listingReview.aggregate({
+        where: { listing: { sellerId: user.id } },
+        _avg: { rating: true },
+        _count: { rating: true },
+      }).catch(() => ({ _avg: { rating: null }, _count: { rating: 0 } } as { _avg: { rating: number | null }; _count: { rating: number } })),
+      // 5 most recent reviews to display under the badge strip.
+      this.prisma.listingReview.findMany({
+        where: { listing: { sellerId: user.id } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          buyer:   { select: { username: true, name: true, avatarUrl: true } },
+          listing: { select: { slug: true, title: true } },
+        },
+      }).catch(() => [] as Array<{ id: string; rating: number; body: string | null; createdAt: Date; buyer: { username: string; name: string | null; avatarUrl: string | null }; listing: { slug: string; title: string } }>),
     ]);
 
     // Resolve category slugs for the top 3 categories
@@ -75,6 +95,8 @@ export class UsersController {
       : [];
     const catBySlug = new Map(cats.map((c) => [c.id, c]));
 
+    const reviewAvg = reviewAgg._avg.rating;
+    const reviewCount = reviewAgg._count.rating;
     const passport = {
       collectionValueIdr: valueAgg._sum.priceCents
         ? Number(valueAgg._sum.priceCents / 100n)
@@ -82,7 +104,19 @@ export class UsersController {
       collectionCount: listingsCount,
       postsCount,
       tradesCompleted: tradesCount,
-      tradeRating: Number(user.trustScore), // proxy until a dedicated Rating model lands
+      // Real average of buyer reviews when ≥1 review exists; falls back
+      // to trustScore so freshly-onboarded sellers still display
+      // something rather than a stark 0.0.
+      tradeRating: reviewCount > 0 ? Number(reviewAvg ?? 0) : Number(user.trustScore),
+      reviewCount,
+      reviews: recentReviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        body: r.body,
+        createdAt: r.createdAt.toISOString(),
+        buyer: { username: r.buyer.username, name: r.buyer.name, avatarUrl: r.buyer.avatarUrl },
+        listing: { slug: r.listing.slug, title: r.listing.title },
+      })),
       badges: deriveBadges({
         listingsCount,
         postsCount,

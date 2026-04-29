@@ -108,7 +108,7 @@ export function FeedComposer({ me }: { me: { username: string; name: string | nu
             onClick={() => setOpen(true)}
             className="flex-1 truncate rounded-full bg-panel-2/60 px-4 py-2 text-left text-sm text-fg-subtle transition-colors hover:bg-panel-2 hover:text-fg"
           >
-            Apa yang lagi kamu koleksi, @{me.username}?
+            Apa yang lagi kamu koleksi, {me.name ?? me.username}?
           </button>
           <div className="flex items-center gap-0.5 text-fg-subtle">
             <IconShortcut
@@ -150,7 +150,7 @@ export function FeedComposer({ me }: { me: { username: string; name: string | nu
       <header className="flex items-center gap-3 px-4 pt-4">
         <Avatar letter={me.username[0] ?? "U"} size="md" src={me.avatarUrl ?? null} alt={`Avatar @${me.username}`} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-fg">{me.name ?? `@${me.username}`}</p>
+          <p className="truncate text-sm font-semibold text-fg">{me.name ?? me.username}</p>
           <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-panel-2 px-2 py-0.5 text-[10px] font-medium text-fg-muted">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>
             Publik

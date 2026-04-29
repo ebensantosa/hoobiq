@@ -43,6 +43,7 @@ export function MarketingFooter() {
 
           <Column title="Perusahaan" links={[
             { href: "/tentang",      label: "Tentang Hoobiq" },
+            { href: "/journey",      label: "Roadmap & Coming Soon" },
             { href: "/ketentuan",    label: "Ketentuan Layanan" },
             { href: "/privasi",      label: "Kebijakan Privasi" },
             { href: "/bantuan",      label: "Pusat Bantuan" },

@@ -2,8 +2,8 @@ import * as React from "react";
 import { cn } from "./lib/cn";
 
 const sizes = {
-  sm: 64,
-  md: 112,
+  sm: 48,
+  md: 80,
   lg: 144,
 };
 

@@ -79,17 +79,6 @@ const ROADMAP: Array<{
   },
   {
     status: "planned",
-    title: "Drop calendar",
-    blurb:
-      "Kalender release koleksi resmi (TCG set baru, Pop Mart blind box drop, dst). Set reminder, RSVP, hadir saat live.",
-    bullets: [
-      "Kurasi mingguan oleh tim Hoobiq",
-      "Tombol RSVP + push notif H-1",
-      "Listing terkait auto-tag ke drop event",
-    ],
-  },
-  {
-    status: "planned",
     title: "Hoobiq Live",
     blurb:
       "Live commerce — seller buka session, viewer bid real-time, item bisa langsung di-checkout dari overlay.",

@@ -130,6 +130,11 @@ export class OrdersService {
         },
       }),
     ]);
+    const o = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (o) {
+      await this.notify(o.buyerId, "order_paid", "Pembayaran diterima", "Pesanan kamu masuk ke seller.", { humanId: o.humanId }, { important: true });
+      await this.notify(o.sellerId, "order_paid", "Pesanan baru — sudah dibayar", "Segera kirim dalam 7 hari.", { humanId: o.humanId }, { important: true });
+    }
   }
 
   // ----------------------------------------------------------------- ship
@@ -161,7 +166,7 @@ export class OrdersService {
         autoReleaseAt: new Date(now.getTime() + TIMERS.autoReleaseAfterDeliver),
       },
     });
-    await this.notify(o.buyerId, "order_shipped", "Pesanan dikirim", `Resi: ${input.trackingNumber}`, { humanId });
+    await this.notify(o.buyerId, "order_shipped", "Pesanan dikirim", `Resi: ${input.trackingNumber}`, { humanId }, { important: true });
     return { ok: true, status: "shipped", trackingNumber: input.trackingNumber };
   }
 
@@ -186,7 +191,7 @@ export class OrdersService {
         autoReleaseAt: null,
       },
     });
-    await this.notify(o.sellerId, "order_completed", "Pesanan selesai", "Dana sudah dilepas ke saldo kamu.", { humanId });
+    await this.notify(o.sellerId, "order_completed", "Pesanan selesai", "Dana sudah dilepas ke saldo kamu.", { humanId }, { important: true });
     return { ok: true, status: "completed" };
   }
 
@@ -232,7 +237,7 @@ export class OrdersService {
 
     if (input.decision === "accept") {
       await this.acceptCancel(o.id, cr.id, "seller_accepted");
-      await this.notify(o.buyerId, "cancel_accepted", "Pembatalan disetujui", "Dana akan direfund.", { humanId });
+      await this.notify(o.buyerId, "cancel_accepted", "Pembatalan disetujui", "Dana akan direfund.", { humanId }, { important: true });
       return { ok: true, status: "cancelled" };
     } else {
       await this.prisma.cancelRequest.update({
@@ -320,7 +325,7 @@ export class OrdersService {
 
     if (input.decision === "approve") {
       await this.approveReturn(rr.id, "seller_approved");
-      await this.notify(o.buyerId, "return_approved", "Retur disetujui", "Silakan kirim barang kembali (max 5 hari).", { humanId });
+      await this.notify(o.buyerId, "return_approved", "Retur disetujui", "Silakan kirim barang kembali (max 5 hari).", { humanId }, { important: true });
       return { ok: true, status: "approved" };
     } else {
       // Tolak retur → buka dispute otomatis, biar admin yang putuskan.
@@ -343,7 +348,7 @@ export class OrdersService {
         }),
         this.prisma.order.update({ where: { id: o.id }, data: { status: "disputed" } }),
       ]);
-      await this.notify(o.buyerId, "return_rejected", "Retur ditolak — masuk dispute admin", input.rejectNote ?? "", { humanId });
+      await this.notify(o.buyerId, "return_rejected", "Retur ditolak — masuk dispute admin", input.rejectNote ?? "", { humanId }, { important: true });
       return { ok: true, status: "rejected_to_dispute" };
     }
   }
@@ -398,7 +403,7 @@ export class OrdersService {
     });
     if (!rr) throw new NotFoundException({ code: "not_found", message: "Tidak ada retur yang sedang dikirim balik." });
     await this.completeReturn(rr.id, "seller_confirmed");
-    await this.notify(o.buyerId, "return_completed", "Retur selesai", "Dana refund diproses.", { humanId });
+    await this.notify(o.buyerId, "return_completed", "Retur selesai", "Dana refund diproses.", { humanId }, { important: true });
     return { ok: true };
   }
 
@@ -462,8 +467,8 @@ export class OrdersService {
     await this.tryRefund(orderId, "auto_cancel");
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
-      await this.notify(o.buyerId, "order_auto_cancelled", "Pesanan dibatalkan otomatis", "Seller tidak mengirim dalam 7 hari. Dana direfund.", { humanId: o.humanId });
-      await this.notify(o.sellerId, "order_auto_cancelled", "Pesanan dibatalkan otomatis", "Kamu tidak mengirim dalam 7 hari.", { humanId: o.humanId });
+      await this.notify(o.buyerId, "order_auto_cancelled", "Pesanan dibatalkan otomatis", "Seller tidak mengirim dalam 7 hari. Dana direfund.", { humanId: o.humanId }, { important: true });
+      await this.notify(o.sellerId, "order_auto_cancelled", "Pesanan dibatalkan otomatis", "Kamu tidak mengirim dalam 7 hari.", { humanId: o.humanId }, { important: true });
     }
   }
 
@@ -476,7 +481,7 @@ export class OrdersService {
     });
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
-      await this.notify(o.sellerId, "order_auto_released", "Dana dilepas otomatis", "Buyer tidak konfirmasi dalam 3 hari.", { humanId: o.humanId });
+      await this.notify(o.sellerId, "order_auto_released", "Dana dilepas otomatis", "Buyer tidak konfirmasi dalam 3 hari.", { humanId: o.humanId }, { important: true });
     }
   }
 
@@ -539,8 +544,8 @@ export class OrdersService {
         },
       }),
     ]);
-    await this.notify(d.buyerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null });
-    await this.notify(d.sellerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null });
+    await this.notify(d.buyerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null }, { important: true });
+    await this.notify(d.sellerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null }, { important: true });
     if (input.decision !== "release_seller") {
       await this.tryRefund(d.orderId, "dispute");
     }
@@ -549,15 +554,21 @@ export class OrdersService {
 
   // ------------------------------------------------------------- helper
   /**
-   * Persist an in-app notification AND fire a transactional email so
-   * users still get pinged when they're not on the site. Email is
-   * best-effort — DB row stays the source of truth, SMTP failures
-   * just log.
+   * Persist an in-app notification, and ONLY fire a transactional email
+   * when `important` is true. Resend free tier is ~3k/month so we save
+   * the email quota for milestone events (paid, shipped, refunded,
+   * dispute resolved). In-app notifications still fire every time.
    */
-  private async notify(userId: string, kind: string, title: string, body: string, data: Record<string, unknown>) {
+  private async notify(
+    userId: string, kind: string, title: string, body: string,
+    data: Record<string, unknown>,
+    opts: { important?: boolean } = {},
+  ) {
     await this.prisma.notification.create({
       data: { userId, kind, title, body, dataJson: JSON.stringify(data) },
     }).catch(() => { /* notif best-effort */ });
+
+    if (!opts.important) return;
 
     // Pull the email + name once. Skip email if the user has no email
     // (shouldn't happen but defensive).
@@ -645,7 +656,7 @@ export class OrdersService {
       }).catch(() => undefined);
       await this.notify(order.buyerId, "refund_failed", "Refund tertunda",
         "Refund kamu sedang diproses manual oleh tim Hoobiq. Mohon ditunggu.",
-        { humanId: order.humanId, reason });
+        { humanId: order.humanId, reason }, { important: true });
     }
   }
 }

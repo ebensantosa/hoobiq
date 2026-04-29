@@ -1,9 +1,9 @@
 import { Module } from "@nestjs/common";
-import { UsersController } from "./users.controller";
+import { PayoutsController } from "./payouts.controller";
 import { EmailModule } from "../email/email.module";
 
 @Module({
   imports: [EmailModule],
-  controllers: [UsersController],
+  controllers: [PayoutsController],
 })
-export class UsersModule {}
+export class PayoutsModule {}

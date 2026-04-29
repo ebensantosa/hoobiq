@@ -50,8 +50,8 @@ export default function TentangPage() {
               </Para>
               <SubHead>Kurasi, bukan feed algoritmik</SubHead>
               <Para>
-                Feed komunitas terorganisir sampai level sub-seri (contoh: Pokémon → Crown
-                Zenith → Rainbow Rare). Kamu tidak perlu scrolling acak untuk ketemu orang
+                Feed komunitas terorganisir sampai level sub-seri (contoh: Pokémon, Crown
+                Zenith, Rainbow Rare). Kamu tidak perlu scrolling acak untuk ketemu orang
                 yang ngejar hal yang sama.
               </Para>
             </>

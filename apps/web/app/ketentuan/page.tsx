@@ -176,7 +176,7 @@ export default function KetentuanPage() {
           body: (
             <>
               <Para>
-                Kamu boleh menutup akun kapan saja melalui Pengaturan &rarr; Tutup Akun.
+                Kamu boleh menutup akun kapan saja melalui Pengaturan, lalu Tutup Akun.
                 Transaksi yang belum selesai harus diselesaikan dulu, dan saldo aktif akan
                 ditransfer ke rekening terverifikasi dalam 14 hari kerja.
               </Para>

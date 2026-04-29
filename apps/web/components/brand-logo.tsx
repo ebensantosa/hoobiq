@@ -1,7 +1,7 @@
 import { Logo } from "@hoobiq/ui";
 import { getSiteSettings } from "@/lib/site-settings";
 
-const sizes = { sm: 64, md: 112, lg: 144 } as const;
+const sizes = { sm: 48, md: 80, lg: 144 } as const;
 
 /**
  * Brand logo that respects admin-uploaded overrides.

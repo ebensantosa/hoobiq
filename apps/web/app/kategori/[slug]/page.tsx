@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
 import { Stat } from "@hoobiq/ui";
-import { ArrowRight } from "@/components/icon-arrow";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 import type { ListingSummary } from "@hoobiq/types";
@@ -137,8 +136,8 @@ export default async function CategoryPage({
                       {c.children.length > 4 ? ` · +${c.children.length - 4}` : ""}
                     </p>
                   )}
-                  <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-500">
-                    Jelajahi <ArrowRight size={14} />
+                  <span className="mt-2 inline-flex items-center text-sm font-semibold text-brand-500">
+                    Jelajahi
                   </span>
                 </div>
               </Link>

@@ -124,7 +124,7 @@ export default function PrivasiPage() {
               </Para>
               <Bullets
                 items={[
-                  "Mengakses data pribadi kamu yang kami simpan (Pengaturan → Unduh data).",
+                  "Mengakses data pribadi kamu yang kami simpan (Pengaturan, lalu Unduh data).",
                   "Memperbaiki data yang tidak akurat.",
                   "Meminta penghapusan data (hak untuk dilupakan) — kecuali yang diwajibkan disimpan oleh hukum.",
                   "Menarik persetujuan pemrosesan data (dengan konsekuensi akun ditutup).",

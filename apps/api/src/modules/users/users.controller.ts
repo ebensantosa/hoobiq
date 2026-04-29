@@ -5,6 +5,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { EmailService } from "../email/email.service";
 
 const ImageUrl = z.string().refine(
   (s) => /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
@@ -18,7 +19,10 @@ const KtpSubmitInput = z.object({
 
 @Controller("users")
 export class UsersController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+  ) {}
 
   /**
    * Authenticated read of the current user's *private* profile fields
@@ -148,6 +152,17 @@ export class UsersController {
         },
       }),
     ]);
+    if (u.email) {
+      const name = u.name ?? u.username;
+      await this.email.send(
+        u.email,
+        "[Hoobiq] KTP terverifikasi",
+        `<div style="font-family:'Nunito',Arial,sans-serif;color:#0F172A;max-width:560px;margin:0 auto;padding:24px">
+          <h1 style="font-size:22px;margin:0 0 12px">KTP kamu sudah terverifikasi ✅</h1>
+          <p style="font-size:14px;line-height:1.6">Halo ${escapeHtml(name)}, KTP kamu lolos review. Sekarang kamu bisa nambah rekening &amp; tarik saldo.</p>
+        </div>`,
+      );
+    }
     return { ok: true };
   }
 
@@ -163,7 +178,7 @@ export class UsersController {
     }
     const u = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { ktpStatus: true },
+      select: { ktpStatus: true, email: true, name: true, username: true },
     });
     if (!u) throw new NotFoundException({ code: "not_found", message: "User tidak ditemukan." });
     if (u.ktpStatus !== "pending") {
@@ -188,6 +203,19 @@ export class UsersController {
         },
       }),
     ]);
+    if (u.email) {
+      const name = u.name ?? u.username;
+      await this.email.send(
+        u.email,
+        "[Hoobiq] KTP perlu diperbaiki",
+        `<div style="font-family:'Nunito',Arial,sans-serif;color:#0F172A;max-width:560px;margin:0 auto;padding:24px">
+          <h1 style="font-size:22px;margin:0 0 12px">KTP belum lolos review</h1>
+          <p style="font-size:14px;line-height:1.6">Halo ${escapeHtml(name)},</p>
+          <p style="font-size:14px;line-height:1.6">Catatan reviewer: <strong>${escapeHtml(body.note)}</strong></p>
+          <p style="font-size:14px;line-height:1.6">Silakan submit ulang di Pengaturan → Verifikasi KTP.</p>
+        </div>`,
+      );
+    }
     return { ok: true };
   }
 
@@ -510,6 +538,10 @@ export class UsersController {
     try { const v = JSON.parse(user.interestedJson); if (Array.isArray(v)) interestedOut = v; } catch { /* ignore */ }
     return { user: { ...user, interested: interestedOut } };
   }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /* ---------------------------------------------------------------- badges */

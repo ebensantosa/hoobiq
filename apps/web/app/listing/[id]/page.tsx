@@ -6,6 +6,7 @@ import { ListingGallery } from "@/components/listing-gallery";
 import { ListingCard } from "@/components/listing-card";
 import { ListingReviews } from "@/components/listing-reviews";
 import { BoostTrigger } from "@/components/boost-trigger";
+import { WishlistButton } from "@/components/wishlist-button";
 import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
@@ -137,15 +138,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Stok habis
                 </span>
               ) : (
-                // Single primary CTA. The "Pesan sekarang" lives on the
-                // seller card below — having two message buttons in the
-                // same column was redundant and read as duplicated UI.
-                <Link
-                  href={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
-                  className="inline-flex h-12 w-full items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
-                >
-                  Beli sekarang
-                </Link>
+                <>
+                  <Link
+                    href={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
+                    className="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
+                  >
+                    Beli sekarang
+                  </Link>
+                  {me && <WishlistButton listingId={listing.id} />}
+                </>
               )}
             </div>
 

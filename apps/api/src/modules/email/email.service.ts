@@ -1,75 +1,51 @@
 import { Injectable, Logger } from "@nestjs/common";
-import nodemailer, { type Transporter } from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../../config/env";
 
 /**
- * Gmail SMTP delivery for transactional emails (order updates, KTP
- * results, password change, dispute decisions, etc).
+ * Resend transactional email. Free tier is ~3k/month so we only send for
+ * milestone events (paid, shipped, refunded, KTP decision, dispute
+ * resolved, password changed, payout decision) — see OrdersService.notify
+ * `important` flag and the explicit calls in users/auth/payouts.
  *
- * Auth: Google App Password — generate at
- *   myaccount.google.com → Security → 2-Step Verification → App passwords.
- * Plain account password no longer works for SMTP since 2022.
+ * Setup:
+ *   1. Sign up at resend.com → verify the sender domain (e.g. hoobiq.id).
+ *   2. Generate API key at resend.com/api-keys.
+ *   3. Set RESEND_API_KEY + EMAIL_FROM in apps/api/.env, then `pm2 reload`.
  *
- * Env required for sending:
- *   SMTP_USER  = sender@gmail.com
- *   SMTP_PASS  = 16-char app password
- *   EMAIL_FROM = "Hoobiq <notif@hoobiq.id>"   (optional, defaults to SMTP_USER)
- *
- * If SMTP_USER / SMTP_PASS are unset (dev), the service logs the email
- * to stdout instead of throwing. Production deploys must set them.
+ * If RESEND_API_KEY is unset (dev), the service logs the email instead of
+ * throwing. Email failures are best-effort — never thrown to callers.
  */
 @Injectable()
 export class EmailService {
   private readonly log = new Logger(EmailService.name);
-  private transporter: Transporter | null = null;
+  private client: Resend | null = null;
 
-  private get isConfigured(): boolean {
-    return !!(env.SMTP_USER && env.SMTP_PASS);
+  private getClient(): Resend | null {
+    if (!env.RESEND_API_KEY) return null;
+    if (this.client) return this.client;
+    this.client = new Resend(env.RESEND_API_KEY);
+    return this.client;
   }
 
-  private getTransporter(): Transporter | null {
-    if (!this.isConfigured) return null;
-    if (this.transporter) return this.transporter;
-    this.transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      },
-    });
-    return this.transporter;
-  }
-
-  /**
-   * Send an HTML email. Best-effort: SMTP failures are logged but never
-   * thrown to callers. Caller code (Notification creation, KTP flip) is
-   * authoritative; email is a nice-to-have on top.
-   */
-  async send(to: string, subject: string, html: string, text?: string): Promise<void> {
-    const t = this.getTransporter();
-    if (!t) {
+  async send(to: string, subject: string, html: string): Promise<void> {
+    const c = this.getClient();
+    if (!c) {
       this.log.warn(`[email-stub] To: ${to} | ${subject}`);
       return;
     }
     try {
-      await t.sendMail({
-        from: env.EMAIL_FROM ?? env.SMTP_USER,
+      const result = await c.emails.send({
+        from: env.EMAIL_FROM ?? "Hoobiq <notif@hoobiq.id>",
         to,
         subject,
         html,
-        text: text ?? stripHtml(html),
       });
+      if (result.error) {
+        this.log.error(`Resend error to ${to}: ${result.error.message}`);
+      }
     } catch (e) {
-      this.log.error(`Email send failed (${to}): ${(e as Error).message}`);
+      this.log.error(`Resend send threw (${to}): ${(e as Error).message}`);
     }
   }
-}
-
-/** Naive HTML → text fallback for clients that prefer plain text. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }

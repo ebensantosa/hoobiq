@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { CategoryTreeView } from "@/components/category-tree-view";
-import { ArrowRight } from "@/components/icon-arrow";
 import { serverApi } from "@/lib/server/api";
 
 export const metadata = { title: "Kategori · Hoobiq" };
@@ -109,13 +108,21 @@ export default async function CategoryIndexPage() {
   return (
     <AppShell active="Kategori">
       <div className="px-4 pb-8 sm:px-6 lg:px-10">
-        <header className="border-b border-rule pb-6">
-          <h1 className="text-3xl font-bold text-fg md:text-4xl">Kategori</h1>
-          <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-            Pilih kategori untuk lihat listing aktif. Tiap kategori punya
-            sub-seri sampai 3 level (misalnya Trading Cards › Pokémon › Crown
-            Zenith).
-          </p>
+        <header className="flex flex-wrap items-end justify-between gap-3 border-b border-rule pb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-fg md:text-4xl">Kategori</h1>
+            <p className="mt-2 max-w-2xl text-sm text-fg-muted">
+              Pilih kategori untuk lihat listing aktif. Tiap kategori punya
+              sub-seri sampai 3 level (misalnya Trading Cards, Pokémon, Crown
+              Zenith).
+            </p>
+          </div>
+          <Link
+            href="/pengaturan/kategori-baru"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-brand-400/60 bg-brand-400/10 px-4 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-400/20 dark:text-brand-300"
+          >
+            + Request kategori baru
+          </Link>
         </header>
 
         {roots.length === 0 ? (
@@ -153,8 +160,8 @@ export default async function CategoryIndexPage() {
                         {c.children.length > 4 ? ` · +${c.children.length - 4} sub-seri` : ""}
                       </p>
                     )}
-                    <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-500">
-                      Jelajahi <ArrowRight size={14} />
+                    <span className="mt-2 inline-flex items-center text-sm font-semibold text-brand-500">
+                      Jelajahi
                     </span>
                   </div>
                 </Link>

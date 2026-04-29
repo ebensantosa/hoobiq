@@ -65,6 +65,8 @@ model User {
   notifications    Notification[]
   auditEntries     AuditEntry[]
   listingReviews   ListingReview[] @relation("BuyerReviews")
+  payoutRequests   PayoutRequest[] @relation("PayoutUser")
+  payoutDecisions  PayoutRequest[] @relation("PayoutDecider")
 
   @@index([email])
   @@index([username])
@@ -110,6 +112,28 @@ model Address {
 
   @@index([userId, primary])
   @@map("addresses")
+}
+
+model PayoutRequest {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  bankAccountId  String    @map("bank_account_id")
+  amountCents    BigInt    @map("amount_cents")
+  // pending | approved | rejected | paid | cancelled
+  status         String    @default("pending")
+  opsNote        String?   @map("ops_note")
+  decidedById    String?   @map("decided_by_id")
+  decidedAt      DateTime? @map("decided_at")
+  paidAt         DateTime? @map("paid_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user      User @relation("PayoutUser",    fields: [userId],      references: [id], onDelete: Cascade)
+  decidedBy User? @relation("PayoutDecider", fields: [decidedById], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("payout_requests")
 }
 
 model BankAccount {
@@ -608,44 +632,6 @@ model FeatureFlag {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("feature_flags")
-}
-
-model Drop {
-  id           String    @id @default(cuid())
-  slug         String    @unique
-  productName  String    @map("product_name")
-  brand        String
-  description  String?
-  heroImageUrl String?   @map("hero_image_url")
-  supplyQty    Int       @map("supply_qty")
-  priceIdr     BigInt?   @map("price_idr")
-  dropsAt      DateTime  @map("drops_at")
-  endsAt       DateTime? @map("ends_at")
-  listingSlug  String?   @map("listing_slug")
-  status       String    @default("scheduled") // scheduled | live | sold_out | cancelled
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-
-  reminders DropReminder[]
-
-  @@index([dropsAt])
-  @@index([status, dropsAt])
-  @@map("drops")
-}
-
-model DropReminder {
-  id        String    @id @default(cuid())
-  userId    String    @map("user_id")
-  dropId    String    @map("drop_id")
-  notifyAt  DateTime  @map("notify_at")
-  sentAt    DateTime? @map("sent_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  drop Drop @relation(fields: [dropId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, dropId])
-  @@index([sentAt, notifyAt])
-  @@map("drop_reminders")
 }
 
 model TradeProposal {

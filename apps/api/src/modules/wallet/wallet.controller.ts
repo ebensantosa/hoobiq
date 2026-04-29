@@ -20,12 +20,19 @@ export class WalletController {
       where: { sellerId: user.id, status: { in: ["paid", "shipped"] } },
     });
 
-    // Available = completed orders minus already-paid-out (we don't track
-    // payouts yet, so completed total ≈ available for MVP).
-    const completed = await this.prisma.order.aggregate({
-      _sum: { totalCents: true },
-      where: { sellerId: user.id, status: "completed" },
-    });
+    // Available = completed orders − payouts already pending/approved/paid.
+    // Rejected/cancelled payouts don't subtract from available so the
+    // seller can re-request after a rejection.
+    const [completed, payoutOut] = await Promise.all([
+      this.prisma.order.aggregate({
+        _sum: { totalCents: true },
+        where: { sellerId: user.id, status: "completed" },
+      }),
+      this.prisma.payoutRequest.aggregate({
+        _sum: { amountCents: true },
+        where: { userId: user.id, status: { in: ["pending", "approved", "paid"] } },
+      }),
+    ]);
 
     const recentTx = await this.prisma.order.findMany({
       where: { OR: [{ sellerId: user.id }, { buyerId: user.id }] },
@@ -37,8 +44,9 @@ export class WalletController {
       },
     });
 
+    const available = (completed._sum.totalCents ?? 0n) - (payoutOut._sum.amountCents ?? 0n);
     return {
-      availableIdr: Number((completed._sum.totalCents ?? 0n) / 100n),
+      availableIdr: Number((available > 0n ? available : 0n) / 100n),
       escrowIdr:    Number((escrow._sum.totalCents ?? 0n) / 100n),
       recent: recentTx.map((t) => ({
         id: t.humanId,

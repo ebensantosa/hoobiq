@@ -64,12 +64,12 @@ const schema = z.object({
   // back to SESSION_SECRET in dev — set explicitly in prod.
   BANK_ENCRYPTION_KEY: z.string().min(32).optional(),
 
-  // Gmail SMTP — used by EmailService to send order/return/dispute
-  // notifications. SMTP_USER is the Gmail address that sends; SMTP_PASS
-  // is a 16-char Google App Password (NOT the account password — generate
-  // at myaccount.google.com → Security → 2-Step → App passwords).
-  SMTP_USER: z.string().email().optional(),
-  SMTP_PASS: z.string().min(8).optional(),
+  // Resend — transactional email provider. Free tier is ~3k/month so
+  // EmailService is selective: only fires for milestone events
+  // (paid, shipped, refunded, KTP decision, dispute resolved, password
+  // changed, payout decision). Generate API key at resend.com/api-keys
+  // after verifying the sender domain (notif@hoobiq.id).
+  RESEND_API_KEY: z.string().min(8).optional(),
   EMAIL_FROM: z.string().optional(), // "Hoobiq <notif@hoobiq.id>"
 
   // Sentry DSN for both apps. If unset, Sentry init is a no-op.

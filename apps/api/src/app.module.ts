@@ -21,7 +21,6 @@ import { WalletModule } from "./modules/wallet/wallet.module";
 import { DmModule } from "./modules/dm/dm.module";
 import { BanksModule } from "./modules/banks/banks.module";
 import { FloorModule } from "./modules/floor/floor.module";
-import { DropsModule } from "./modules/drops/drops.module";
 import { TradesModule } from "./modules/trades/trades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ShippingModule } from "./modules/shipping/shipping.module";
@@ -29,6 +28,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { CartModule } from "./modules/cart/cart.module";
 import { EmailModule } from "./modules/email/email.module";
 import { BoostModule } from "./modules/boost/boost.module";
+import { PayoutsModule } from "./modules/payouts/payouts.module";
 
 @Module({
   imports: [
@@ -54,11 +54,11 @@ import { BoostModule } from "./modules/boost/boost.module";
     CartModule,
     EmailModule,
     BoostModule,
+    PayoutsModule,
     WalletModule,
     DmModule,
     BanksModule,
     FloorModule,
-    DropsModule,
     TradesModule,
     UploadsModule,
     ShippingModule,

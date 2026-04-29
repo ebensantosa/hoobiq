@@ -95,11 +95,15 @@ export async function Sidebar() {
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-rule bg-panel px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:bg-brand-400/5 hover:text-brand-500"
         >
           Lihat semua kategori
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="m13 5 7 7-7 7" />
-          </svg>
         </a>
+        {user && (
+          <a
+            href="/pengaturan/kategori-baru"
+            className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded-md px-3 py-1.5 text-[11px] font-medium text-fg-subtle transition-colors hover:text-brand-500"
+          >
+            Belum ada? Request kategori baru
+          </a>
+        )}
       </Section>
 
       {user && (

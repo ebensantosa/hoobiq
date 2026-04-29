@@ -25,9 +25,9 @@ export async function AppShell({
   return (
     <div className="flex min-h-screen flex-col">
       <TopNav active={active} />
-      {/* Header height: 64px on mobile (h-16) and 80px on sm+ (h-20).
+      {/* Header height: 56px on mobile (h-14) and 64px on sm+ (h-16).
           The spacer matches both so content never tucks under the bar. */}
-      <div className="pt-16 sm:pt-20" />
+      <div className="pt-14 sm:pt-16" />
       <div className="mx-auto flex w-full max-w-[1440px] flex-1">
         {withSidebar && <Sidebar />}
         {/* `pt-4 sm:pt-6` keeps tighter spacing on mobile, looser on

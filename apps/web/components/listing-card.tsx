@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CardArt, pickArt } from "./card-art";
 import { ListingOwnerMenu } from "./listing-owner-menu";
 import { CartButton } from "./cart-button";
+import { WishlistButton } from "./wishlist-button";
 import { conditionBadge } from "@/lib/condition-badge";
 import type { ListingSummary } from "@hoobiq/types";
 
@@ -60,6 +61,11 @@ export function ListingCard({
             <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-sm bg-flame-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow">
               ⚡ Boost
             </span>
+          )}
+          {!isOwn && (
+            <div className="absolute right-2 top-2">
+              <WishlistButton listingId={l.id} variant="icon" />
+            </div>
           )}
         </div>
 

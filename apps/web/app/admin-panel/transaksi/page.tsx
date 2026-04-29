@@ -50,7 +50,7 @@ export default async function AdminTxPage() {
             <div className="grid grid-cols-[160px_2fr_1fr_1fr_120px] gap-4 border-b border-rule px-5 py-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               <span>ID</span>
               <span>Item</span>
-              <span>Buyer → Seller</span>
+              <span>Buyer & Seller</span>
               <span>Status</span>
               <span className="text-right">Nominal</span>
             </div>

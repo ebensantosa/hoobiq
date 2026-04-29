@@ -71,7 +71,7 @@ const sections: Section[] = [
         q: "Bagaimana cara memasang listing?",
         a: (
           <>
-            Klik tombol "Post" di pojok kanan atas → pilih "Listing baru". Isi
+            Klik tombol "Post" di pojok kanan atas, pilih "Listing baru". Isi
             foto (maks 8, yang pertama jadi cover), pilih kategori sampai level
             sub-seri, atur harga dan kondisi, lalu publish. Listing muncul di
             marketplace dalam 2 menit setelah review otomatis.
@@ -219,7 +219,7 @@ const sections: Section[] = [
         q: "Barang tidak sesuai deskripsi, apa yang harus saya lakukan?",
         a: (
           <>
-            Buka halaman transaksi → klik "Ajukan dispute". Isi alasan, upload
+            Buka halaman transaksi, lalu klik "Ajukan dispute". Isi alasan, upload
             foto/video bukti, dan kirim. Seller dapat 48 jam untuk merespons.
             Kalau tidak ada respons, tim Trust &amp; Safety otomatis mereview
             kasus. Keputusan biasanya keluar dalam 5 hari kerja.

@@ -25,6 +25,8 @@ const ic = {
   user:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>,
   package:  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>,
   trade:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10l5-5 5 5M7 14l5 5 5-5"/></svg>,
+  home:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9.5 9-7 9 7"/><path d="M5 8v13h14V8"/><path d="M9 21v-7h6v7"/></svg>,
+  cart:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/><path d="M3 3h2l3.6 11.59a2 2 0 0 0 2 1.41h7.7a2 2 0 0 0 2-1.59L23 6H6"/></svg>,
   feeds:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>,
   shop:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
   grid:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -57,8 +59,10 @@ export async function Sidebar() {
     <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-rule bg-canvas/50 px-4 pt-4 pb-8 lg:flex">
       <Section title="Navigasi">
         <ul className="flex flex-col gap-0.5">
+          <li><SidebarItem href="/"            label="Home"        icon={ic.home}  accent="flame" /></li>
           <li><SidebarItem href="/feeds"       label="Feeds"       icon={ic.feeds} accent="brand" /></li>
           <li><SidebarItem href="/marketplace" label="Marketplace" icon={ic.shop}  accent="ultra" /></li>
+          <li><SidebarItem href="/trades"      label="Trade"       icon={ic.trade} accent="ultra" /></li>
         </ul>
       </Section>
 
@@ -104,7 +108,7 @@ export async function Sidebar() {
             <li><SidebarItem href={`/u/${user.username}`} label="Profil"           icon={ic.user}     accent="ultra" /></li>
             <li><SidebarItem href="/pesanan"               label="Pesanan saya"     icon={ic.package}  accent="sky"   /></li>
             <li><SidebarItem href="/wishlist"              label="Wishlist"         icon={ic.heart}    accent="brand" /></li>
-            <li><SidebarItem href="/trades"                label="Trade Match"      icon={ic.trade}    accent="ultra" /></li>
+            <li><SidebarItem href="/keranjang"             label="Keranjang"        icon={ic.cart}     accent="brand" /></li>
             <li><SidebarItem href="/jual"                  label="Jual · dashboard" icon={ic.store}    accent="ultra" /></li>
             <li><SidebarItem href="/saldo"                 label="Hoobiq Pay"       icon={ic.wallet}   accent="flame" /></li>
             <li><SidebarItem href="/pengaturan"            label="Pengaturan"       icon={ic.settings} /></li>

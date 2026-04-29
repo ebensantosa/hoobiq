@@ -5,7 +5,7 @@ import { FeedComposer } from "@/components/feed-composer";
 import { FeedSearchBar } from "@/components/feed-search-bar";
 import { FeedTabs } from "@/components/feed-tabs";
 import { HaulReel, type HaulItem } from "@/components/haul-reel";
-import { ListingCard } from "@/components/listing-card";
+import { ListingFeedCard } from "@/components/listing-feed-card";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
 import type { ListingSummary } from "@hoobiq/types";
@@ -155,41 +155,50 @@ export default async function FeedsPage({
             </div>
           )}
 
-          {/* Mixed feed: posts on top, then matching listings underneath when
-              the buyer asked for "Semua" or "Listing". When show="listings"
-              only listings render; when show="posts" only posts render. */}
-          {items.length === 0 && listingItems.length === 0 ? (
-            <div className="rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
-              <p className="text-base font-medium text-fg">
-                {rawQ ? `Tidak ada hasil untuk “${sp.q}”` : "Feed masih sepi"}
-              </p>
-              <p className="mt-1 text-sm">
-                {rawQ
-                  ? "Coba kata kunci lain, atau ganti filter."
-                  : <>Jadi yang pertama nge-post! Atau lihat{" "}
-                      <Link href="/marketplace" className="text-brand-500 hover:underline">marketplace</Link> dulu.</>}
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              {items.map((p) => <FeedCard key={p.id} post={p} meUsername={me?.username} />)}
-              {listingItems.length > 0 && (
-                <section className="rounded-2xl border border-rule bg-panel">
-                  <header className="flex items-center justify-between border-b border-rule px-5 py-3">
-                    <h3 className="text-sm font-bold text-fg">Listing terbaru</h3>
-                    <Link href="/marketplace" className="text-xs font-semibold text-brand-500 hover:underline">
-                      Buka marketplace →
-                    </Link>
-                  </header>
-                  <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3">
-                    {listingItems.map((l) => (
-                      <ListingCard key={l.id} l={l} meUsername={me?.username ?? null} />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
+          {/* Unified feed — posts and listings interleaved by createdAt
+              into a single stream. The eye reads it as one timeline of
+              "what's happening on Hoobiq right now" instead of two
+              stacked sections. */}
+          {(() => {
+            type Entry =
+              | { kind: "post"; at: number; post: typeof items[number] }
+              | { kind: "listing"; at: number; listing: typeof listingItems[number] };
+            const entries: Entry[] = [
+              ...items.map((p) => ({ kind: "post" as const, at: new Date(p.createdAt).getTime(), post: p })),
+              ...listingItems.map((l) => ({ kind: "listing" as const, at: new Date(l.createdAt).getTime(), listing: l })),
+            ].sort((a, b) => b.at - a.at);
+
+            if (entries.length === 0) {
+              return (
+                <div className="rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
+                  <p className="text-base font-medium text-fg">
+                    {rawQ ? `Tidak ada hasil untuk “${sp.q}”` : "Feed masih sepi"}
+                  </p>
+                  <p className="mt-1 text-sm">
+                    {rawQ
+                      ? "Coba kata kunci lain, atau ganti filter."
+                      : <>Jadi yang pertama nge-post! Atau lihat{" "}
+                          <Link href="/marketplace" className="text-brand-500 hover:underline">marketplace</Link> dulu.</>}
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <div className="flex flex-col gap-6">
+                {entries.map((e) =>
+                  e.kind === "post" ? (
+                    <FeedCard key={`p:${e.post.id}`} post={e.post} meUsername={me?.username} />
+                  ) : (
+                    <ListingFeedCard
+                      key={`l:${e.listing.id}`}
+                      listing={e.listing}
+                      meUsername={me?.username ?? null}
+                    />
+                  ),
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         {/* Right rail — real trending hashtags + top collectors of the week */}

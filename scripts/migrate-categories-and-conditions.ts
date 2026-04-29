@@ -65,6 +65,18 @@ const CONDITION_REMAP: Record<string, string> = {
 // ---------------------------------------------------------------- run
 
 async function main() {
+  // 0. Tradeable backfill ---------------------------------------------
+  // Pre-spec the default was `tradeable=false` so most existing listings
+  // never opted into the trade deck. The new product spec says every
+  // listing is tradeable by default — backfill once so the deck on
+  // /trades isn't empty for old data. Sellers can still opt-out per
+  // listing via the upload form going forward.
+  const tradeableUpdated = await prisma.listing.updateMany({
+    where: { tradeable: false },
+    data: { tradeable: true },
+  });
+  console.log(`✓ Tradeable backfill: ${tradeableUpdated.count} listings flipped to tradeable=true`);
+
   // 1. Conditions ------------------------------------------------------
   let condUpdated = 0;
   for (const [oldVal, newVal] of Object.entries(CONDITION_REMAP)) {

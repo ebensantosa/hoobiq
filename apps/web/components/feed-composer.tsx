@@ -178,7 +178,7 @@ export function FeedComposer({
           </p>
         )}
 
-        {hiddenInput(fileRef, ingestFiles)}
+        <HiddenFileInput inputRef={fileRef} onPick={ingestFiles} />
       </div>
     );
   }
@@ -299,7 +299,7 @@ export function FeedComposer({
         </Button>
       </div>
 
-      {hiddenInput(fileRef, ingestFiles)}
+      <HiddenFileInput inputRef={fileRef} onPick={ingestFiles} />
       {pending && <UploadOverlay imageCount={images.length} />}
     </div>
   );
@@ -333,24 +333,37 @@ function UploadOverlay({ imageCount }: { imageCount: number }) {
   );
 }
 
-/** Stable hidden file input — separated so both empty and with-photos
- *  states can render it with the same ref. */
-function hiddenInput(
-  ref: React.RefObject<HTMLInputElement | null>,
-  ingest: (f: FileList | null) => void | Promise<void>,
-) {
+/**
+ * Stable hidden file input — proper component (not a function call from
+ * JSX), so React's reconciler treats it consistently across re-renders
+ * and the ref is reliably attached. The previous `hiddenInput(ref, ...)`
+ * call pattern intermittently lost the ref binding, leaving "Pilih foto"
+ * inert on some interaction paths.
+ */
+function HiddenFileInput({
+  inputRef,
+  onPick,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onPick: (f: FileList | null) => void | Promise<void>;
+}) {
   return (
     <input
-      ref={ref}
+      ref={inputRef}
       type="file"
       accept={ACCEPTED_IMAGE_TYPES.join(",")}
       multiple
-      hidden
+      // `hidden` works in modern browsers but inputs are sometimes
+      // styled with display:none which blocks programmatic clicks in
+      // older WebKit. Use a safe absolute-positioned offscreen style
+      // so .click() always works.
+      className="sr-only"
+      tabIndex={-1}
       onChange={(e) => {
         const f = e.target.files;
         // Clear so the same file can be selected again after a remove.
         e.target.value = "";
-        void ingest(f);
+        void onPick(f);
       }}
     />
   );

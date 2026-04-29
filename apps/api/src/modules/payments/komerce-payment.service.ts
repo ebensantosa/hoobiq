@@ -156,13 +156,14 @@ export class KomercePaymentService {
       // so we send both to be safe — Komerce ignores unknown fields.
       callback_api_key: req.callbackKey,
       callback_API_KEY: req.callbackKey,
-      // Browser-side bounce after a successful payment. Komerce's docs use
-      // `return_url`; we also send `redirect_url`/`success_url` defensively
-      // because field naming has drifted across product types and Komerce
-      // simply ignores unknown fields.
-      ...(req.returnUrl
-        ? { return_url: req.returnUrl, redirect_url: req.returnUrl, success_url: req.returnUrl }
-        : {}),
+      // Browser-side bounce after a successful payment. The current
+      // Komerce Payment API spec doesn't formally document a return_url
+      // field, but we send it anyway — Komerce ignores unknown fields, so
+      // there's zero downside and if/when they enable it the auto-redirect
+      // to /pesanan/:id starts working without a code change. Until then
+      // the wait page's PaymentStatusPoller drives the redirect via
+      // /payments/komerce/reconcile.
+      ...(req.returnUrl ? { return_url: req.returnUrl } : {}),
     });
 
     let res: Response;

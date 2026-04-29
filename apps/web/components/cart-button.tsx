@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { cartApi } from "@/lib/api/cart";
 import { ApiError } from "@/lib/api/client";
@@ -95,7 +96,16 @@ export function CartButton({
 }
 
 function AddedModal({ onClose }: { onClose: () => void }) {
-  // Close on Esc + backdrop click, lock body scroll while open.
+  // Render into document.body via a portal — the listing card uses
+  // `transform` for its hover lift + `overflow-hidden` for clipping, and
+  // a transformed ancestor traps `position: fixed` descendants inside
+  // its own box (CSS spec). Without the portal the modal renders
+  // *inside* the card that opened it, looking like a tiny tooltip.
+  // SSR guard: the portal can only attach after the document exists.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+
+  // Close on Esc + lock body scroll while open.
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -107,13 +117,15 @@ function AddedModal({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  const node = (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="cart-added-title"
       onClick={onClose}
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -153,4 +165,6 @@ function AddedModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }

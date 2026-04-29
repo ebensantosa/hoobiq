@@ -89,13 +89,14 @@ export function ListingCard({
         </div>
       </Link>
 
-      {/* Action row — outside the link so clicking a button doesn't
-          navigate. Buy is the primary CTA; cart is secondary. */}
+      {/* Action row — sits outside the card-cover Link so clicking a
+          button doesn't navigate to the detail page. We don't need to
+          stop click propagation here (and can't, from a Server
+          Component anyway — passing onClick to Link errors at SSR). */}
       <div className="flex items-center gap-2 px-3 pb-3 pt-3">
         <CartButton listingId={l.id} ownListing={isOwn} size="sm" />
         <Link
           href={isOwn ? `/jual/${encodeURIComponent(l.slug)}/edit` : `/checkout?listing=${encodeURIComponent(l.slug)}`}
-          onClick={(e) => e.stopPropagation()}
           className={
             "ml-auto inline-flex h-7 items-center justify-center rounded-md px-3 text-[10px] font-bold uppercase tracking-wider transition-colors " +
             (isOwn

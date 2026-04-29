@@ -20,7 +20,24 @@ const prisma = new PrismaClient();
 
 // ---------------------------------------------------------------- mappings
 
-/** Old slug → new slug. Picked for the closest semantic fit. */
+/** Old slug → new slug. Picked for the closest semantic fit.
+ *
+ * Cards → Trading Cards. The legacy `cards` root collapsed into the new
+ *   `trading-cards`; series-level slugs (pokemon, onepiece, etc) followed
+ *   their parent rather than getting re-pointed to the new Merchandise →
+ *   Official → <anime> tree (those are merch items, not cards).
+ *
+ * Figure → Action Figure. Old `figure` root + its kids (genshin lived
+ *   under figure as a Genshin Impact action figure subset) all bucket
+ *   into the new `action-figure` under Toys. Do NOT route them to
+ *   `genshin-impact` under Merchandise → Official Goods — that's where
+ *   posters/plush live, not figures.
+ *
+ * Blindbox / Pop Mart / Labubu → blind-box (Pop Mart and Labubu are
+ *   blind-box brands; they re-merge into the single Toys → Blind Box).
+ *
+ * Komik / Manga → komik under Others.
+ */
 const CATEGORY_REMAP: Record<string, string> = {
   cards: "trading-cards",
   pokemon: "trading-cards",
@@ -29,7 +46,7 @@ const CATEGORY_REMAP: Record<string, string> = {
   "paldea-evolved": "trading-cards",
   op01: "trading-cards",
   figure: "action-figure",
-  genshin: "genshin-impact",
+  genshin: "action-figure",
   blindbox: "blind-box",
   popmart: "blind-box",
   labubu: "blind-box",

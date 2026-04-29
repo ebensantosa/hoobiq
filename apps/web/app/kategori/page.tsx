@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { CategoryTreeView } from "@/components/category-tree-view";
 import { serverApi } from "@/lib/server/api";
 
 export const metadata = { title: "Kategori · Hoobiq" };
@@ -161,7 +162,23 @@ export default async function CategoryIndexPage() {
           </div>
         )}
 
-        {/* Sub-categories panel — appears when at least one root has children */}
+        {/* Inline chevron-expand tree — same data as the cards above but
+            for buyers who prefer to drill in without route changes. */}
+        {roots.some((r) => r.children.length > 0) && (
+          <section className="mt-12">
+            <h2 className="text-xl font-bold text-fg">Jelajah cepat</h2>
+            <p className="mt-1 text-sm text-fg-muted">
+              Klik panah untuk buka sub-kategori, klik panah lagi untuk
+              buka series-nya. Klik nama untuk langsung ke marketplace.
+            </p>
+            <div className="mt-5">
+              <CategoryTreeView roots={roots} />
+            </div>
+          </section>
+        )}
+
+        {/* Popular sub-series chip strip stays as a quick-jump for the
+            categories that already have momentum. */}
         {roots.some((r) => r.children.length > 0) && (
           <section className="mt-12">
             <h2 className="text-xl font-bold text-fg">Sub-seri populer</h2>

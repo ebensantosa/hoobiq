@@ -102,7 +102,13 @@ export function ListingCard({
       <div className="flex items-center gap-2 px-3 pb-3 pt-3">
         <CartButton listingId={l.id} ownListing={isOwn} size="sm" />
         <Link
-          href={isOwn ? `/jual/${encodeURIComponent(l.slug)}/edit` : `/checkout?listing=${encodeURIComponent(l.slug)}`}
+          href={
+            isOwn
+              ? `/jual/${encodeURIComponent(l.slug)}/edit`
+              : meUsername
+              ? `/checkout?listing=${encodeURIComponent(l.slug)}`
+              : `/masuk?next=${encodeURIComponent(`/checkout?listing=${l.slug}`)}`
+          }
           className={
             "ml-auto inline-flex h-7 items-center justify-center rounded-md px-3 text-[10px] font-bold uppercase tracking-wider transition-colors " +
             (isOwn

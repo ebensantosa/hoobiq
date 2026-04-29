@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { wishlistApi, type WishlistItem } from "@/lib/api/wishlist";
+import { ApiError } from "@/lib/api/client";
 import { useToast } from "./toast-provider";
 
 /**
@@ -43,7 +44,12 @@ export function WishlistButton({
         if (next) await wishlistApi.add(listingId);
         else      await wishlistApi.remove(listingId);
         if (next) toast.success("Tersimpan ke wishlist", "");
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          const here = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+          window.location.href = `/masuk?next=${encodeURIComponent(here)}`;
+          return;
+        }
         setSaved(!next);
         toast.error("Gagal", "Coba lagi sebentar.");
       }

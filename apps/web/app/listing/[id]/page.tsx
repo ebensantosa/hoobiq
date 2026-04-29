@@ -140,7 +140,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               ) : (
                 <>
                   <Link
-                    href={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
+                    href={
+                      me
+                        ? `/checkout?listing=${encodeURIComponent(listing.slug)}`
+                        : `/masuk?next=${encodeURIComponent(`/checkout?listing=${listing.slug}`)}`
+                    }
                     className="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
                   >
                     Beli sekarang
@@ -181,7 +185,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               {!isOwn && (
                 <div className="border-t border-rule px-5 py-3">
                   <Link
-                    href={`/dm?to=${encodeURIComponent(listing.seller.username)}&listing=${encodeURIComponent(listing.slug)}`}
+                    href={
+                      me
+                        ? `/dm?to=${encodeURIComponent(listing.seller.username)}&listing=${encodeURIComponent(listing.slug)}`
+                        : `/masuk?next=${encodeURIComponent(`/dm?to=${listing.seller.username}&listing=${listing.slug}`)}`
+                    }
                     className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-fg text-canvas text-sm font-semibold transition-colors hover:bg-fg/90"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

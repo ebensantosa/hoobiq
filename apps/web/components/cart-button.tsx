@@ -46,6 +46,14 @@ export function CartButton({
         setShowModal(true);
       })
       .catch((err) => {
+        // Anonymous click → bounce to login with the current page as
+        // the post-login destination so the buyer lands back where
+        // they started.
+        if (err instanceof ApiError && err.status === 401) {
+          const next = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+          window.location.href = `/masuk?next=${encodeURIComponent(next)}`;
+          return;
+        }
         const msg =
           err instanceof ApiError ? err.message :
           err instanceof Error ? err.message :

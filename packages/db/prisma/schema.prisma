@@ -44,6 +44,7 @@ model User {
   bankAccounts     BankAccount[]
   wishlist         WishlistItem[]
   postsAuthored    Post[]
+  cartItems        CartItem[]
   categoryRequestsSubmitted CategoryRequest[] @relation("CategoryRequestUser")
   categoryRequestsDecided   CategoryRequest[] @relation("CategoryRequestDecider")
   disputesAsBuyer  Dispute[]       @relation("BuyerDisputes")
@@ -203,12 +204,34 @@ model Listing {
   orders   Order[]
   wishes   WishlistItem[]
   reviews  ListingReview[]
+  cartItems CartItem[]
 
   @@index([sellerId, createdAt])
   @@index([categoryId, createdAt])
   @@index([isPublished, moderation, createdAt])
   @@index([boostedUntil])
   @@map("listings")
+}
+
+// Persistent shopping cart. One row per (user, listing) — adding the
+// same listing twice just bumps qty. Buyer can also adjust qty and
+// remove items individually. Checkout reads from this table when the
+// buyer hits the cart page; "Beli sekarang" still bypasses cart and
+// goes straight to /checkout?listing=<slug> per the existing flow.
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  listingId String   @map("listing_id")
+  qty       Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, createdAt])
+  @@map("cart_items")
 }
 
 // Buyer review tied to a completed order. One review per order so you can't

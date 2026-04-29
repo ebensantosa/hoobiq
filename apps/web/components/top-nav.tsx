@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { NotificationsBell } from "./notifications-bell";
+import { CartNavIcon } from "./cart-nav-icon";
 import { BrandLogo } from "./brand-logo";
 import { getSessionUser } from "@/lib/server/session";
 import { getSiteSettings } from "@/lib/site-settings";
@@ -65,6 +66,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </IconButton>
+              <CartNavIcon />
               <NotificationsBell />
               <UserMenu user={user} />
             </>

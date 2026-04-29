@@ -26,6 +26,7 @@ import { TradesModule } from "./modules/trades/trades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ShippingModule } from "./modules/shipping/shipping.module";
 import { HealthModule } from "./modules/health/health.module";
+import { CartModule } from "./modules/cart/cart.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { HealthModule } from "./modules/health/health.module";
     NotificationsModule,
     AddressesModule,
     PostsModule,
+    CartModule,
     WalletModule,
     DmModule,
     BanksModule,

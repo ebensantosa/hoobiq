@@ -141,20 +141,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Stok habis
                 </span>
               ) : (
-                <>
-                  <Link
-                    href={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
-                    className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-brand-400 px-6 text-sm font-semibold text-white hover:bg-brand-500"
-                  >
-                    Beli sekarang
-                  </Link>
-                  <Link
-                    href={`/dm?to=${encodeURIComponent(listing.seller.username)}`}
-                    className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-rule px-6 text-sm font-medium text-fg hover:border-brand-400/60"
-                  >
-                    Pesan seller
-                  </Link>
-                </>
+                // Single primary CTA. The "Pesan sekarang" lives on the
+                // seller card below — having two message buttons in the
+                // same column was redundant and read as duplicated UI.
+                <Link
+                  href={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-md bg-brand-500 px-6 text-sm font-semibold text-white hover:bg-brand-600"
+                >
+                  Beli sekarang
+                </Link>
               )}
             </div>
 
@@ -213,8 +208,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </ul>
             </div>
 
-            {/* Quick reassurance: trade-in option */}
-            <div className="mt-4 rounded-2xl border border-rule p-4 text-xs text-fg-muted">
+            {/* Trade hint — hidden when the buyer is the seller (you
+                can't trade with yourself), and when the listing has
+                explicitly opted out of trade. The `tradeable` flag now
+                defaults to true at upload time so this surfaces on most
+                listings; sellers can disable per item. */}
+            {!isOwn && listing.tradeable && (
+            <div className="mt-4 rounded-md border border-rule p-4 text-xs text-fg-muted">
               Mau tukar daripada beli?{" "}
               <Link
                 href={`/trades?to=${encodeURIComponent(listing.seller.username)}`}
@@ -223,6 +223,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 Coba trade dengan {listing.seller.name ?? listing.seller.username}
               </Link>
             </div>
+            )}
           </aside>
         </div>
 

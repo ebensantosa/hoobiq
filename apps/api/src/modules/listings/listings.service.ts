@@ -281,7 +281,8 @@ export class ListingsService {
         weightGrams: input.weightGrams,
         couriersJson: JSON.stringify(input.couriers ?? []),
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
-        tradeable: input.tradeable ?? false,
+        // Default trade-on per spec — sellers opt out, not in.
+        tradeable: input.tradeable ?? true,
         // Auto-publish on create. We don't have a moderator workforce or
         // automated review pipeline yet, and the previous "pending" default
         // meant new listings were invisible until an admin manually flipped

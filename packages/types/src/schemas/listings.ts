@@ -131,9 +131,11 @@ export const CreateListingInput = z.object({
   // optional on create — listing falls back to "hubungi seller" until set.
   couriers: z.array(z.enum(["jne", "pos", "tiki", "sicepat", "jnt", "anteraja", "ninja", "wahana", "ide"])).max(9).default([]),
   originSubdistrictId: z.number().int().positive().nullable().optional(),
-  // Owner flags this listing as available for trade. When true the listing
-  // appears in /trades deck for everyone — buyers can still purchase normally.
-  tradeable: z.boolean().default(false),
+  // Owner flags this listing as available for trade. Defaults to true:
+  // collectors expect every listing to be at least theoretically swappable,
+  // and the per-item opt-out is surfaced as a checkbox in the upload form
+  // for sellers who explicitly don't want trade offers on a piece.
+  tradeable: z.boolean().default(true),
 });
 export type CreateListingInput = z.infer<typeof CreateListingInput>;
 

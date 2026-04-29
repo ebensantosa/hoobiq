@@ -107,7 +107,9 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   const [imageErr, setImageErr]   = React.useState<string | null>(null);
   const [couriers, setCouriers]   = React.useState<string[]>(existing?.couriers ?? []);
   const [origin, setOrigin]       = React.useState<Destination | null>(existing?.origin ?? null);
-  const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? false);
+  // Default ON — collectors expect listings to be at least theoretically
+  // tradeable. Sellers untick to opt out per item.
+  const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? true);
 
   // Track which fields the user has actually interacted with — we only
   // surface errors after they've been touched (avoids "all red on first

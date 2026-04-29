@@ -17,8 +17,12 @@ const ImageStr = z.string().refine(
 );
 
 const CreatePost = z.object({
-  body: z.string().min(2).max(2000),
-  images: z.array(ImageStr).max(8).default([]),
+  // Caption is optional now per spec ("IG-like: foto wajib + caption").
+  // Default empty string keeps DB column NOT NULL happy.
+  body: z.string().max(2000).default(""),
+  // At least one photo per post — text-only posts are out of scope for
+  // the new feed surface.
+  images: z.array(ImageStr).min(1, "Minimal 1 foto.").max(8),
   categoryId: z.string().cuid().optional(),
 });
 

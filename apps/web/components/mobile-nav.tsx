@@ -20,6 +20,15 @@ type Item = {
 
 const ITEMS: Item[] = [
   {
+    href: "/",
+    label: "Home",
+    // Exact prefix — anything starting with `/` would over-match. usePathname
+    // returns "/" only for the root, so an exact equality check is what
+    // highlights this tab.
+    prefix: "/",
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-7h4v7"/></svg>,
+  },
+  {
     href: "/marketplace",
     label: "Belanja",
     prefix: "/marketplace",
@@ -73,7 +82,7 @@ export function MobileNav({ username }: { username?: string | null }) {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-canvas/95 backdrop-blur-md lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {items.map((it) => {
           const active = it.prefix
             ? pathname === it.prefix || pathname.startsWith(`${it.prefix}/`)

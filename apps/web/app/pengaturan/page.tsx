@@ -23,8 +23,13 @@ export default async function ProfilSettingsPage() {
   const session = await getSessionUser();
   if (!session) redirect("/masuk");
 
-  const data = await serverApi<{ user: UserPublic }>(`/users/${session.username}`);
-  const user = data?.user;
+  const [pub, priv] = await Promise.all([
+    serverApi<{ user: UserPublic }>(`/users/${session.username}`),
+    // Private fields (phone) live behind /users/me so they aren't exposed
+    // on the public profile endpoint.
+    serverApi<{ user: { phone: string | null } }>(`/users/me`),
+  ]);
+  const user = pub?.user;
 
   return (
     <section className="flex flex-col gap-8">
@@ -40,6 +45,7 @@ export default async function ProfilSettingsPage() {
           name: user?.name ?? session.name ?? "",
           bio:  user?.bio  ?? "",
           city: user?.city ?? "",
+          phone: priv?.user?.phone ?? "",
           avatarUrl: user?.avatarUrl ?? null,
         }}
       />

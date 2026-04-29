@@ -12,7 +12,7 @@ const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export function ProfileForm({
   defaults,
 }: {
-  defaults: { username: string; name: string; bio: string; city: string; avatarUrl: string | null };
+  defaults: { username: string; name: string; bio: string; city: string; phone: string; avatarUrl: string | null };
 }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
@@ -70,10 +70,16 @@ export function ProfileForm({
             avatarPayload = { avatarUrl };
           }
         }
+        const phoneRaw = String(fd.get("phone") ?? "").trim();
+        if (phoneRaw && !/^[+\d\s-]{8,32}$/.test(phoneRaw)) {
+          setErr("Nomor HP minimal 8 digit, hanya angka, spasi, +, atau -.");
+          return;
+        }
         await usersApi.updateMe({
           name: String(fd.get("name") ?? "").trim() || null,
           bio:  String(fd.get("bio")  ?? "").trim() || null,
           city: String(fd.get("city") ?? "").trim() || null,
+          phone: phoneRaw || null,
           ...avatarPayload,
         });
         setSaved(true);
@@ -143,6 +149,21 @@ export function ProfileForm({
         </Field>
         <Field label="Kota">
           <Input name="city" defaultValue={defaults.city} maxLength={64} />
+        </Field>
+        <Field
+          label="Nomor HP"
+          hint="Wajib diisi untuk checkout — dipakai kurir & invoice pembayaran."
+        >
+          <Input
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            defaultValue={defaults.phone}
+            placeholder="+62…"
+            minLength={8}
+            maxLength={32}
+            pattern="[+\d\s-]+"
+          />
         </Field>
       </div>
 

@@ -9,6 +9,26 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 export class UsersController {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Authenticated read of the current user's *private* profile fields
+   * (phone, etc) for the settings page. Public profile lives at
+   * `GET /users/:username`. Declared before the dynamic `:username` route
+   * so Nest's router matches "me" exactly instead of treating it as a
+   * username lookup.
+   */
+  @Get("me")
+  async getMe(@CurrentUser() current: SessionUser) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: current.id },
+      select: {
+        id: true, username: true, name: true, avatarUrl: true,
+        bio: true, city: true, phone: true,
+      },
+    });
+    if (!u) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    return { user: u };
+  }
+
   @Public()
   @Get(":username")
   async getByUsername(@Param("username") username: string) {
@@ -244,7 +264,7 @@ export class UsersController {
     const user = await this.prisma.user.update({
       where: { id: current.id },
       data,
-      select: { id: true, username: true, name: true, bio: true, city: true, avatarUrl: true, interestedJson: true },
+      select: { id: true, username: true, name: true, bio: true, city: true, phone: true, avatarUrl: true, interestedJson: true },
     });
     let interestedOut: string[] = [];
     try { const v = JSON.parse(user.interestedJson); if (Array.isArray(v)) interestedOut = v; } catch { /* ignore */ }

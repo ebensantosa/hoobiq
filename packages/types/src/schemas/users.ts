@@ -18,6 +18,16 @@ export const UpdateProfileInput = z.object({
   name: z.string().min(1).max(120).nullable().optional(),
   bio: z.string().max(240).nullable().optional(),
   city: z.string().max(64).nullable().optional(),
+  // Required for checkout (Komerce Payment + receipts). Mirrors RegisterInput
+  // validation so signup and settings stay in sync.
+  phone: z
+    .string()
+    .trim()
+    .min(8, "Minimal 8 digit")
+    .max(32)
+    .regex(/^[+\d\s-]+$/, "Hanya angka, spasi, +, atau -")
+    .nullable()
+    .optional(),
   // Accept http(s) URLs (production R2) AND data:image URIs (dev — image
   // is encoded into the JSON body until R2 signed-uploads land). Mirrors
   // CreateListingInput.images for consistency.

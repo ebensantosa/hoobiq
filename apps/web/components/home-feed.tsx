@@ -4,6 +4,16 @@ import { ListingCard } from "@/components/listing-card";
 import { conditionLabel } from "@/lib/condition-badge";
 import type { ListingSummary } from "@hoobiq/types";
 
+/** Shape of the category data we surface in the top strip. */
+export type HomeCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  level: number;
+  listingCount: number;
+  children: HomeCategory[];
+};
+
 /**
  * The logged-in home page — purposely distinct from /marketplace (the
  * filterable grid) and /feeds (the social timeline). Spec says clicking
@@ -21,12 +31,17 @@ import type { ListingSummary } from "@hoobiq/types";
  */
 export function HomeFeed({
   username,
+  categories,
   boosted,
   trending,
   popular,
   fresh,
 }: {
   username: string;
+  /** Top-level categories rendered as a horizontal pill strip directly
+   *  beneath the welcome header. Profile-page placement was easy to miss;
+   *  this puts the entry-points in the buyer's primary line of sight. */
+  categories: HomeCategory[];
   boosted: ListingSummary[];
   trending: ListingSummary[];
   popular: ListingSummary[];
@@ -44,6 +59,8 @@ export function HomeFeed({
             listing baru langsung dari kolektor.
           </p>
         </header>
+
+        {categories.length > 0 && <CategoryStrip categories={categories} />}
 
         {boosted.length > 0 && (
           <Section
@@ -99,6 +116,73 @@ export function HomeFeed({
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * Top-of-home category strip. Per-category quick-jump card with an
+ * accent gradient + listing count, plus a "Lihat semua" rail link to
+ * the full /kategori page. Sits right after the welcome header so
+ * buyers see entry-points before any listings load.
+ *
+ * Each card links to /kategori/<slug>: for level-1 categories with
+ * children that page renders the next-level kotak picker; for
+ * leaf-level it redirects straight to /marketplace?cat=<slug>. Either
+ * way, this strip is the spec-aligned "klik kategori" entry point.
+ */
+function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
+  // Tone palette keyed by slug — each card gets a distinct gradient so
+  // the strip reads as five visually-different entry points instead of
+  // a row of identical pills. Falls back to a neutral mix for slugs
+  // we don't recognize (legacy or future categories).
+  const TONES: Record<string, string> = {
+    "collection-cards": "from-emerald-100 to-emerald-50 dark:from-emerald-400/15 dark:to-emerald-400/5",
+    "trading-cards":    "from-brand-100 to-brand-50 dark:from-brand-400/15 dark:to-brand-400/5",
+    "merchandise":      "from-sky-100 to-sky-50 dark:from-sky-400/15 dark:to-sky-400/5",
+    "toys":             "from-ultra-100 to-ultra-50 dark:from-ultra-400/15 dark:to-ultra-400/5",
+    "others":           "from-flame-100 to-flame-50 dark:from-flame-400/15 dark:to-flame-400/5",
+  };
+  const fallback = "from-brand-50 to-ultra-50 dark:from-brand-400/10 dark:to-ultra-400/10";
+
+  return (
+    <section className="mt-6">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-500">
+            Jelajah kategori
+          </span>
+          <h2 className="mt-1 text-base font-bold text-fg">Pilih dari mana mau mulai</h2>
+        </div>
+        <Link href="/kategori" className="text-xs font-semibold text-brand-500 hover:underline">
+          Lihat semua →
+        </Link>
+      </div>
+      <div className="-mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1 lg:-mx-10 lg:px-10">
+        {categories.map((c) => (
+          <Link
+            key={c.id}
+            href={`/kategori/${c.slug}`}
+            className={
+              "group relative flex w-40 shrink-0 flex-col gap-2 overflow-hidden rounded-2xl border border-rule p-4 transition-all hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40 bg-gradient-to-br " +
+              (TONES[c.slug] ?? fallback)
+            }
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-white/85 text-fg shadow-sm backdrop-blur dark:bg-canvas/60">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </span>
+            <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
+            <p className="font-mono text-[10px] text-fg-muted">
+              {c.listingCount.toLocaleString("id-ID")} listing
+            </p>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

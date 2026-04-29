@@ -3,7 +3,7 @@ import { Card } from "@hoobiq/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { ListingCard } from "@/components/listing-card";
-import { HomeFeed } from "@/components/home-feed";
+import { HomeFeed, type HomeCategory } from "@/components/home-feed";
 import { BrandLogo } from "@/components/brand-logo";
 import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
@@ -31,17 +31,18 @@ export default async function LandingPage() {
   // and /feeds per spec). Anonymous visitors still see the marketing
   // landing below.
   if (user) {
-    const [trendingRes, freshRes, popularRes] = await Promise.all([
+    const [trendingRes, freshRes, treeRes] = await Promise.all([
       serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=24"),
       serverApi<{ items: ListingSummary[] }>("/listings?sort=newest&limit=12"),
-      // "Popular" reuses trending with an offset trick — the first 8 went
-      // to the trending strip, so we slice 8..16 from the same list to
-      // surface the next tier without firing a duplicate query.
-      Promise.resolve(null),
+      // Top-level categories rendered as a strip beneath the welcome
+      // header. Cached server-side; level filter trims to L1 only because
+      // the strip only surfaces the entry-points (deeper picking happens
+      // on /kategori or via the marketplace filter).
+      serverApi<HomeCategory[]>("/categories", { revalidate: 60 }),
     ]);
     const trendingAll = trendingRes?.items ?? [];
     const fresh = freshRes?.items ?? [];
-    void popularRes;
+    const categories = (treeRes ?? []).filter((c) => c.level === 1);
     const boosted = trendingAll.filter((l) => l.boosted);
     const trending = trendingAll.filter((l) => !l.boosted).slice(0, 8);
     const popular = trendingAll.slice(8, 16);
@@ -49,6 +50,7 @@ export default async function LandingPage() {
     return (
       <HomeFeed
         username={user.username}
+        categories={categories}
         boosted={boosted}
         trending={trending}
         popular={popular}

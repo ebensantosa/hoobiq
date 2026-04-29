@@ -147,9 +147,13 @@ export function DMShell({
           Koneksi realtime terputus — pesan baru mungkin tertunda.
         </div>
       )}
-      <div className="grid flex-1 grid-cols-[320px_1fr] overflow-hidden">
+      {/* WhatsApp-style responsive layout: one column on mobile (list OR
+          thread, never both), classic split on lg+. The grid template
+          collapses to a single column under lg so neither pane is
+          cramped. */}
+      <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[320px_1fr]">
       {/* ---------- Threads list ---------- */}
-      <aside className="flex flex-col border-r border-rule">
+      <aside className={"flex-col border-r border-rule lg:flex " + (active ? "hidden" : "flex")}>
         <div className="flex items-center justify-between border-b border-rule px-5 py-4">
           <h2 className="text-base font-bold text-fg">Pesan</h2>
           <span className="text-xs text-fg-subtle">{conversations.length} percakapan</span>
@@ -200,11 +204,24 @@ export function DMShell({
       {/* ---------- Active thread ---------- */}
       {active ? (
         <section className="flex min-w-0 flex-col">
-          <header className="flex items-center gap-3 border-b border-rule px-6 py-4">
+          {/* WhatsApp-like sticky header with back button on mobile.
+              Background uses a slightly tinted surface so the chat
+              messages below have a clear visual frame. */}
+          <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-rule bg-panel/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-panel/85 lg:px-6 lg:py-4">
+            <button
+              type="button"
+              onClick={() => setActiveId(null)}
+              aria-label="Kembali ke daftar pesan"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg lg:hidden"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
             <Avatar letter={active.counterpart?.username[0] ?? "U"} size="md" />
-            <div className="flex-1">
-              <p className="font-semibold text-fg">{active.counterpart?.username}</p>
-              <p className="text-xs text-fg-subtle">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-fg">{active.counterpart?.username}</p>
+              <p className="truncate text-xs text-fg-subtle">
                 {active.counterpart?.city ?? "—"}
                 {typingFrom && <span className="ml-2 text-brand-500">sedang mengetik…</span>}
               </p>
@@ -281,7 +298,9 @@ export function DMShell({
           </form>
         </section>
       ) : (
-        <section className="flex items-center justify-center text-fg-subtle">
+        // Empty thread placeholder — only visible on desktop (the list
+        // owns the mobile screen until the buyer picks a conversation).
+        <section className="hidden items-center justify-center text-fg-subtle lg:flex">
           Pilih percakapan untuk mulai.
         </section>
       )}

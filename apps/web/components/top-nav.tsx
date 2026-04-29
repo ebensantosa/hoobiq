@@ -25,10 +25,14 @@ export async function TopNav({ active: _active }: { active?: string }) {
             header stays vertically centered without overflow. */}
         <Link
           href="/"
-          className="flex shrink-0 items-center self-center"
+          // Tight left padding via the parent's `px-4 sm:px-6`. `-ml-1`
+          // tugs the logo a hair further left on mobile so it sits flush
+          // with the optical edge of the screen instead of looking
+          // floating between the safe-area inset and the nav pills.
+          className="flex shrink-0 items-center self-center -ml-1 sm:ml-0"
           aria-label={settings.brandName}
         >
-          <BrandLogo size="md" />
+          <BrandLogo size="responsive" />
         </Link>
 
         {user && (

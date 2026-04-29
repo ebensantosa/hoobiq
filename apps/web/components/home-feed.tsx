@@ -131,19 +131,6 @@ export function HomeFeed({
  * way, this strip is the spec-aligned "klik kategori" entry point.
  */
 function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
-  // Tone palette keyed by slug — each card gets a distinct gradient so
-  // the strip reads as five visually-different entry points instead of
-  // a row of identical pills. Falls back to a neutral mix for slugs
-  // we don't recognize (legacy or future categories).
-  const TONES: Record<string, string> = {
-    "collection-cards": "from-emerald-100 to-emerald-50 dark:from-emerald-400/15 dark:to-emerald-400/5",
-    "trading-cards":    "from-brand-100 to-brand-50 dark:from-brand-400/15 dark:to-brand-400/5",
-    "merchandise":      "from-sky-100 to-sky-50 dark:from-sky-400/15 dark:to-sky-400/5",
-    "toys":             "from-ultra-100 to-ultra-50 dark:from-ultra-400/15 dark:to-ultra-400/5",
-    "others":           "from-flame-100 to-flame-50 dark:from-flame-400/15 dark:to-flame-400/5",
-  };
-  const fallback = "from-brand-50 to-ultra-50 dark:from-brand-400/10 dark:to-ultra-400/10";
-
   return (
     <section className="mt-6">
       <div className="flex items-end justify-between gap-3">
@@ -157,37 +144,147 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           Lihat semua
         </Link>
       </div>
-      {/* py-2 keeps the hover lift + brand ring from being clipped by
-          the scroll container — overflow-x-auto forces overflow-y to
-          auto/hidden in browsers, so we have to bake the breathing
-          room into the strip's own box. */}
-      <div className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
-        {categories.map((c) => (
-          <Link
-            key={c.id}
-            href={`/kategori/${c.slug}`}
-            className={
-              "group relative flex w-40 shrink-0 flex-col gap-2 overflow-hidden rounded-2xl border border-rule p-4 transition-all hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40 bg-gradient-to-br " +
-              (TONES[c.slug] ?? fallback)
-            }
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-white/85 text-fg shadow-sm backdrop-blur dark:bg-canvas/60">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </span>
-            <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
-            <p className="font-mono text-[10px] text-fg-muted">
-              {c.listingCount.toLocaleString("id-ID")} listing
-            </p>
-          </Link>
-        ))}
+      {/* Responsive grid — no horizontal scroll. Mobile = 2 cols, sm =
+          3, lg = 5 (one slot per top-level category). py-2 keeps the
+          hover lift + ring from being clipped by the section box. */}
+      <div className="mt-3 grid grid-cols-2 gap-3 py-2 sm:grid-cols-3 lg:grid-cols-5">
+        {categories.map((c) => {
+          const tone = CATEGORY_TONE[c.slug] ?? FALLBACK_TONE;
+          return (
+            <Link
+              key={c.id}
+              href={`/kategori/${c.slug}`}
+              className={
+                "group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 bg-gradient-to-br " +
+                tone.bg + " " + tone.border + " " + tone.shadow
+              }
+            >
+              <span className={"grid h-10 w-10 place-items-center rounded-lg shadow-sm backdrop-blur " + tone.iconBg}>
+                <span className={tone.iconColor}>{categoryIcon(c.slug)}</span>
+              </span>
+              <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
+              <p className="font-mono text-[10px] text-fg-muted">
+                {c.listingCount.toLocaleString("id-ID")} listing
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
+}
+
+/** Per-slug colour palette: gradient bg + matching ring/shadow on
+ *  hover + icon-tile colour. Mirrors the sidebar's iconFor() colour
+ *  language so the strip and the sidebar speak the same visual idiom. */
+const CATEGORY_TONE: Record<string, {
+  bg: string; border: string; shadow: string; iconBg: string; iconColor: string;
+}> = {
+  "collection-cards": {
+    bg: "from-emerald-100 to-emerald-50 dark:from-emerald-400/15 dark:to-emerald-400/5",
+    border: "border-emerald-300/40 hover:border-emerald-400/70",
+    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-emerald-400/40",
+    iconBg: "bg-emerald-500/15 dark:bg-emerald-400/20",
+    iconColor: "text-emerald-600 dark:text-emerald-300",
+  },
+  "trading-cards": {
+    bg: "from-brand-100 to-brand-50 dark:from-brand-400/15 dark:to-brand-400/5",
+    border: "border-brand-300/40 hover:border-brand-400/70",
+    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40",
+    iconBg: "bg-brand-500/15 dark:bg-brand-400/20",
+    iconColor: "text-brand-600 dark:text-brand-300",
+  },
+  "merchandise": {
+    bg: "from-sky-100 to-sky-50 dark:from-sky-400/15 dark:to-sky-400/5",
+    border: "border-sky-300/40 hover:border-sky-400/70",
+    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-sky-400/40",
+    iconBg: "bg-sky-500/15 dark:bg-sky-400/20",
+    iconColor: "text-sky-600 dark:text-sky-300",
+  },
+  "toys": {
+    bg: "from-ultra-100 to-ultra-50 dark:from-ultra-400/15 dark:to-ultra-400/5",
+    border: "border-ultra-300/40 hover:border-ultra-400/70",
+    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-ultra-400/40",
+    iconBg: "bg-ultra-500/15 dark:bg-ultra-400/20",
+    iconColor: "text-ultra-600 dark:text-ultra-300",
+  },
+  "others": {
+    bg: "from-flame-100 to-flame-50 dark:from-flame-400/15 dark:to-flame-400/5",
+    border: "border-flame-300/40 hover:border-flame-400/70",
+    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-flame-400/40",
+    iconBg: "bg-flame-500/15 dark:bg-flame-400/20",
+    iconColor: "text-flame-600 dark:text-flame-300",
+  },
+};
+const FALLBACK_TONE = CATEGORY_TONE["trading-cards"]!;
+
+/** Slug-keyed icon. Same visual language as the sidebar so jumping
+ *  between sidebar and home strip doesn't feel like two different
+ *  apps. Icons are 22×22 strokes consistent with the lucide preset
+ *  used everywhere else. */
+function categoryIcon(slug: string): React.ReactNode {
+  const stroke = "currentColor";
+  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke, strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (slug) {
+    case "collection-cards":
+    case "trading-cards":
+    case "cards":
+      return (
+        <svg {...props}>
+          <rect x="2" y="6" width="14" height="16" rx="2"/>
+          <path d="M6 6V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2"/>
+        </svg>
+      );
+    case "merchandise":
+    case "merch":
+      return (
+        <svg {...props}>
+          <path d="M20.4 7.5 16 4l-2 2-2-2-2 2-2-2-4.4 3.5L5 12h2v8h10v-8h2z"/>
+        </svg>
+      );
+    case "toys":
+    case "figure":
+      return (
+        <svg {...props}>
+          <path d="M12 2a4 4 0 0 1 4 4v2H8V6a4 4 0 0 1 4-4z"/>
+          <path d="M5 22h14l-1.5-9h-11z"/>
+          <path d="M9 13v9M15 13v9"/>
+        </svg>
+      );
+    case "others":
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/>
+          <path d="M12 17h.01"/>
+        </svg>
+      );
+    case "blindbox":
+    case "blind-box":
+      return (
+        <svg {...props}>
+          <path d="m21 16-9 5-9-5V8l9-5 9 5z"/>
+          <path d="M3.3 8 12 13l8.7-5"/>
+          <path d="M12 13v8"/>
+        </svg>
+      );
+    case "komik":
+      return (
+        <svg {...props}>
+          <path d="M2 4a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/>
+          <path d="M22 4a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>
+        </svg>
+      );
+    default:
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      );
+  }
 }
 
 function Section({

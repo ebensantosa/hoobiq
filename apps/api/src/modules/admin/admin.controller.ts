@@ -38,6 +38,12 @@ type CategoryUpsert = z.infer<typeof CategoryUpsert>;
 const CategoryPatch = CategoryUpsert.partial();
 type CategoryPatch = z.infer<typeof CategoryPatch>;
 
+const ReviewPatch = z.object({
+  rating: z.number().int().min(1).max(5).optional(),
+  body:   z.string().max(2000).nullable().optional(),
+});
+type ReviewPatch = z.infer<typeof ReviewPatch>;
+
 /**
  * Admin endpoints — every route is role-gated by @Roles.
  * All admin mutations should also write to the audit log; pattern shown in /audit.
@@ -459,6 +465,71 @@ export class AdminController {
         childCount: c._count.children,
       })),
     };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Reviews — admin moderation                                          */
+  /* ------------------------------------------------------------------ */
+
+  /** List reviews with listing + buyer context for the admin table. */
+  @Get("reviews")
+  async listReviews(@Query("q") q?: string) {
+    const rows = await this.prisma.listingReview.findMany({
+      where: q
+        ? {
+            OR: [
+              { body:    { contains: q } },
+              { listing: { title: { contains: q } } },
+              { buyer:   { username: { contains: q } } },
+            ],
+          }
+        : {},
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        listing: { select: { id: true, slug: true, title: true } },
+        buyer:   { select: { id: true, username: true, name: true } },
+      },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        body: r.body,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+        listing: r.listing,
+        buyer: r.buyer,
+      })),
+    };
+  }
+
+  @Patch("reviews/:id")
+  async patchReview(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body(new ZodPipe(ReviewPatch)) input: ReviewPatch,
+  ) {
+    const exists = await this.prisma.listingReview.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "Review tidak ditemukan." });
+    await this.prisma.listingReview.update({
+      where: { id },
+      data: {
+        ...(input.rating !== undefined && { rating: input.rating }),
+        ...(input.body   !== undefined && { body:   input.body }),
+      },
+    });
+    await this.writeAudit(user.id, "review.update", `review:${id}`, input);
+    return { ok: true };
+  }
+
+  @Delete("reviews/:id")
+  @HttpCode(204)
+  async deleteReview(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    const exists = await this.prisma.listingReview.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "Review tidak ditemukan." });
+    await this.prisma.listingReview.delete({ where: { id } });
+    await this.writeAudit(user.id, "review.delete", `review:${id}`);
   }
 
   @Get("webhooks")

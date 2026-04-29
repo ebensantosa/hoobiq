@@ -41,6 +41,7 @@ const nav: { group: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin-panel/pengguna", label: "Pengguna" },
       { href: "/admin-panel/moderasi", label: "Moderasi feed" },
+      { href: "/admin-panel/review",   label: "Review" },
       { href: "/admin-panel/broadcast", label: "Broadcast" },
     ],
   },

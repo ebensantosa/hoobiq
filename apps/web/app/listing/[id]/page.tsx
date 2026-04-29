@@ -77,17 +77,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               <SpecCard label="Kategori" value={listing.category.name} />
             </section>
 
-            {/* Reviews — anchored for the "review" link in the aside.
-                `scroll-mt-28` keeps the heading clear of the fixed header
-                when the user lands here from the anchor. */}
-            <div id="reviews" className="scroll-mt-28">
-              <ListingReviews
-                listingId={listing.id}
-                slug={listing.slug}
-                isLoggedIn={!!me}
-                isOwn={isOwn}
-              />
-            </div>
           </div>
 
           {/* Right — sticky aside (price + buy + seller + protections) */}
@@ -258,6 +247,20 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </div>
           </section>
         )}
+
+        {/* Reviews — pushed to the very bottom on both mobile and desktop
+            so the product details (gallery, price, seller, protections)
+            stay above the fold. The `#reviews` anchor in the aside still
+            scrolls here. `scroll-mt-28` keeps the heading clear of the
+            fixed header when the user jumps from the anchor. */}
+        <div id="reviews" className="scroll-mt-28">
+          <ListingReviews
+            listingId={listing.id}
+            slug={listing.slug}
+            isLoggedIn={!!me}
+            isOwn={isOwn}
+          />
+        </div>
       </div>
     </AppShell>
   );

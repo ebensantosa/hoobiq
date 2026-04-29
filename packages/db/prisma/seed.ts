@@ -232,32 +232,120 @@ async function main() {
     }
   }
 
-  /* ---------- A completed order ---------- */
-  const luffy = await prisma.listing.findUnique({ where: { slug: "luffy-leader-parallel-op01" } });
-  const buyerAddr = await prisma.address.findFirst({ where: { userId: buyer.id, primary: true } });
-  if (luffy && buyerAddr) {
-    const humanId = "HBQ-2026-04800001";
-    await prisma.order.upsert({
+  /* ---------- Extra buyer personas for review seeding ----------------
+   * Distinct usernames + cities so the listing-detail review section
+   * doesn't look like a single-person fake. Each buyer gets a primary
+   * address (required to create orders below).
+   * ----------------------------------------------------------------- */
+  const extraBuyers: Array<{
+    email: string; username: string; name: string; city: string; province: string; postal: string;
+    line: string; phone: string; trustScore: number; level: number;
+  }> = [
+    { email: "intan@hoobiq.id",  username: "intanloves",   name: "Intan Pratiwi",    city: "Yogyakarta",     province: "DI Yogyakarta", postal: "55281", line: "Jl. Kaliurang KM 5 No. 21", phone: "+62 813-7788-1010", trustScore: 4.8, level: 7 },
+    { email: "dimas@hoobiq.id",  username: "dimaspulls",   name: "Dimas Aryanto",    city: "Surabaya",       province: "Jawa Timur",    postal: "60111", line: "Jl. Manyar Kertoarjo III No. 9", phone: "+62 812-9988-2020", trustScore: 4.6, level: 6 },
+    { email: "ayu@hoobiq.id",    username: "ayucollects",  name: "Ayu Lestari",      city: "Denpasar",       province: "Bali",          postal: "80113", line: "Jl. Hayam Wuruk No. 88", phone: "+62 811-4455-3030", trustScore: 4.9, level: 9 },
+    { email: "fariz@hoobiq.id",  username: "farizshelf",   name: "Fariz Maulana",    city: "Bandung",        province: "Jawa Barat",    postal: "40115", line: "Jl. Riau No. 12", phone: "+62 812-3344-4040", trustScore: 4.5, level: 4 },
+  ];
+  const extraBuyerHash = await bcrypt.hash("Buyer1234!" + PEPPER, 12);
+  const extraBuyerRecords: Array<{ id: string; addressId: string }> = [];
+  for (const b of extraBuyers) {
+    const u = await prisma.user.upsert({
+      where: { email: b.email },
+      update: { passwordHash: extraBuyerHash },
+      create: {
+        username: b.username, email: b.email,
+        passwordHash: extraBuyerHash,
+        name: b.name, city: b.city, phone: b.phone,
+        role: "user", emailVerified: new Date(),
+        trustScore: b.trustScore, exp: 200 + b.level * 60, level: b.level,
+      },
+    });
+    let addr = await prisma.address.findFirst({ where: { userId: u.id, primary: true } });
+    if (!addr) {
+      addr = await prisma.address.create({
+        data: {
+          userId: u.id, label: "Rumah", name: u.name ?? b.name,
+          phone: u.phone ?? b.phone, line: b.line,
+          city: b.city, province: b.province, postal: b.postal, primary: true,
+        },
+      });
+    }
+    extraBuyerRecords.push({ id: u.id, addressId: addr.id });
+  }
+
+  /* ---------- Completed orders + reviews per listing -----------------
+   * Every seeded listing gets one completed order + one review so the
+   * detail page never looks empty. Buyer rotates across the personas
+   * above to make the review feed feel populated rather than
+   * single-author. Idempotent via humanId — re-seeds skip existing.
+   * ----------------------------------------------------------------- */
+  const reviewPool: Array<{ rating: number; body: string }> = [
+    { rating: 5, body: "Packing premium banget, bubble wrap tebal + box karton keras. Barang sampai mulus, sesuai foto. Recommended seller!" },
+    { rating: 5, body: "Komunikasi enak, fast response. Item dikirim H+1 setelah pembayaran. Kondisi mint, top loader langsung dipasang." },
+    { rating: 4, body: "Barang oke, sesuai deskripsi. Pengiriman agak lama tapi packing aman. Overall puas sih." },
+    { rating: 5, body: "Dari ratusan seller di Hoobiq, ini salah satu yang paling rapi. Nego sopan, packing pro. Bakal repeat order." },
+    { rating: 5, body: "Sumpah deg-degan beli kartu mahal online, tapi seller ini reliable. Slab utuh, no scratch. Mantap." },
+    { rating: 4, body: "Kondisi sesuai janji. Sleeve + top loader langsung dipasang. Cuma minor defect kecil di edge tapi udah disclose dari awal jadi gpp." },
+    { rating: 5, body: "Figure datang dengan box mint, segel inner masih ada. Worth setiap rupiah. Thanks min!" },
+    { rating: 5, body: "Beli lebih murah dari marketplace sebelah, dapet packing lebih bagus. Hoobiq Pay juga bikin tenang." },
+    { rating: 4, body: "Manga first print susah dicari, akhirnya ketemu di sini. Spine clean, page yellowing minor (wajar untuk first print). Senang banget." },
+    { rating: 5, body: "Chase dapet beneran chase 😆 packing aman, bag inner masih utuh. Trusted seller!" },
+  ];
+
+  const allListings = await prisma.listing.findMany({
+    where: { sellerId: aditya.id },
+    select: { id: true, slug: true, priceCents: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const candidates: Array<{ id: string; addressId: string }> = [
+    { id: buyer.id, addressId: (await prisma.address.findFirst({ where: { userId: buyer.id, primary: true } }))!.id },
+    ...extraBuyerRecords,
+  ];
+
+  const startSeq = 4_800_001;
+  for (let i = 0; i < allListings.length; i++) {
+    const l = allListings[i]!;
+    const buyerCtx = candidates[i % candidates.length]!;
+    const review = reviewPool[i % reviewPool.length]!;
+    const humanId = `HBQ-2026-${String(startSeq + i).padStart(8, "0")}`;
+    // Stagger paid/delivered/completed dates so the review timeline
+    // looks natural — newest reviews on top, oldest on bottom.
+    const ageDays = (i + 1) * 3;
+    const order = await prisma.order.upsert({
       where: { humanId },
       update: {},
       create: {
         humanId,
-        buyerId: buyer.id, sellerId: aditya.id, listingId: luffy.id,
-        addressId: buyerAddr.id,
+        buyerId: buyerCtx.id, sellerId: aditya.id, listingId: l.id,
+        addressId: buyerCtx.addressId,
         qty: 1,
-        priceCents: luffy.priceCents,
+        priceCents: l.priceCents,
         shippingCents: 18_000n * 100n,
         platformFeeCents: 17_000n * 100n,
         payFeeCents: 8_500n * 100n,
         insuranceCents: 0n,
-        totalCents: luffy.priceCents + 18_000n * 100n + 17_000n * 100n + 8_500n * 100n,
+        totalCents: l.priceCents + 18_000n * 100n + 17_000n * 100n + 8_500n * 100n,
         courierCode: "jne-reg",
-        trackingNumber: "JNE0042876123",
+        trackingNumber: `JNE${String(40000000 + i * 1234).padStart(10, "0")}`,
         status: "completed",
-        paidAt: new Date(Date.now() - 7 * 86_400_000),
-        shippedAt: new Date(Date.now() - 5 * 86_400_000),
-        deliveredAt: new Date(Date.now() - 2 * 86_400_000),
-        completedAt: new Date(Date.now() - 1 * 86_400_000),
+        paidAt: new Date(Date.now() - (ageDays + 5) * 86_400_000),
+        shippedAt: new Date(Date.now() - (ageDays + 3) * 86_400_000),
+        deliveredAt: new Date(Date.now() - (ageDays + 1) * 86_400_000),
+        completedAt: new Date(Date.now() - ageDays * 86_400_000),
+      },
+    });
+    // Idempotent: ListingReview is keyed by orderId (unique).
+    await prisma.listingReview.upsert({
+      where: { orderId: order.id },
+      update: {},
+      create: {
+        listingId: l.id,
+        buyerId: buyerCtx.id,
+        orderId: order.id,
+        rating: review.rating,
+        body: review.body,
+        createdAt: new Date(Date.now() - ageDays * 86_400_000),
       },
     });
   }
@@ -300,8 +388,12 @@ async function main() {
 
   console.log("✅ seed done — accounts:");
   console.log("   admin@hoobiq.id    Admin123!");
-  console.log("   aditya@hoobiq.id   Demo1234!  ← seller demo (10 listings, 3 posts, 4 notifs, 1 completed order)");
-  console.log("   rangga@hoobiq.id   Buyer1234! ← buyer demo (wishlist, completed order)");
+  console.log("   aditya@hoobiq.id   Demo1234!  ← seller demo (10 listings + 1 review per listing)");
+  console.log("   rangga@hoobiq.id   Buyer1234! ← buyer demo");
+  console.log("   intan@hoobiq.id    Buyer1234!");
+  console.log("   dimas@hoobiq.id    Buyer1234!");
+  console.log("   ayu@hoobiq.id      Buyer1234!");
+  console.log("   fariz@hoobiq.id    Buyer1234!");
 }
 
 async function upsertCat(

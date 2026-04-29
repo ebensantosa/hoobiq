@@ -1,4 +1,5 @@
-import { Badge, Button, Card, Input, Label } from "@hoobiq/ui";
+import { Badge, Button, Card } from "@hoobiq/ui";
+import { ChangePasswordForm } from "@/components/change-password-form";
 
 export const metadata = { title: "Keamanan · Pengaturan · Hoobiq" };
 
@@ -17,14 +18,7 @@ export default function KeamananPage() {
         <p className="mt-1 text-sm text-fg-muted">
           Password kuat = minimal 8 karakter, campur huruf besar-kecil + angka.
         </p>
-        <form className="mt-5 flex flex-col gap-4">
-          <Field label="Password lama"><Input type="password" /></Field>
-          <Field label="Password baru"><Input type="password" /></Field>
-          <Field label="Konfirmasi password baru"><Input type="password" /></Field>
-          <div className="flex justify-end">
-            <Button variant="primary" size="md">Simpan password</Button>
-          </div>
-        </form>
+        <ChangePasswordForm />
       </div>
 
       {/* 2FA */}
@@ -95,11 +89,3 @@ export default function KeamananPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label>{label}</Label>
-      {children}
-    </div>
-  );
-}

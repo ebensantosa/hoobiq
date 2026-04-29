@@ -122,7 +122,7 @@ const TONE: Record<Status, { label: string; cls: string; ring: string }> = {
 export default function JourneyPage() {
   return (
     <AppShell active="Journey">
-      <div className="px-6 pb-12 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-6">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">
             Roadmap publik

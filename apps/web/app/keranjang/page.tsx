@@ -19,7 +19,7 @@ export default async function KeranjangPage() {
 
   return (
     <AppShell active="Keranjang">
-      <div className="px-6 pb-12 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg md:text-4xl">Keranjang</h1>
           <p className="mt-2 text-sm text-fg-muted">

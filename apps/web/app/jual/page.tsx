@@ -52,7 +52,7 @@ export default async function SellerDashboardPage() {
 
   return (
     <AppShell active="Marketplace">
-      <div className="px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-8 sm:px-6 lg:px-10">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-6">
           <div>
             <h1 className="text-3xl font-bold text-fg">Jual · Dashboard</h1>

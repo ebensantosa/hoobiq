@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Nunito, JetBrains_Mono } from "next/font/google";
 import { themeInitScript } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
+import { ToastProvider } from "@/components/toast-provider";
 import { getSiteSettings } from "@/lib/site-settings";
 import "./globals.css";
 
@@ -72,7 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Suspense fallback={null}>
           <NavProgress />
         </Suspense>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

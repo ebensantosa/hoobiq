@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, Button } from "@hoobiq/ui";
 import { api, ApiError } from "@/lib/api/client";
 import { uploadImages } from "@/lib/api/uploads";
+import { useToast } from "./toast-provider";
 
 const MAX_IMAGES = 8;
 const MAX_CAPTION = 2000;
@@ -31,6 +32,7 @@ export function FeedComposer({
   me: { username: string; name: string | null; avatarUrl?: string | null };
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [images, setImages] = React.useState<string[]>([]);
   const [coverIdx, setCoverIdx] = React.useState(0);
   const [caption, setCaption] = React.useState("");
@@ -50,32 +52,40 @@ export function FeedComposer({
     if (!files || files.length === 0) return;
     const slots = MAX_IMAGES - images.length;
     if (slots <= 0) {
-      setErr(`Maksimum ${MAX_IMAGES} foto.`);
+      toast.error("Keranjang foto penuh", `Maksimum ${MAX_IMAGES} foto per post.`);
       return;
     }
+    const arr = Array.from(files).slice(0, slots);
+    const tooLarge: string[] = [];
+    const wrongType: string[] = [];
     const ok: File[] = [];
-    let issue: string | null = null;
-    for (const f of Array.from(files).slice(0, slots)) {
-      if (!ACCEPTED_IMAGE_TYPES.includes(f.type)) {
-        issue = "Format harus PNG, JPG, atau WebP.";
-        continue;
-      }
-      if (f.size > MAX_IMAGE_BYTES) {
-        issue = "Ukuran maksimum 2MB per foto.";
-        continue;
-      }
-      ok.push(f);
+    for (const f of arr) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(f.type))      wrongType.push(f.name);
+      else if (f.size > MAX_IMAGE_BYTES)               tooLarge.push(f.name);
+      else                                             ok.push(f);
     }
-    if (ok.length === 0) {
-      if (issue) setErr(issue);
-      return;
+    // Surface every reject reason as a separate toast so the user can see
+    // exactly which file was the problem rather than a generic "format
+    // salah" that hides multiple issues.
+    if (tooLarge.length > 0) {
+      toast.error(
+        tooLarge.length === 1 ? `${tooLarge[0]} terlalu besar` : `${tooLarge.length} foto terlalu besar`,
+        `Ukuran maksimum 2 MB per foto. Compress dulu atau pilih foto lain.`,
+      );
     }
+    if (wrongType.length > 0) {
+      toast.error(
+        wrongType.length === 1 ? `${wrongType[0]} format tidak didukung` : `${wrongType.length} foto format tidak didukung`,
+        "Format yang didukung: PNG, JPG, WebP.",
+      );
+    }
+    if (ok.length === 0) return;
     try {
       const data = await Promise.all(ok.map(readAsDataUrl));
       setImages((prev) => [...prev, ...data]);
       setErr(null);
     } catch {
-      setErr("Gagal membaca file.");
+      toast.error("Gagal membaca file", "Coba pilih ulang fotonya.");
     }
   }
 
@@ -93,7 +103,7 @@ export function FeedComposer({
 
   function submit() {
     if (images.length === 0) {
-      setErr("Pilih minimal 1 foto dulu.");
+      toast.error("Belum ada foto", "Pilih minimal 1 foto dulu.");
       return;
     }
     setErr(null);
@@ -108,9 +118,11 @@ export function FeedComposer({
           body: { body: caption.trim(), images: finalUrls },
         });
         reset();
+        toast.success("Post terkirim", caption.trim() ? undefined : "Foto berhasil di-share.");
         router.refresh();
       } catch (e) {
-        setErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal kirim post.");
+        const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal kirim post.";
+        toast.error("Gagal kirim post", msg);
       }
     });
   }
@@ -174,7 +186,7 @@ export function FeedComposer({
   // With-photos state — IG-style cover + thumb strip + caption.
   const cover = images[coverIdx] ?? images[0]!;
   return (
-    <div className="overflow-hidden rounded-2xl border border-rule bg-panel">
+    <div className="relative overflow-hidden rounded-2xl border border-rule bg-panel">
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar
@@ -288,6 +300,35 @@ export function FeedComposer({
       </div>
 
       {hiddenInput(fileRef, ingestFiles)}
+      {pending && <UploadOverlay imageCount={images.length} />}
+    </div>
+  );
+}
+
+/**
+ * Block-the-world overlay while uploads + post create are in flight.
+ * The composer itself stays mounted (and the underlying state intact)
+ * so a network error can re-enable interaction without losing the user's
+ * draft. We don't show this for the empty state since there's nothing
+ * to upload there.
+ */
+function UploadOverlay({ imageCount }: { imageCount: number }) {
+  return (
+    <div
+      role="status"
+      aria-live="assertive"
+      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-canvas/85 backdrop-blur-sm"
+    >
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-400/15">
+        <span
+          aria-hidden
+          className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"
+        />
+      </span>
+      <p className="text-sm font-semibold text-fg">
+        {imageCount > 1 ? `Mengunggah ${imageCount} foto…` : "Mengunggah foto…"}
+      </p>
+      <p className="text-xs text-fg-muted">Jangan tutup tab dulu ya.</p>
     </div>
   );
 }

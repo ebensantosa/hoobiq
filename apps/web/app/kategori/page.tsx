@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { CategoryTreeView } from "@/components/category-tree-view";
+import { ArrowRight } from "@/components/icon-arrow";
 import { serverApi } from "@/lib/server/api";
 
 export const metadata = { title: "Kategori · Hoobiq" };
@@ -107,7 +108,7 @@ export default async function CategoryIndexPage() {
 
   return (
     <AppShell active="Kategori">
-      <div className="px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-8 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg md:text-4xl">Kategori</h1>
           <p className="mt-2 max-w-2xl text-sm text-fg-muted">
@@ -152,8 +153,8 @@ export default async function CategoryIndexPage() {
                         {c.children.length > 4 ? ` · +${c.children.length - 4} sub-seri` : ""}
                       </p>
                     )}
-                    <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-500 transition-transform group-hover:translate-x-0.5">
-                      Jelajahi <span>→</span>
+                    <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-500">
+                      Jelajahi <ArrowRight size={14} />
                     </span>
                   </div>
                 </Link>

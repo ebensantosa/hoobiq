@@ -49,7 +49,7 @@ export function HomeFeed({
 }) {
   return (
     <AppShell active="Home">
-      <div className="px-6 pb-12 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg md:text-4xl">
             Halo, {username}.
@@ -157,7 +157,7 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           Lihat semua →
         </Link>
       </div>
-      <div className="-mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-1 lg:-mx-10 lg:px-10">
+      <div className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
         {categories.map((c) => (
           <Link
             key={c.id}

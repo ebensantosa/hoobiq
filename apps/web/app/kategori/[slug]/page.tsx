@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
 import { Stat } from "@hoobiq/ui";
+import { ArrowRight } from "@/components/icon-arrow";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
 import type { ListingSummary } from "@hoobiq/types";
@@ -94,7 +95,7 @@ export default async function CategoryPage({
   if (hasChildren) {
     return (
       <AppShell active="Kategori">
-        <div className="px-6 pb-8 lg:px-10">
+        <div className="px-4 pb-8 sm:px-6 lg:px-10">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
             {breadcrumb.join(" · ")}
           </div>
@@ -136,8 +137,8 @@ export default async function CategoryPage({
                       {c.children.length > 4 ? ` · +${c.children.length - 4}` : ""}
                     </p>
                   )}
-                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-500 transition-transform group-hover:translate-x-0.5">
-                    Jelajahi <span>→</span>
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-500">
+                    Jelajahi <ArrowRight size={14} />
                   </span>
                 </div>
               </Link>
@@ -162,7 +163,7 @@ export default async function CategoryPage({
 
   return (
     <AppShell active="Kategori">
-      <div className="px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-8 sm:px-6 lg:px-10">
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
           {breadcrumb.join(" · ")}
         </div>

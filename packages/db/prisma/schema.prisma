@@ -31,6 +31,18 @@ model User {
   ktpVerified    Boolean   @default(false) @map("ktp_verified")
   twoFAEnabled   Boolean   @default(false) @map("twofa_enabled")
   twoFASecret    String?   @map("twofa_secret")
+  // Soft cooldown for password changes — UI + API enforce a minimum
+  // gap between changes via this timestamp.
+  lastPasswordChangeAt DateTime? @map("last_password_change_at")
+  // KTP verification tracking. `ktpVerified` is the existing simple
+  // flag; the timestamp lets the UI show "verified on …" and the
+  // status field carries pending/rejected nuance for moderation.
+  ktpStatus      String    @default("none") @map("ktp_status") // none | pending | verified | rejected
+  ktpSubmittedAt DateTime? @map("ktp_submitted_at")
+  ktpVerifiedAt  DateTime? @map("ktp_verified_at")
+  ktpRejectNote  String?   @map("ktp_reject_note")
+  ktpFrontUrl    String?   @map("ktp_front_url")
+  ktpSelfieUrl   String?   @map("ktp_selfie_url")
   interestedJson String    @default("[]") @map("interested_json")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -205,6 +217,7 @@ model Listing {
   wishes   WishlistItem[]
   reviews  ListingReview[]
   cartItems CartItem[]
+  offerMessages Message[] @relation("MessageOfferListing")
 
   @@index([sellerId, createdAt])
   @@index([categoryId, createdAt])
@@ -503,9 +516,22 @@ model Message {
   createdAt      DateTime  @default(now()) @map("created_at")
   deletedAt      DateTime? @map("deleted_at")
 
+  // Optional offer payload — when the message is a price-negotiation
+  // proposal, kind="offer" and offerListingId/offerPriceCents are set.
+  // Other kinds may follow (e.g. trade swap proposal). The recipient
+  // accepts/rejects; status flips and downstream pages (checkout)
+  // pick up the negotiated price.
+  kind           String    @default("text") // text | offer | trade
+  offerListingId String?   @map("offer_listing_id")
+  offerPriceCents BigInt?  @map("offer_price_cents")
+  offerStatus    String?   @map("offer_status") // pending | accepted | rejected | cancelled
+  decidedAt      DateTime? @map("offer_decided_at")
+
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  offerListing Listing?     @relation("MessageOfferListing", fields: [offerListingId], references: [id])
 
   @@index([conversationId, createdAt])
+  @@index([offerListingId, offerStatus])
   @@map("messages")
 }
 

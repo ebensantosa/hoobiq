@@ -39,7 +39,7 @@ export default async function PesananPage() {
   return (
     <AppShell active="Marketplace">
       <PendingOrdersReconciler humanIds={pendingHumanIds} />
-      <div className="px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-8 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg">Pesanan saya</h1>
           <p className="mt-2 text-sm text-fg-muted">

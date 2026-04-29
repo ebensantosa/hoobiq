@@ -1,9 +1,20 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { z } from "zod";
 import { UpdateProfileInput, type SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+
+const ImageUrl = z.string().refine(
+  (s) => /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
+  { message: "Harus URL http(s) atau data:image" },
+);
+
+const KtpSubmitInput = z.object({
+  frontUrl: ImageUrl,
+  selfieUrl: ImageUrl,
+});
 
 @Controller("users")
 export class UsersController {
@@ -27,6 +38,80 @@ export class UsersController {
     });
     if (!u) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
     return { user: u };
+  }
+
+  /**
+   * KTP verification status. Used by /pengaturan/rekening to gate the
+   * payout-account form: rekening can only be added once status is
+   * "verified" (or the legacy ktpVerified boolean is true for users
+   * grandfathered before the workflow existed).
+   */
+  @Get("me/ktp")
+  async getKtp(@CurrentUser() current: SessionUser) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: current.id },
+      select: {
+        ktpStatus: true, ktpVerified: true, ktpRejectNote: true,
+        ktpSubmittedAt: true, ktpVerifiedAt: true,
+      },
+    });
+    if (!u) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    const status = u.ktpStatus as "none" | "pending" | "verified" | "rejected";
+    return {
+      status,
+      // Treat the legacy `ktpVerified` boolean as authoritative for users
+      // that existed before the granular flow — we don't want to lock
+      // them out of payout just because their `ktpStatus` defaults to
+      // "none".
+      verified: status === "verified" || u.ktpVerified,
+      rejectNote: u.ktpRejectNote,
+      submittedAt: u.ktpSubmittedAt?.toISOString() ?? null,
+      verifiedAt:  u.ktpVerifiedAt?.toISOString() ?? null,
+    };
+  }
+
+  /**
+   * Buyer submits KTP photos for review. Status flips pending → verified
+   * (or rejected) by an ops admin. Re-submitting after a rejection is
+   * allowed; submitting while already pending is blocked so admins
+   * aren't reviewing duplicates.
+   */
+  @Post("me/ktp")
+  @HttpCode(202)
+  async submitKtp(
+    @CurrentUser() current: SessionUser,
+    @Body(new ZodPipe(KtpSubmitInput)) body: z.infer<typeof KtpSubmitInput>,
+  ) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: current.id },
+      select: { ktpStatus: true, ktpVerified: true },
+    });
+    if (!u) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+
+    if (u.ktpStatus === "pending") {
+      throw new BadRequestException({
+        code: "already_pending",
+        message: "KTP kamu sedang direview. Tunggu hasilnya dulu.",
+      });
+    }
+    if (u.ktpStatus === "verified" || u.ktpVerified) {
+      throw new BadRequestException({
+        code: "already_verified",
+        message: "Akun kamu sudah terverifikasi.",
+      });
+    }
+
+    await this.prisma.user.update({
+      where: { id: current.id },
+      data: {
+        ktpStatus: "pending",
+        ktpFrontUrl: body.frontUrl,
+        ktpSelfieUrl: body.selfieUrl,
+        ktpSubmittedAt: new Date(),
+        ktpRejectNote: null,
+      },
+    });
+    return { ok: true, status: "pending" };
   }
 
   @Public()

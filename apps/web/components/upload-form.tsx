@@ -225,12 +225,6 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           onChange={(id) => { set("categoryId", id); blur("categoryId"); }}
           error={showErr("categoryId")}
         />
-        <p className="-mt-3 text-[11px] text-fg-subtle">
-          Belum ada series/anime yang kamu cari?{" "}
-          <a href="/pengaturan/kategori-baru" className="text-brand-500 hover:underline">
-            Request kategori baru →
-          </a>
-        </p>
 
         <div className="grid gap-5 md:grid-cols-3">
           <Field label="Harga (Rp)" error={showErr("price")}>

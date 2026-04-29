@@ -55,7 +55,7 @@ export default async function MarketplacePage({
 
   return (
     <AppShell active="Marketplace">
-      <div className="px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-8 sm:px-6 lg:px-10">
         <PageHero
           eyebrow="Marketplace"
           title={sp.q ? `Hasil untuk "${sp.q}"` : t("marketplace.hero.title")}

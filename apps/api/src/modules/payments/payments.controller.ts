@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, forwardRef, Get, Inject, NotFoundException, Post } from "@nestjs/common";
 import { z } from "zod";
 import type { SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -8,6 +8,7 @@ import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { RedisService } from "../../infrastructure/redis/redis.service";
 import { KomercePaymentService, type ChargeMethod } from "./komerce-payment.service";
+import { OrdersService } from "../orders/orders.service";
 
 const ChargeInput = z.object({
   orderHumanId: z.string().min(1).max(40),
@@ -24,6 +25,8 @@ export class PaymentsController {
     private readonly prisma: PrismaService,
     private readonly komerce: KomercePaymentService,
     private readonly redis: RedisService,
+    @Inject(forwardRef(() => OrdersService))
+    private readonly orders: OrdersService,
   ) {}
 
   /**
@@ -106,6 +109,28 @@ export class PaymentsController {
       returnUrl,
     });
 
+    // Persist Komerce's payment_id (externalId) so the reconcile endpoint
+    // below can query GET /user/payment/status/{payment_id} as a fallback
+    // when the webhook doesn't fire (sandbox often skips callbacks).
+    // Upsert keyed by orderId because Payment.orderId is unique.
+    await this.prisma.payment.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        provider: "komerce",
+        providerTxId: charge.externalId,
+        method: input.method,
+        amountCents: order.totalCents,
+        statusRaw: "pending",
+      },
+      update: {
+        provider: "komerce",
+        providerTxId: charge.externalId,
+        method: input.method,
+        statusRaw: "pending",
+      },
+    });
+
     return {
       method: input.method,
       redirectUrl: charge.redirectUrl ?? null,
@@ -113,5 +138,53 @@ export class PaymentsController {
       qrImageUrl: charge.qrImageUrl ?? null,
       expiresAt: charge.expiresAt,
     };
+  }
+
+  /**
+   * Active reconciliation against Komerce. The wait page polls this every
+   * few seconds while the buyer is paying — Komerce explicitly recommends
+   * polling GET /user/payment/status/{payment_id} as a fallback for
+   * webhook delivery (rate limit: 1 req/3s per payment_id, which our 4s
+   * client poll respects). Only the order's buyer can hit this.
+   */
+  @Post("reconcile")
+  async reconcile(
+    @CurrentUser() user: SessionUser,
+    @Body(new ZodPipe(z.object({ orderHumanId: z.string().min(1).max(40) }))) input: { orderHumanId: string },
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { humanId: input.orderHumanId },
+      select: { id: true, buyerId: true, status: true, humanId: true },
+    });
+    if (!order) throw new NotFoundException({ code: "not_found", message: "Order tidak ditemukan." });
+    if (order.buyerId !== user.id) throw new ForbiddenException({ code: "forbidden", message: "Bukan order kamu." });
+
+    // Already paid (or otherwise terminal) — nothing to do.
+    if (order.status !== "pending_payment") {
+      return { status: order.status, reconciled: false };
+    }
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId: order.id },
+      select: { providerTxId: true, provider: true },
+    });
+    if (!payment?.providerTxId || payment.provider !== "komerce") {
+      // Charge hasn't been created yet — nothing to ask Komerce about.
+      return { status: order.status, reconciled: false };
+    }
+
+    let komerceStatus = "";
+    try {
+      const res = await this.komerce.getStatus(payment.providerTxId);
+      komerceStatus = res.status.toLowerCase();
+      if (komerceStatus === "paid" || komerceStatus === "settlement" || komerceStatus === "success") {
+        await this.orders.markPaid(order.id, payment.providerTxId, res.raw);
+        return { status: "paid", reconciled: true };
+      }
+    } catch {
+      // Network / upstream error — leave order in pending_payment, client
+      // will retry on the next poll tick.
+    }
+    return { status: order.status, reconciled: false, komerce: komerceStatus || null };
   }
 }

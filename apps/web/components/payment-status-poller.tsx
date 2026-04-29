@@ -25,16 +25,21 @@ export function PaymentStatusPoller({ humanId }: { humanId: string }) {
     const tick = async () => {
       if (!alive) return;
       try {
-        const data = await api<{ order: { status: string; humanId: string } }>(
-          `/orders/${encodeURIComponent(humanId)}`,
+        // Active reconciliation: the API will query Komerce
+        // GET /user/payment/status/{payment_id} and mark the order paid
+        // if Komerce reports it as paid. Komerce rate-limits this to
+        // 1 req / 3s per payment_id, so we tick at 4s.
+        const data = await api<{ status: string }>(
+          `/payments/komerce/reconcile`,
+          { method: "POST", body: { orderHumanId: humanId } },
         );
         if (!alive) return;
-        if (data?.order && data.order.status !== "pending_payment") {
-          router.replace(`/pesanan/${encodeURIComponent(data.order.humanId)}`);
+        if (data?.status && data.status !== "pending_payment") {
+          router.replace(`/pesanan/${encodeURIComponent(humanId)}`);
           return;
         }
       } catch {
-        // Network blip is fine — try again on next tick.
+        // Network blip / 4xx is fine — try again on next tick.
       }
       timer = setTimeout(tick, 4000);
     };

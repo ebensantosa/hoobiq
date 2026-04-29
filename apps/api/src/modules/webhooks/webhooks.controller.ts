@@ -6,6 +6,7 @@ import {
   HttpCode,
   Inject,
   Post,
+  Put,
 } from "@nestjs/common";
 import { Public } from "../../common/decorators/public.decorator";
 import { env } from "../../config/env";
@@ -55,13 +56,28 @@ export class WebhooksController {
     return { received: true };
   }
 
-  @Public()
-  @Post("komerce")
-  @HttpCode(200)
-  async komerce(
+  // Komerce uses POST for the Payment API webhook and PUT for the
+  // Store Order (shipment) webhook — same target URL, same auth scheme.
+  // Both verbs delegate to the same handler so we can register a single
+  // URL in the dashboard.
+  @Public() @Post("komerce") @HttpCode(200)
+  komercePost(
     @Body() payload: Record<string, unknown>,
     @Headers("x-callback-api-key") headerKey?: string,
     @Headers("callback_api_key") legacyKey?: string,
+  ) { return this.handleKomerce(payload, headerKey, legacyKey); }
+
+  @Public() @Put("komerce") @HttpCode(200)
+  komercePut(
+    @Body() payload: Record<string, unknown>,
+    @Headers("x-callback-api-key") headerKey?: string,
+    @Headers("callback_api_key") legacyKey?: string,
+  ) { return this.handleKomerce(payload, headerKey, legacyKey); }
+
+  private async handleKomerce(
+    payload: Record<string, unknown>,
+    headerKey?: string,
+    legacyKey?: string,
   ) {
     const started = Date.now();
 
@@ -73,22 +89,28 @@ export class WebhooksController {
       headerKey ?? legacyKey ?? String(payload?.callback_api_key ?? payload?.callback_API_KEY ?? "");
     const ok = !!expected && received === expected;
 
-    // Komerce field naming differs across products: paid VA pings carry
-    // `status: "paid"`, QRIS uses `payment_status`. The order id we sent
-    // (`order_id` = our humanId) comes back as `order_id` for VA/ewallet
-    // and `merchant_order_id` for some tenants — read defensively.
+    // Komerce field naming differs across products:
+    //   Payment API (VA/ewallet/QRIS) sends `order_id` + `status: "paid"`.
+    //   Store Order shipment uses PUT with `order_no` + `cnote` (AWB) +
+    //   `status: "delivered" | "in_transit" | ...`.
+    // Read both shapes; the action branch below decides what to do based
+    // on which fields are populated.
     const orderHumanId = String(
-      payload.order_id ?? payload.merchant_order_id ?? payload.invoice_id ?? "",
+      payload.order_id ?? payload.merchant_order_id ?? payload.invoice_id ?? payload.order_no ?? "",
     );
     const status = String(
       payload.status ?? payload.payment_status ?? payload.transaction_status ?? "",
     ).toLowerCase();
     const paymentId = String(payload.payment_id ?? payload.id ?? payload.transaction_id ?? "");
+    // Shipment webhooks come in via PUT and carry an AWB; we just log them
+    // for now (full shipment tracking lives elsewhere) — the raw payload
+    // is preserved in webhookLog.payloadJson for audit/replay.
+    const isShipment = !!payload.cnote || !!payload.awb_no || !!payload.awb;
 
     await this.prisma.webhookLog.create({
       data: {
         source: "komerce",
-        event: status || "unknown",
+        event: isShipment ? `shipment.${status || "update"}` : (status || "unknown"),
         statusRaw: String(payload.status ?? payload.payment_status ?? "?"),
         latencyMs: Date.now() - started,
         payloadJson: JSON.stringify(payload ?? {}),
@@ -101,7 +123,7 @@ export class WebhooksController {
       throw new BadRequestException({ code: "bad_signature", message: "Invalid callback key" });
     }
 
-    const isPaid = status === "paid" || status === "settlement" || status === "success";
+    const isPaid = !isShipment && (status === "paid" || status === "settlement" || status === "success");
     if (isPaid && orderHumanId) {
       const order = await this.prisma.order.findUnique({ where: { humanId: orderHumanId } });
       if (order && order.status === "pending_payment") {

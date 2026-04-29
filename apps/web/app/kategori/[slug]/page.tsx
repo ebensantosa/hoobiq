@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
 import { Stat } from "@hoobiq/ui";
@@ -75,10 +75,22 @@ export default async function CategoryPage({
   const hasChildren = subcategories.length > 0;
   const breadcrumb = ["Kategori", ...ancestors.map((a) => a.name), node.name];
 
-  // Per spec: when this node still has children, render the kotak-kotak
-  // picker (like /kategori does for level-1) instead of the listings grid.
-  // Listings appear only at the leaf level. The buyer can also bypass this
-  // by clicking "Lihat semua" which jumps straight to /marketplace?cat=slug.
+  // Spec navigation flow:
+  //   /kategori (kotak L1) → /kategori/<L1> (kotak L2) → /marketplace?cat=<L2>
+  //
+  // Only the level-1 page renders a picker. Levels 2 and 3 jump straight
+  // to the marketplace pre-filtered by their slug — buyers refine deeper
+  // (anime title, etc) using the marketplace's checkbox filter, not by
+  // drilling further through this page. This avoids the "infinite picker"
+  // feeling when the L3 sub-sub list is just a flat list of titles.
+  if (node.level >= 2) {
+    const params = new URLSearchParams();
+    params.set("cat", slug);
+    if (sort !== "newest") params.set("sort", sort);
+    if (condition) params.set("condition", condition);
+    redirect(`/marketplace?${params.toString()}`);
+  }
+
   if (hasChildren) {
     return (
       <AppShell active="Kategori">

@@ -25,6 +25,7 @@ const nav: { group: string; items: NavItem[] }[] = [
       { href: "/admin-panel/dispute", label: "Dispute", badgeKey: "disputes" },
       { href: "/admin-panel/kategori", label: "Kategori" },
       { href: "/admin-panel/kategori-request", label: "Request kategori" },
+      { href: "/admin-panel/kyc", label: "Verifikasi KTP" },
     ],
   },
   {

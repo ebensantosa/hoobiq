@@ -27,6 +27,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
 import { ShippingModule } from "./modules/shipping/shipping.module";
 import { HealthModule } from "./modules/health/health.module";
 import { CartModule } from "./modules/cart/cart.module";
+import { EmailModule } from "./modules/email/email.module";
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CartModule } from "./modules/cart/cart.module";
     AddressesModule,
     PostsModule,
     CartModule,
+    EmailModule,
     WalletModule,
     DmModule,
     BanksModule,

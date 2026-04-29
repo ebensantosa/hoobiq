@@ -16,6 +16,8 @@ export interface ChargeInput {
   method: string;
   customer: { email: string; name: string; phone: string };
   items: Array<{ id: string; name: string; priceCents: bigint; qty: number }>;
+  /** Optional browser bounce URL after Snap finish — passed via callbacks.finish. */
+  returnUrl?: string;
 }
 
 export interface ChargeResult {

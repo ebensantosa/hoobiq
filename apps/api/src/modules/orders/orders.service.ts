@@ -16,7 +16,9 @@ import type {
   DisputeOpenInput,
   DisputeDecideInput,
 } from "@hoobiq/types";
+import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { EmailService } from "../email/email.service";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
 
 const CENTS_PER_RUPIAH = 100n;
@@ -39,6 +41,7 @@ export const TIMERS = {
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly email: EmailService,
     @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider
   ) {}
 
@@ -66,27 +69,40 @@ export class OrdersService {
     const total = subtotal + shipping + platformFee + payFee + insurance;
     const humanId = genHumanId();
 
-    const { order, charge } = await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          humanId, buyerId, sellerId: listing.sellerId, listingId: listing.id, addressId: address.id,
-          qty: input.qty,
-          priceCents: listing.priceCents, shippingCents: shipping,
-          platformFeeCents: platformFee, payFeeCents: payFee, insuranceCents: insurance,
-          totalCents: total, courierCode: input.courierCode, status: "pending_payment",
-        },
-      });
+    // Two-stage so we can isolate the Midtrans network call from the
+    // DB transaction: create the order row first, then fire Snap, then
+    // upsert the Payment row. Avoids a long-running TX while we're
+    // talking to Midtrans (which can be 1-3s and would otherwise hold
+    // open Postgres locks).
+    const order = await this.prisma.order.create({
+      data: {
+        humanId, buyerId, sellerId: listing.sellerId, listingId: listing.id, addressId: address.id,
+        qty: input.qty,
+        priceCents: listing.priceCents, shippingCents: shipping,
+        platformFeeCents: platformFee, payFeeCents: payFee, insuranceCents: insurance,
+        totalCents: total, courierCode: input.courierCode, status: "pending_payment",
+      },
+    });
 
-      const charge = await this.payment.createCharge({
-        orderId: order.id, humanId, amountCents: total, method: "bca_va",
-        customer: { email: buyer.email, name: buyer.name ?? buyer.username, phone: buyer.phone ?? "" },
-        items: [{ id: listing.id, name: listing.title, priceCents: listing.priceCents, qty: input.qty }],
-      });
+    const webBase = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    const charge = await this.payment.createCharge({
+      orderId: order.id, humanId, amountCents: total, method: "snap",
+      customer: { email: buyer.email, name: buyer.name ?? buyer.username, phone: buyer.phone ?? "" },
+      items: [{ id: listing.id, name: listing.title, priceCents: listing.priceCents, qty: input.qty }],
+      // Midtrans Snap bounces here after the buyer finishes (success or
+      // close). The order detail page reconciles via webhook + on-mount
+      // refetch so the buyer sees the right status either way.
+      returnUrl: `${webBase}/checkout/sukses?o=${encodeURIComponent(humanId)}`,
+    });
 
-      await tx.payment.create({
-        data: { orderId: order.id, providerTxId: charge.providerTxId, amountCents: total, statusRaw: charge.status },
-      });
-      return { order, charge };
+    await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        provider: "midtrans",
+        providerTxId: charge.providerTxId,
+        amountCents: total,
+        statusRaw: charge.status,
+      },
     });
 
     return {
@@ -532,10 +548,40 @@ export class OrdersService {
   }
 
   // ------------------------------------------------------------- helper
+  /**
+   * Persist an in-app notification AND fire a transactional email so
+   * users still get pinged when they're not on the site. Email is
+   * best-effort — DB row stays the source of truth, SMTP failures
+   * just log.
+   */
   private async notify(userId: string, kind: string, title: string, body: string, data: Record<string, unknown>) {
     await this.prisma.notification.create({
       data: { userId, kind, title, body, dataJson: JSON.stringify(data) },
     }).catch(() => { /* notif best-effort */ });
+
+    // Pull the email + name once. Skip email if the user has no email
+    // (shouldn't happen but defensive).
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true, username: true },
+    }).catch(() => null);
+    if (!u?.email) return;
+
+    const name = u.name ?? u.username;
+    const humanId = typeof data.humanId === "string" ? data.humanId : null;
+    const cta = humanId
+      ? `<p style="margin:24px 0"><a href="${escapeHtml((env.PUBLIC_WEB_BASE ?? "https://hoobiq.com").replace(/\/$/, ""))}/pesanan/${encodeURIComponent(humanId)}" style="display:inline-block;background:#E7559F;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Lihat detail pesanan</a></p>`
+      : "";
+    const html = `
+      <div style="font-family:'Nunito',Arial,sans-serif;color:#0F172A;max-width:560px;margin:0 auto;padding:24px">
+        <h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(title)}</h1>
+        <p style="font-size:14px;line-height:1.6;color:#475569">Halo ${escapeHtml(name)},</p>
+        <p style="font-size:14px;line-height:1.6;color:#0F172A">${escapeHtml(body)}</p>
+        ${cta}
+        <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0" />
+        <p style="font-size:12px;color:#94A3B8">Email otomatis dari Hoobiq — jangan balas ke alamat ini. Butuh bantuan? <a href="mailto:bantuan@hoobiq.id" style="color:#E7559F">bantuan@hoobiq.id</a></p>
+      </div>`;
+    await this.email.send(u.email, `[Hoobiq] ${title}`, html);
   }
 
   /**
@@ -616,4 +662,14 @@ function labelDecision(d: DisputeDecideInput["decision"]) {
     case "refund_buyer_with_return": return "Refund ke buyer, barang dikirim balik ke seller.";
     case "release_seller":           return "Dana tetap ke seller, retur ditolak.";
   }
+}
+
+/** Minimal HTML escaper for user-derived strings in email templates. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

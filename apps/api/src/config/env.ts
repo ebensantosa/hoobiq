@@ -38,6 +38,8 @@ const schema = z.object({
   MIDTRANS_SERVER_KEY: z.string().optional(),
   MIDTRANS_CLIENT_KEY: z.string().optional(),
   MIDTRANS_SIGNATURE_KEY: z.string().optional(),
+  // "sandbox" (default) or "production" — picks Snap + API base URLs.
+  MIDTRANS_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
   KOMERCE_API_KEY: z.string().optional(),
   KOMERCE_WEBHOOK_SECRET: z.string().optional(),
   // Komerce Payment + QRISLY — separate keys per Komerce dashboard product.
@@ -61,6 +63,17 @@ const schema = z.object({
   // SHA-256 hashed before use, so any string ≥ 32 chars works. Falls
   // back to SESSION_SECRET in dev — set explicitly in prod.
   BANK_ENCRYPTION_KEY: z.string().min(32).optional(),
+
+  // Gmail SMTP — used by EmailService to send order/return/dispute
+  // notifications. SMTP_USER is the Gmail address that sends; SMTP_PASS
+  // is a 16-char Google App Password (NOT the account password — generate
+  // at myaccount.google.com → Security → 2-Step → App passwords).
+  SMTP_USER: z.string().email().optional(),
+  SMTP_PASS: z.string().min(8).optional(),
+  EMAIL_FROM: z.string().optional(), // "Hoobiq <notif@hoobiq.id>"
+
+  // Sentry DSN for both apps. If unset, Sentry init is a no-op.
+  SENTRY_DSN: z.string().url().optional(),
 
   // Public base URL of the web app — used to build the `return_url` we
   // hand to Komerce so the buyer auto-bounces back to /pesanan/:id after

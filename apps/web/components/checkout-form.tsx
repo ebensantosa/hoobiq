@@ -150,7 +150,7 @@ export function CheckoutForm({
     setErr(null);
     setPending(true);
     try {
-      const res = await api<{ humanId: string; paymentRedirectUrl: string }>("/orders/checkout", {
+      const res = await api<{ humanId: string; paymentRedirectUrl: string | null }>("/orders/checkout", {
         method: "POST",
         body: {
           listingId: listing.id,
@@ -159,18 +159,19 @@ export function CheckoutForm({
           courierCode: `${selectedCost.courier}-${selectedCost.service.toLowerCase()}`,
           shippingCents: selectedCost.cost * 100,
           insurance,
-          // Server doesn't drive the charge anymore — it just stores the
-          // order. Wait page picks up the selected method via query.
-          payMethod: pickedPay.type === "qris" ? "qris" : "page",
+          payMethod: "snap",
         },
       });
-      // Encode method + bank code so the launcher fires the exact channel
-      // the buyer chose (e.g. ?m=va&c=BCA or ?m=qris).
-      const qs = new URLSearchParams({
-        m: pickedPay.type === "qris" ? "qris" : pickedPay.type,
-        ...(pickedPay.code ? { c: pickedPay.code } : {}),
-      });
-      router.push(`/checkout/${encodeURIComponent(res.humanId)}/wait?${qs}`);
+      // Midtrans Snap is a hosted page — bounce the buyer straight to
+      // it. Snap will redirect them to /checkout/sukses?o=<humanId>
+      // when finished (success or close). Fallback to local /pesanan
+      // detail if Snap didn't return a URL (shouldn't happen but
+      // guards against schema drift).
+      if (res.paymentRedirectUrl) {
+        window.location.href = res.paymentRedirectUrl;
+      } else {
+        router.push(`/pesanan/${encodeURIComponent(res.humanId)}`);
+      }
     } catch (e) {
       setErr(
         e instanceof ApiError ? e.message :

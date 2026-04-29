@@ -71,6 +71,127 @@ export class UsersController {
   }
 
   /**
+   * Admin: list KTP submissions for review. Filter by status; default
+   * "pending" so the queue surfaces new submissions first.
+   */
+  @Get("kyc")
+  async listKyc(
+    @CurrentUser() admin: SessionUser,
+    @Query("status") statusQ?: string,
+  ) {
+    if (admin.role !== "admin" && admin.role !== "superadmin" && admin.role !== "ops") {
+      throw new BadRequestException({ code: "forbidden", message: "Khusus admin." });
+    }
+    const status = statusQ === "verified" || statusQ === "rejected" ? statusQ : "pending";
+    const rows = await this.prisma.user.findMany({
+      where: { ktpStatus: status },
+      orderBy: { ktpSubmittedAt: "desc" },
+      take: 100,
+      select: {
+        id: true, username: true, name: true, email: true, avatarUrl: true, city: true,
+        ktpStatus: true, ktpSubmittedAt: true, ktpVerifiedAt: true, ktpRejectNote: true,
+        ktpFrontUrl: true, ktpSelfieUrl: true,
+      },
+    });
+    return {
+      items: rows.map((u) => ({
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        email: u.email,
+        avatarUrl: u.avatarUrl,
+        city: u.city,
+        status: u.ktpStatus,
+        submittedAt: u.ktpSubmittedAt?.toISOString() ?? null,
+        verifiedAt:  u.ktpVerifiedAt?.toISOString() ?? null,
+        rejectNote: u.ktpRejectNote,
+        frontUrl: u.ktpFrontUrl,
+        selfieUrl: u.ktpSelfieUrl,
+      })),
+    };
+  }
+
+  @Post("kyc/:userId/approve")
+  @HttpCode(200)
+  async approveKyc(
+    @CurrentUser() admin: SessionUser,
+    @Param("userId") userId: string,
+  ) {
+    if (admin.role !== "admin" && admin.role !== "superadmin") {
+      throw new BadRequestException({ code: "forbidden", message: "Khusus admin/superadmin." });
+    }
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { ktpStatus: true, email: true, name: true, username: true },
+    });
+    if (!u) throw new NotFoundException({ code: "not_found", message: "User tidak ditemukan." });
+    if (u.ktpStatus === "verified") {
+      throw new BadRequestException({ code: "already_verified", message: "Sudah terverifikasi." });
+    }
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ktpStatus: "verified",
+          ktpVerified: true,
+          ktpVerifiedAt: now,
+          ktpRejectNote: null,
+        },
+      }),
+      this.prisma.auditEntry.create({
+        data: {
+          actorId: admin.id,
+          action: "kyc.approve",
+          targetRef: `user:${userId}`,
+          metaJson: JSON.stringify({}),
+        },
+      }),
+    ]);
+    return { ok: true };
+  }
+
+  @Post("kyc/:userId/reject")
+  @HttpCode(200)
+  async rejectKyc(
+    @CurrentUser() admin: SessionUser,
+    @Param("userId") userId: string,
+    @Body(new ZodPipe(z.object({ note: z.string().trim().min(2).max(500) }))) body: { note: string },
+  ) {
+    if (admin.role !== "admin" && admin.role !== "superadmin") {
+      throw new BadRequestException({ code: "forbidden", message: "Khusus admin/superadmin." });
+    }
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { ktpStatus: true },
+    });
+    if (!u) throw new NotFoundException({ code: "not_found", message: "User tidak ditemukan." });
+    if (u.ktpStatus !== "pending") {
+      throw new BadRequestException({ code: "not_pending", message: "Status bukan pending." });
+    }
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ktpStatus: "rejected",
+          ktpRejectNote: body.note.trim(),
+          ktpFrontUrl: null,
+          ktpSelfieUrl: null,
+        },
+      }),
+      this.prisma.auditEntry.create({
+        data: {
+          actorId: admin.id,
+          action: "kyc.reject",
+          targetRef: `user:${userId}`,
+          metaJson: JSON.stringify({ note: body.note }),
+        },
+      }),
+    ]);
+    return { ok: true };
+  }
+
+  /**
    * Buyer submits KTP photos for review. Status flips pending → verified
    * (or rejected) by an ops admin. Re-submitting after a rejection is
    * allowed; submitting while already pending is blocked so admins

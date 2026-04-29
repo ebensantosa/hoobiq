@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import * as Sentry from "@sentry/node";
 import { join } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -8,6 +9,26 @@ import { AppModule } from "./app.module";
 import { env } from "./config/env";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+
+// Sentry init runs before NestFactory so any bootstrap-time crash is
+// captured. No-op in dev (or when SENTRY_DSN is unset) — the SDK still
+// installs but never sends.
+if (env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: env.SENTRY_DSN,
+    environment: env.NODE_ENV,
+    tracesSampleRate: env.NODE_ENV === "production" ? 0.1 : 1.0,
+    // Drop request bodies & cookies by default — we don't want
+    // session cookies or payment payloads in the error feed.
+    beforeSend(event) {
+      if (event.request) {
+        delete event.request.cookies;
+        delete event.request.data;
+      }
+      return event;
+    },
+  });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

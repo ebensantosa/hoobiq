@@ -8,15 +8,15 @@ import { cn } from "./lib/cn";
 // optical center. Frame height is what flex `items-center` actually sees,
 // so the logo is properly centered in any header that uses items-center.
 const frame = {
-  sm: 32,
-  md: 32,
-  lg: 56,
+  sm: 40,
+  md: 40,
+  lg: 64,
 };
 
 const imageH = {
-  sm: 48,
-  md: 48,
-  lg: 80,
+  sm: 60,
+  md: 60,
+  lg: 96,
 };
 
 /**

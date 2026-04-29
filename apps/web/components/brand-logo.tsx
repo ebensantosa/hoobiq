@@ -1,7 +1,7 @@
 import { Logo } from "@hoobiq/ui";
 import { getSiteSettings } from "@/lib/site-settings";
 
-const frame = { sm: 32, md: 32, lg: 56 } as const;
+const frame = { sm: 40, md: 40, lg: 64 } as const;
 
 /**
  * Brand logo that respects admin-uploaded overrides.

@@ -43,11 +43,10 @@ export function Logo({
         src="/logo.PNG"
         alt="Hoobiq"
         height={imgH}
-        // Pull the image up just enough to land the wordmark's optical
-        // center at the frame's center — small offset (vs the larger
-        // imgH/12 we used previously) so the logo sits flush with the
-        // menu text baseline instead of riding above it.
-        style={{ height: imgH, width: "auto", marginTop: -imgH / 30 }}
+        // Push the image down 3px so the wordmark's optical center lands
+        // on the menu-text baseline. Tagline at the bottom of the asset
+        // gets clipped by the frame's overflow:hidden.
+        style={{ height: imgH, width: "auto", marginTop: 3 }}
         className={cn(
           "max-w-none select-none object-contain transition-transform duration-300 ease-out",
           "hover:scale-[1.03]",

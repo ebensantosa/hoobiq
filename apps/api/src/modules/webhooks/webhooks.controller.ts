@@ -5,6 +5,7 @@ import {
   Headers,
   HttpCode,
   Inject,
+  Logger,
   Post,
   Put,
 } from "@nestjs/common";
@@ -22,6 +23,8 @@ import { BoostService, BOOST_PREFIX } from "../boost/boost.service";
  */
 @Controller("webhooks")
 export class WebhooksController {
+  private readonly log = new Logger(WebhooksController.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
@@ -52,7 +55,15 @@ export class WebhooksController {
         signatureOk: ok,
       },
     });
-    if (!ok) throw new BadRequestException({ code: "bad_signature", message: "Invalid signature" });
+    // Always return 200 — non-2xx makes Midtrans retry the same payload
+    // for hours, even when the rejection is deterministic (bad signature
+    // = misconfigured key, not transient). The webhook log row above
+    // captures signatureOk=false so ops can grep the failures without
+    // having to wade through Midtrans's retry storm.
+    if (!ok) {
+      this.log.warn(`Midtrans webhook signature mismatch for order ${String(payload.order_id ?? "?")} — check MIDTRANS_SERVER_KEY env`);
+      return { received: false, reason: "bad_signature" };
+    }
 
     const orderHumanId = String(payload.order_id ?? "");
     const status = String(payload.transaction_status ?? "");

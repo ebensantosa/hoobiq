@@ -47,15 +47,12 @@ export default async function LandingPage() {
       ]);
     const trendingAll = trendingRes?.items ?? [];
     const fresh = freshRes?.items ?? [];
-    // Show ALL level-1 categories on the home rail (no PRIMARY filter).
-    // Sort canonical-first so the 5 main buckets lead, then any extras
-    // by name.
-    const allLevel1 = (treeRes ?? []).filter((c) => c.level === 1);
-    const primary = pickPrimaryCategories(allLevel1);
-    const extras = allLevel1
-      .filter((c) => !primary.some((p) => p.slug === c.slug))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    const categories = [...primary, ...extras];
+    // Home rail shows the 5 canonical buckets only — legacy level-1
+    // rows (action-figure, blind-box, etc.) belong as children, not
+    // top-level cards.
+    const categories = pickPrimaryCategories(
+      (treeRes ?? []).filter((c) => c.level === 1),
+    );
     const boosted = trendingAll.filter((l) => l.boosted);
     const trending = trendingAll.filter((l) => !l.boosted).slice(0, 8);
     const popular = trendingAll.slice(8, 16);

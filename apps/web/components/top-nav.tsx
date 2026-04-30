@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { NotificationsBell } from "./notifications-bell";
 import { CartNavIcon } from "./cart-nav-icon";
@@ -140,12 +139,8 @@ export async function TopNav({ active: _active }: { active?: string }) {
             inside UserMenu (Mulai Jualan / Dashboard Seller) so the
             header stays focused on search + browse + cart. */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          {/* Theme toggle — desktop-tablet only. Phone width is too
-              tight; the toggle is also reachable from the avatar
-              dropdown if the buyer needs it. */}
-          <div className="hidden sm:block">
-            <ThemeToggle />
-          </div>
+          {/* Theme toggle moved into UserMenu (avatar dropdown) so the
+              header stays focused on browse + cart + account. */}
           {user ? (
             <>
               {/* Wishlist + DM hidden on mobile — both already

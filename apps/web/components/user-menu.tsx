@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@hoobiq/ui";
+import { ThemeToggle } from "./theme-toggle";
 import { authApi } from "@/lib/api/auth";
 import type { SessionUser } from "@hoobiq/types";
 
@@ -131,6 +132,14 @@ export function UserMenu({
               </span>
               <span aria-hidden>→</span>
             </Link>
+          </div>
+
+          {/* Theme toggle — moved out of the header into the avatar
+              dropdown per the latest UX feedback: keeps the topbar
+              cleaner, and theme is a settings-ish control, not a
+              primary nav action. */}
+          <div className="border-t border-rule">
+            <ThemeToggle variant="row" />
           </div>
 
           <div className="border-t border-rule">

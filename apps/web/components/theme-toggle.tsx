@@ -4,7 +4,19 @@ import * as React from "react";
 type Theme = "light" | "dark";
 const STORAGE_KEY = "hoobiq-theme";
 
-export function ThemeToggle({ className }: { className?: string }) {
+/**
+ * Theme toggle. Two render modes via `variant`:
+ *   - "icon" (default): square icon button for header chrome.
+ *   - "row":            full-width text + icon row, suited for the
+ *                       UserMenu dropdown where we want a real label.
+ */
+export function ThemeToggle({
+  className,
+  variant = "icon",
+}: {
+  className?: string;
+  variant?: "icon" | "row";
+}) {
   const [theme, setTheme] = React.useState<Theme>("light");
 
   React.useEffect(() => {
@@ -20,6 +32,29 @@ export function ThemeToggle({ className }: { className?: string }) {
     try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode */ }
   };
 
+  const sun = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  );
+  const moon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  );
+
+  if (variant === "row") {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        className={
+          "flex w-full items-center justify-between gap-2 px-4 py-2 text-sm text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg " +
+          (className ?? "")
+        }
+      >
+        <span>{theme === "dark" ? "Mode terang" : "Mode gelap"}</span>
+        <span className="text-fg">{theme === "dark" ? sun : moon}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -31,13 +66,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         (className ?? "")
       }
     >
-      {theme === "dark" ? (
-        // sun — clicking switches to light
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      ) : (
-        // moon — clicking switches to dark
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      )}
+      {theme === "dark" ? sun : moon}
     </button>
   );
 }

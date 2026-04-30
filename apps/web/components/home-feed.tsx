@@ -77,7 +77,12 @@ export function HomeFeed({
       <div className="px-4 pb-16 sm:px-6 lg:px-10">
         <HeroBanner />
 
-        <QuickStats stats={stats} />
+        {/* Quick stats are dashboard-y — hide on mobile per the latest
+            UX feedback. Mobile home flows hero → kategori → produk
+            so the buyer sees products as fast as possible. */}
+        <div className="hidden md:block">
+          <QuickStats stats={stats} />
+        </div>
 
         {categories.length > 0 && (
           <SectionHeader

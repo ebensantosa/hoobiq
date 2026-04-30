@@ -79,6 +79,17 @@ log "Build api…"
 npm --workspace @hoobiq/api run build
 
 log "Build web…"
+# Wipe the previous .next cache before each build. Two reasons:
+#   1) Next.js writes a fetch-cache directory inside the standalone
+#      copy at runtime; if that folder ever gets root-owned (e.g. an
+#      earlier pm2 daemon ran as root before this script switched to
+#      the hoobiq user), the next `next build` fails with EACCES on
+#      unlink because hoobiq can't delete root-owned files.
+#   2) Stale chunks from a previous build occasionally slip into the
+#      standalone copy and produce ChunkLoadError 400s in prod.
+# `|| true` keeps the script going on a fresh box where .next doesn't
+# exist yet.
+rm -rf "$APP_DIR/apps/web/.next" 2>/dev/null || true
 npm --workspace @hoobiq/web run build
 
 # Next standalone needs static + public copied alongside the bundled server.

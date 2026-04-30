@@ -61,8 +61,9 @@ export default async function FeedsPage({
   const followingOnly = include.has("following") || followingTab;
   const listingQuery = sp.q ? `/listings?q=${encodeURIComponent(sp.q)}&limit=12` : "/listings?sort=newest&limit=12";
 
+  const postsQuery = followingOnly ? "/posts?limit=60&scope=following" : "/posts?limit=60";
   const [data, listingsRes, me] = await Promise.all([
-    serverApi<{ items: FeedPost[] }>("/posts?limit=60"),
+    serverApi<{ items: FeedPost[] }>(postsQuery),
     wantsListings ? serverApi<{ items: ListingSummary[] }>(listingQuery) : Promise.resolve(null),
     getSessionUser(),
   ]);
@@ -148,10 +149,9 @@ export default async function FeedsPage({
             <FeedComposer me={{ username: me.username, name: me.name, avatarUrl: me.avatarUrl }} />
           )}
 
-          {followingOnly && (
-            <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-              Filter “Hanya yang diikuti” akan aktif begitu fitur follow-kolektor selesai
-              — sementara tampil semua post terbaru.
+          {followingOnly && items.length === 0 && (
+            <div className="rounded-2xl border border-rule bg-panel/40 p-4 text-sm text-fg-muted">
+              Belum ada post dari kolektor yang kamu follow. Cek profil kolektor di Marketplace dan tekan Follow.
             </div>
           )}
 

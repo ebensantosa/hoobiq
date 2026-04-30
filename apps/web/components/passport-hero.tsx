@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TrustBadges } from "./trust-badges";
 import { deriveTrustBadges } from "./trust-badges-derive";
+import { FollowButton } from "./follow-button";
 
 export type Badge = {
   key: string;
@@ -60,10 +61,12 @@ export function PassportHero({
   user,
   passport,
   isOwn = false,
+  follow,
 }: {
   user: PassportUser;
   passport: Passport;
   isOwn?: boolean;
+  follow?: { followers: number; following: number; isFollowing: boolean };
 }) {
   const joined = new Date(user.createdAt).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const isVerified = user.role === "verified" || user.role === "admin";
@@ -140,6 +143,19 @@ export function PassportHero({
               </div>
               <p className="mt-0.5 text-sm font-medium text-fg-subtle">@{user.username}</p>
 
+              {follow && (
+                <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <Link href={`/u/${user.username}/followers`} className="font-semibold text-fg hover:text-brand-500">
+                    {follow.followers.toLocaleString("id-ID")}
+                    <span className="ml-1 font-normal text-fg-muted">Pengikut</span>
+                  </Link>
+                  <Link href={`/u/${user.username}/followers?tab=following`} className="font-semibold text-fg hover:text-brand-500">
+                    {follow.following.toLocaleString("id-ID")}
+                    <span className="ml-1 font-normal text-fg-muted">Diikuti</span>
+                  </Link>
+                </p>
+              )}
+
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
                 {user.city && (
                   <Meta icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}>
@@ -186,6 +202,9 @@ export function PassportHero({
               </>
             ) : (
               <>
+                {follow && (
+                  <FollowButton username={user.username} initialFollowing={follow.isFollowing} />
+                )}
                 <Link
                   href={`/dm?to=${user.username}`}
                   className=" inline-flex items-center gap-1.5 rounded-xl border border-rule
@@ -194,15 +213,6 @@ export function PassportHero({
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   Pesan
-                </Link>
-                <Link
-                  href={`/trades?to=${user.username}`}
-                  className=" inline-flex items-center gap-1.5 rounded-xl
-                    bg-gradient-to-r from-brand-500 to-flame-500 px-4 py-2
-                    text-xs font-bold text-white shadow-[0_8px_20px_-8px_rgba(231,85,159,0.55)]
-                    transition-transform hover:-translate-y-0.5"
-                >
-                  Ajak trade
                 </Link>
               </>
             )}

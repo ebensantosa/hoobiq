@@ -45,10 +45,30 @@ export class PostsController {
 
   @Public()
   @Get()
-  async list(@CurrentUser() user: SessionUser | undefined, @Query("limit") limitParam?: string) {
+  async list(
+    @CurrentUser() user: SessionUser | undefined,
+    @Query("limit") limitParam?: string,
+    @Query("scope") scope?: string,
+  ) {
     const limit = Math.min(60, Math.max(1, Number(limitParam ?? 20)));
+
+    // Following-only scope filters posts down to authors the current user
+    // follows. Anonymous viewers asking for `scope=following` get an
+    // empty list — there's no graph to filter against.
+    let authorFilter: { authorId: { in: string[] } } | undefined;
+    if (scope === "following") {
+      if (!user) return { items: [] };
+      const follows = await this.prisma.userFollow.findMany({
+        where: { followerId: user.id },
+        select: { followedId: true },
+      });
+      const ids = follows.map((f) => f.followedId);
+      if (ids.length === 0) return { items: [] };
+      authorFilter = { authorId: { in: ids } };
+    }
+
     const rows = await this.prisma.post.findMany({
-      where: { deletedAt: null, moderation: { in: ["pending", "active"] } },
+      where: { deletedAt: null, moderation: { in: ["pending", "active"] }, ...(authorFilter ?? {}) },
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {

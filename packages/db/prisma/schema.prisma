@@ -80,11 +80,30 @@ model User {
   payoutRequests   PayoutRequest[] @relation("PayoutUser")
   payoutDecisions  PayoutRequest[] @relation("PayoutDecider")
   orderMessages    OrderMessage[]  @relation("OrderMessageSender")
+  follows          UserFollow[]    @relation("FollowerUser")
+  followers        UserFollow[]    @relation("FollowedUser")
 
   @@index([email])
   @@index([username])
   @@index([status, trustScore])
   @@map("users")
+}
+
+/// Directed follow graph. (followerId → followedId) means the follower
+/// gets the followed user's posts in their Following feed and shows up
+/// in the followed user's followers count.
+model UserFollow {
+  followerId String   @map("follower_id")
+  followedId String   @map("followed_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User @relation("FollowerUser", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("FollowedUser", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followedId])
+  @@index([followedId, createdAt])
+  @@index([followerId, createdAt])
+  @@map("user_follows")
 }
 
 model Session {

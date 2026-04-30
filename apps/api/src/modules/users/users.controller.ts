@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { UpdateProfileInput, type SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -265,7 +265,7 @@ export class UsersController {
 
   @Public()
   @Get(":username")
-  async getByUsername(@Param("username") username: string) {
+  async getByUsername(@Param("username") username: string, @CurrentUser() me?: SessionUser) {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
@@ -279,7 +279,7 @@ export class UsersController {
     // Passport stats — collection value, trades, post count, top categories,
     // and seller rating from real ListingReview rows on listings this user
     // sold (not the user's trustScore proxy used previously).
-    const [valueAgg, listingsCount, postsCount, tradesCount, byCategory, reviewAgg, recentReviews] = await Promise.all([
+    const [valueAgg, listingsCount, postsCount, tradesCount, byCategory, reviewAgg, recentReviews, followersCount, followingCount, isFollowing] = await Promise.all([
       this.prisma.listing.aggregate({
         where: { sellerId: user.id, deletedAt: null, isPublished: true, moderation: "active", stock: { gt: 0 } },
         _sum: { priceCents: true },
@@ -314,6 +314,14 @@ export class UsersController {
           listing: { select: { slug: true, title: true } },
         },
       }).catch(() => [] as Array<{ id: string; rating: number; body: string | null; createdAt: Date; buyer: { username: string; name: string | null; avatarUrl: string | null }; listing: { slug: string; title: string } }>),
+      this.prisma.userFollow.count({ where: { followedId: user.id } }),
+      this.prisma.userFollow.count({ where: { followerId: user.id } }),
+      me && me.id !== user.id
+        ? this.prisma.userFollow.findUnique({
+            where: { followerId_followedId: { followerId: me.id, followedId: user.id } },
+            select: { followerId: true },
+          }).then((r) => !!r)
+        : Promise.resolve(false),
     ]);
 
     // Resolve category slugs for the top 3 categories
@@ -366,7 +374,63 @@ export class UsersController {
     return {
       user: { ...user, trustScore: Number(user.trustScore), createdAt: user.createdAt.toISOString() },
       passport,
+      follow: { followers: followersCount, following: followingCount, isFollowing },
     };
+  }
+
+  /** Follow a user. Idempotent — repeat call is a no-op. Self-follow blocked. */
+  @Post(":username/follow")
+  @HttpCode(204)
+  async follow(@Param("username") username: string, @CurrentUser() me: SessionUser) {
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!target) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    if (target.id === me.id) throw new BadRequestException({ code: "self_follow_forbidden", message: "Tidak bisa follow diri sendiri." });
+    await this.prisma.userFollow.upsert({
+      where: { followerId_followedId: { followerId: me.id, followedId: target.id } },
+      create: { followerId: me.id, followedId: target.id },
+      update: {},
+    });
+  }
+
+  /** Unfollow. Idempotent — repeat call is a no-op. */
+  @Delete(":username/follow")
+  @HttpCode(204)
+  async unfollow(@Param("username") username: string, @CurrentUser() me: SessionUser) {
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!target) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    await this.prisma.userFollow
+      .delete({ where: { followerId_followedId: { followerId: me.id, followedId: target.id } } })
+      .catch(() => undefined);
+  }
+
+  /** Followers list. Public. */
+  @Public()
+  @Get(":username/followers")
+  async followers(@Param("username") username: string) {
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!target) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    const rows = await this.prisma.userFollow.findMany({
+      where: { followedId: target.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { follower: { select: { username: true, name: true, avatarUrl: true, level: true } } },
+    });
+    return { items: rows.map((r) => r.follower) };
+  }
+
+  /** Following list. Public. */
+  @Public()
+  @Get(":username/following")
+  async following(@Param("username") username: string) {
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!target) throw new NotFoundException({ code: "not_found", message: "Pengguna tidak ditemukan." });
+    const rows = await this.prisma.userFollow.findMany({
+      where: { followerId: target.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { followed: { select: { username: true, name: true, avatarUrl: true, level: true } } },
+    });
+    return { items: rows.map((r) => r.followed) };
   }
 
   /** Collection grid — published listings, optionally filtered by root category. */

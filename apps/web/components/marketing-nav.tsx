@@ -17,23 +17,6 @@ export async function MarketingNav() {
           <BrandLogo size="responsive" />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {([
-            { href: "/marketplace", label: "Marketplace", color: "ultra" as const },
-            { href: "/kategori",    label: "Kategori",    color: "flame" as const },
-            { href: "/feeds",       label: "Komunitas",   color: "brand" as const },
-          ]).map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              data-color={l.color}
-              className="nav-underline rounded-lg px-3 py-1.5 text-sm font-semibold text-fg-muted transition-colors hover:text-fg"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
           {user ? (

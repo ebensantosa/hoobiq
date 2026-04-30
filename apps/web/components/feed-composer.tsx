@@ -9,7 +9,7 @@ import { useToast } from "./toast-provider";
 const MAX_IMAGES = 8;
 const MAX_CAPTION = 2000;
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /**
  * IG-style composer. Photo is the post; caption is optional.
@@ -70,7 +70,7 @@ export function FeedComposer({
     if (tooLarge.length > 0) {
       toast.error(
         tooLarge.length === 1 ? `${tooLarge[0]} terlalu besar` : `${tooLarge.length} foto terlalu besar`,
-        `Ukuran maksimum 2 MB per foto. Compress dulu atau pilih foto lain.`,
+        `Ukuran maksimum 5 MB per foto. Compress dulu atau pilih foto lain.`,
       );
     }
     if (wrongType.length > 0) {
@@ -144,9 +144,8 @@ export function FeedComposer({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={pickFiles}
+        <label
+          htmlFor="feed-composer-picker"
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
@@ -155,7 +154,7 @@ export function FeedComposer({
             void ingestFiles(e.dataTransfer.files);
           }}
           className={
-            "mx-4 mt-3 mb-4 flex w-[calc(100%-2rem)] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-12 transition-colors " +
+            "mx-4 mt-3 mb-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-12 transition-colors " +
             (dragOver
               ? "border-brand-400 bg-brand-400/5"
               : "border-rule bg-panel-2/40 hover:border-brand-400/60 hover:bg-panel-2")
@@ -169,8 +168,8 @@ export function FeedComposer({
             </svg>
           </span>
           <p className="text-sm font-semibold text-fg">Pilih foto untuk di-post</p>
-          <p className="text-xs text-fg-subtle">PNG, JPG, atau WebP · maks 2MB · sampai 8 foto</p>
-        </button>
+          <p className="text-xs text-fg-subtle">PNG, JPG, atau WebP · maks 5MB · sampai 8 foto</p>
+        </label>
 
         {err && (
           <p role="alert" className="mx-4 mb-4 rounded-md border border-flame-400/40 bg-flame-400/10 px-3 py-2 text-xs text-flame-600">
@@ -253,17 +252,16 @@ export function FeedComposer({
             </div>
           ))}
           {images.length < MAX_IMAGES && (
-            <button
-              type="button"
-              onClick={pickFiles}
+            <label
+              htmlFor="feed-composer-picker"
               aria-label="Tambah foto"
-              className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-rule text-fg-subtle transition-colors hover:border-brand-400/60 hover:text-brand-500"
+              className="flex h-16 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-rule text-fg-subtle transition-colors hover:border-brand-400/60 hover:text-brand-500"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span className="text-[9px] font-medium">Tambah</span>
-            </button>
+            </label>
           )}
         </div>
       </div>
@@ -349,19 +347,15 @@ function HiddenFileInput({
 }) {
   return (
     <input
+      id="feed-composer-picker"
       ref={inputRef}
       type="file"
       accept={ACCEPTED_IMAGE_TYPES.join(",")}
       multiple
-      // `hidden` works in modern browsers but inputs are sometimes
-      // styled with display:none which blocks programmatic clicks in
-      // older WebKit. Use a safe absolute-positioned offscreen style
-      // so .click() always works.
       className="sr-only"
       tabIndex={-1}
       onChange={(e) => {
         const f = e.target.files;
-        // Clear so the same file can be selected again after a remove.
         e.target.value = "";
         void onPick(f);
       }}

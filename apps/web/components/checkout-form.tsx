@@ -306,72 +306,39 @@ export function CheckoutForm({
           )}
         </Section>
 
-        {/* Insurance */}
-        <Section title="Tambahan">
-          <Card>
-            <label className="flex cursor-pointer items-center gap-4 p-4">
-              <input
-                type="checkbox"
-                checked={insurance}
-                onChange={(e) => setInsurance(e.target.checked)}
-                className="h-4 w-4 accent-brand-400"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-fg">Asuransi paket</p>
-                <p className="mt-0.5 text-xs text-fg-muted">
-                  Klaim 100% nilai listing kalau paket hilang/rusak total.
-                </p>
-              </div>
-              <p className="font-mono text-sm text-fg">Rp {INSURANCE_FLAT_IDR.toLocaleString("id-ID")}</p>
-            </label>
-          </Card>
-        </Section>
-
-        {/* Payment — handed off to Midtrans Snap. The hosted page lets
-            the buyer pick VA / e-wallet / QRIS / kartu in one screen
-            with merchant-side method toggles, so we don't enumerate
-            banks here. */}
-        <Section title="Metode pembayaran">
-          <Card>
-            <div className="flex items-center gap-4 p-4">
-              <div className="grid h-10 w-14 place-items-center rounded-lg border border-rule bg-white">
-                <span className="font-mono text-[10px] font-semibold text-brand-500">SNAP</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-fg">Hoobiq Pay (Midtrans Snap)</p>
-                <p className="mt-0.5 text-xs text-fg-muted">
-                  Pilih VA bank, e-wallet (GoPay/OVO/Dana/ShopeePay), QRIS, atau kartu
-                  langsung di halaman pembayaran setelah klik "Lanjut ke pembayaran".
-                </p>
-              </div>
+        {/* Asuransi — opt-in tambahan. Single card, inline. */}
+        <Card>
+          <label className="flex cursor-pointer items-center gap-4 p-4">
+            <input
+              type="checkbox"
+              checked={insurance}
+              onChange={(e) => setInsurance(e.target.checked)}
+              className="h-4 w-4 accent-brand-400"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-fg">Asuransi paket</p>
+              <p className="mt-0.5 text-xs text-fg-muted">
+                Klaim 100% nilai listing kalau paket hilang/rusak total.
+              </p>
             </div>
-          </Card>
-        </Section>
+            <p className="font-mono text-sm text-fg">Rp {INSURANCE_FLAT_IDR.toLocaleString("id-ID")}</p>
+          </label>
+        </Card>
       </div>
 
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <Card>
-          <div className="p-6">
+          <div className="p-5 sm:p-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Ringkasan</h3>
-            <dl className="mt-4 flex flex-col gap-3 text-sm">
+            <dl className="mt-4 flex flex-col gap-2.5 text-sm">
               <Row label={`Subtotal${qty > 1 ? ` (×${qty})` : ""}`} value={`Rp ${subtotal.toLocaleString("id-ID")}`} />
-              <Row label={`Ongkir${selectedCost ? ` ${selectedCost.courier.toUpperCase()} ${selectedCost.service}` : ""}`} value={`Rp ${shippingIdr.toLocaleString("id-ID")}`} />
-              <Row label="Biaya platform (2%)" value={`Rp ${platformFee.toLocaleString("id-ID")}`} />
-              <Row label="Biaya Hoobiq Pay (1%)" value={`Rp ${payFee.toLocaleString("id-ID")}`} />
+              <Row label={`Ongkir${selectedCost ? ` · ${selectedCost.courier.toUpperCase()}` : ""}`} value={`Rp ${shippingIdr.toLocaleString("id-ID")}`} />
+              <Row label="Biaya layanan (3%)" value={`Rp ${(platformFee + payFee).toLocaleString("id-ID")}`} />
               {insuranceIdr > 0 && <Row label="Asuransi" value={`Rp ${insuranceIdr.toLocaleString("id-ID")}`} />}
             </dl>
-            <div className="mt-5 flex items-end justify-between border-t border-rule pt-5">
-              <span className="text-sm text-fg-muted">Total bayar</span>
-              <span className="text-3xl font-bold text-fg">Rp {total.toLocaleString("id-ID")}</span>
-            </div>
-
-            <div className="mt-5 rounded-xl border border-brand-400/30 bg-brand-400/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                <span className="text-brand-400">◆</span> Pembayaran aman lewat Hoobiq Pay
-              </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-fg-muted">
-                Pembayaran kamu aman sampai barang diterima. Klaim refund otomatis kalau barang tidak sesuai.
-              </p>
+            <div className="mt-4 flex items-end justify-between border-t border-rule pt-4">
+              <span className="text-sm text-fg-muted">Total</span>
+              <span className="text-2xl font-bold text-fg">Rp {total.toLocaleString("id-ID")}</span>
             </div>
 
             {err && (
@@ -387,11 +354,17 @@ export function CheckoutForm({
               onClick={submit}
               disabled={pending || !selectedAddress}
             >
-              {pending ? "Memproses…" : "Lanjut ke pembayaran"}
+              {pending ? "Memproses…" : "Bayar sekarang"}
             </Button>
-            <p className="mt-3 text-center text-xs text-fg-subtle">
-              Dengan klik bayar, kamu setuju dengan{" "}
-              <Link href="/syarat" className="text-brand-400">Ketentuan Transaksi</Link>.
+
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] text-fg-subtle">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-brand-500">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Aman lewat Hoobiq Pay · VA, e-wallet, QRIS, kartu
+            </p>
+            <p className="mt-1.5 text-center text-[10px] text-fg-subtle">
+              Klik bayar = setuju <Link href="/syarat" className="text-brand-400">Ketentuan Transaksi</Link>
             </p>
           </div>
         </Card>

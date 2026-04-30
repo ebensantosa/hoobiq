@@ -190,13 +190,7 @@ export default async function CheckoutPage({
   return (
     <AppShell active="Marketplace">
       <div className="mx-auto max-w-[1100px] px-6 pb-8 lg:px-10">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">
-          Hoobiq Pay · Checkout aman
-        </span>
-        <h1 className="mt-2 text-3xl font-bold text-fg">Selesaikan pembelian.</h1>
-        <p className="mt-2 text-sm text-fg-muted">
-          Pembayaran kamu aman lewat Hoobiq Pay sampai barang diterima dengan baik.
-        </p>
+        <h1 className="text-2xl font-bold text-fg sm:text-3xl">Checkout</h1>
 
         <CheckoutForm
           listing={{

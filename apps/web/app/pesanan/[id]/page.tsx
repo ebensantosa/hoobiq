@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, Badge, Card } from "@hoobiq/ui";
 import { OrderActions } from "@/components/order-actions";
+import { OrderChat } from "@/components/order-chat";
 import { TrackingTimeline } from "@/components/tracking-timeline";
 import { PendingOrdersReconciler } from "@/components/pending-orders-reconciler";
 import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
+
+type ChatThread = React.ComponentProps<typeof OrderChat>["initial"];
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +109,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     );
   }
 
-  const data = await serverApi<{ order: OrderDetail }>(`/orders/${encodeURIComponent(id)}`);
+  const [data, chatRes] = await Promise.all([
+    serverApi<{ order: OrderDetail }>(`/orders/${encodeURIComponent(id)}`),
+    serverApi<ChatThread>(`/orders/${encodeURIComponent(id)}/messages`).catch(() => null),
+  ]);
   if (!data?.order) notFound();
   const o = data.order;
   const isBuyer = me.username === o.buyer.username;
@@ -200,6 +206,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {/* Tracking — live updates from RajaOngkir/Komerce when resi is set */}
             {o.trackingNumber && (
               <TrackingTimeline courier={o.courierCode} awb={o.trackingNumber} />
+            )}
+
+            {/* Escrow chat — buyer + seller. Read-only when the order
+                has been finalised more than 30 days ago. */}
+            {chatRes && (
+              <OrderChat
+                humanId={o.humanId}
+                initial={chatRes}
+                frozen={isFrozenForChat(o)}
+              />
             )}
 
             {/* Item */}
@@ -345,4 +361,15 @@ function formatDateTime(iso: string): string {
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** Escrow chat is read-only after the order has been final (completed
+ *  / cancelled / refunded) for 30+ days — buyer + seller still see the
+ *  history but the composer is hidden so old threads don't surprise
+ *  someone with new messages months later. */
+function isFrozenForChat(o: OrderDetail): boolean {
+  const finalIso = o.completedAt ?? o.cancelledAt ?? o.refundedAt;
+  if (!finalIso) return false;
+  const ageMs = Date.now() - new Date(finalIso).getTime();
+  return ageMs > 30 * 86_400_000;
 }

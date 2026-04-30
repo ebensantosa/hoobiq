@@ -4,6 +4,7 @@ import {
   NotFoundException, Param, Post, Query,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
+import { z } from "zod";
 import {
   CheckoutInput,
   ShipOrderInput,
@@ -284,6 +285,30 @@ export class OrdersController {
     @Body(new ZodPipe(DisputeOpenInput)) body: DisputeOpenInput
   ) {
     return this.orders.openDispute(user.id, humanId, body);
+  }
+
+  /* ------------------------------ escrow chat ------------------------ */
+
+  @Get(":humanId/messages")
+  listMessages(@CurrentUser() user: SessionUser, @Param("humanId") humanId: string) {
+    return this.orders.listMessages(user.id, humanId);
+  }
+
+  @Post(":humanId/messages")
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @HttpCode(201)
+  postMessage(
+    @CurrentUser() user: SessionUser,
+    @Param("humanId") humanId: string,
+    @Body(new ZodPipe(z.object({ body: z.string().trim().min(1).max(2000) }))) body: { body: string }
+  ) {
+    return this.orders.postMessage(user.id, humanId, body.body);
+  }
+
+  @Post(":humanId/messages/read")
+  @HttpCode(200)
+  markRead(@CurrentUser() user: SessionUser, @Param("humanId") humanId: string) {
+    return this.orders.markMessagesRead(user.id, humanId);
   }
 }
 

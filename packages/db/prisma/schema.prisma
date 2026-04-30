@@ -79,6 +79,7 @@ model User {
   listingReviews   ListingReview[] @relation("BuyerReviews")
   payoutRequests   PayoutRequest[] @relation("PayoutUser")
   payoutDecisions  PayoutRequest[] @relation("PayoutDecider")
+  orderMessages    OrderMessage[]  @relation("OrderMessageSender")
 
   @@index([email])
   @@index([username])
@@ -387,12 +388,41 @@ model Order {
   review         ListingReview?
   cancelRequests CancelRequest[]
   returnRequests ReturnRequest[]
+  messages       OrderMessage[]
 
   @@index([buyerId, status, createdAt])
   @@index([sellerId, status, createdAt])
   @@index([status, autoReleaseAt])
   @@index([status, shipmentDeadlineAt])
   @@map("orders")
+}
+
+/// Escrow chat thread attached to an Order. Buyer + seller post text
+/// messages; the system auto-inserts events on every status change
+/// (payment received, shipped + resi, cancel/return/dispute, etc.) so
+/// the timeline reads as a single combined transcript. Admin reads
+/// via the existing dispute view; V1 doesn't let admin post.
+model OrderMessage {
+  id              String   @id @default(cuid())
+  orderId         String   @map("order_id")
+  /// Null when this row is a system-generated event (paid, shipped,
+  /// cancel-requested, etc.). User messages always carry the sender.
+  senderId        String?  @map("sender_id")
+  /// "user" — typed by buyer or seller.
+  /// "system" — auto-generated event from orders.service status changes.
+  kind            String   @default("user")
+  body            String
+  /// Per-side read receipts. Each side stamps its own column when it
+  /// opens the thread or scrolls to a new message.
+  readByBuyerAt   DateTime? @map("read_by_buyer_at")
+  readBySellerAt  DateTime? @map("read_by_seller_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender  User? @relation("OrderMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@map("order_messages")
 }
 
 /// Buyer-initiated cancel request. Allowed only while order has not been

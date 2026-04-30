@@ -222,6 +222,7 @@ export class OrdersService {
     if (o) {
       await this.notify(o.buyerId, "order_paid", "Pembayaran diterima", "Pesanan kamu masuk ke seller.", { humanId: o.humanId }, { important: true });
       await this.notify(o.sellerId, "order_paid", "Pesanan baru — sudah dibayar", "Segera kirim dalam 7 hari.", { humanId: o.humanId }, { important: true });
+      await this.logSystemMessage(orderId, "💰 Pembayaran diterima — escrow aktif. Seller diharapkan kirim dalam 7 hari.");
     }
   }
 
@@ -274,6 +275,7 @@ export class OrdersService {
       },
     });
     await this.notify(o.buyerId, "order_shipped", "Pesanan dikirim", `Resi: ${input.trackingNumber}`, { humanId }, { important: true });
+    await this.logSystemMessage(o.id, `📦 Seller kirim barang — kurir ${o.courierCode}, resi ${input.trackingNumber}.`);
     return { ok: true, status: "shipped", trackingNumber: input.trackingNumber };
   }
 
@@ -299,6 +301,7 @@ export class OrdersService {
       },
     });
     await this.notify(o.sellerId, "order_completed", "Pesanan selesai", "Dana sudah dilepas ke saldo kamu.", { humanId }, { important: true });
+    await this.logSystemMessage(o.id, "✅ Buyer konfirmasi diterima — dana dirilis ke seller. Pesanan selesai.");
     return { ok: true, status: "completed" };
   }
 
@@ -325,6 +328,7 @@ export class OrdersService {
       },
     });
     await this.notify(o.sellerId, "cancel_requested", "Pembeli minta pembatalan", input.reason, { humanId });
+    await this.logSystemMessage(o.id, `❎ Buyer ajukan pembatalan: "${input.reason}"`);
     return { ok: true, cancelRequestId: cr.id, expiresAt: cr.expiresAt.toISOString() };
   }
 
@@ -345,6 +349,7 @@ export class OrdersService {
     if (input.decision === "accept") {
       await this.acceptCancel(o.id, cr.id, "seller_accepted");
       await this.notify(o.buyerId, "cancel_accepted", "Pembatalan disetujui", "Dana akan direfund.", { humanId }, { important: true });
+      await this.logSystemMessage(o.id, "✅ Seller setuju pembatalan — refund diproses.");
       return { ok: true, status: "cancelled" };
     } else {
       await this.prisma.cancelRequest.update({
@@ -352,6 +357,7 @@ export class OrdersService {
         data: { status: "rejected", rejectNote: input.rejectNote, respondedAt: new Date() },
       });
       await this.notify(o.buyerId, "cancel_rejected", "Pembatalan ditolak", input.rejectNote ?? "", { humanId });
+      await this.logSystemMessage(o.id, `❌ Seller tolak pembatalan: "${input.rejectNote ?? ""}"`);
       return { ok: true, status: "rejected" };
     }
   }
@@ -417,6 +423,7 @@ export class OrdersService {
     });
     await this.prisma.order.update({ where: { id: o.id }, data: { status: "returning", autoReleaseAt: null } });
     await this.notify(o.sellerId, "return_requested", "Pembeli ajukan retur", input.reason, { humanId });
+    await this.logSystemMessage(o.id, `🔄 Buyer ajukan retur (${input.reason}): "${input.description}"`);
     return { ok: true, returnRequestId: rr.id };
   }
 
@@ -437,6 +444,7 @@ export class OrdersService {
     if (input.decision === "approve") {
       await this.approveReturn(rr.id, "seller_approved");
       await this.notify(o.buyerId, "return_approved", "Retur disetujui", "Silakan kirim barang kembali (max 5 hari).", { humanId }, { important: true });
+      await this.logSystemMessage(o.id, "✅ Seller setuju retur. Buyer kirim balik dalam 5 hari.");
       return { ok: true, status: "approved" };
     } else {
       // Tolak retur → buka dispute otomatis, biar admin yang putuskan.
@@ -460,6 +468,7 @@ export class OrdersService {
         this.prisma.order.update({ where: { id: o.id }, data: { status: "disputed" } }),
       ]);
       await this.notify(o.buyerId, "return_rejected", "Retur ditolak — masuk dispute admin", input.rejectNote ?? "", { humanId }, { important: true });
+      await this.logSystemMessage(o.id, `⚠️ Seller tolak retur: "${input.rejectNote ?? ""}". Kasus diteruskan ke admin sebagai dispute.`);
       return { ok: true, status: "rejected_to_dispute" };
     }
   }
@@ -501,6 +510,7 @@ export class OrdersService {
       },
     });
     await this.notify(o.sellerId, "return_shipped_back", "Buyer kirim barang balik", `Resi: ${input.trackingNumber}`, { humanId });
+    await this.logSystemMessage(o.id, `📦 Buyer kirim barang balik — kurir ${input.courierCode}, resi ${input.trackingNumber}.`);
     return { ok: true };
   }
 
@@ -515,6 +525,7 @@ export class OrdersService {
     if (!rr) throw new NotFoundException({ code: "not_found", message: "Tidak ada retur yang sedang dikirim balik." });
     await this.completeReturn(rr.id, "seller_confirmed");
     await this.notify(o.buyerId, "return_completed", "Retur selesai", "Dana refund diproses.", { humanId }, { important: true });
+    await this.logSystemMessage(o.id, "✅ Seller konfirmasi retur diterima — refund diproses.");
     return { ok: true };
   }
 
@@ -625,6 +636,8 @@ export class OrdersService {
       },
     });
     await this.prisma.order.update({ where: { id: o.id }, data: { status: "disputed" } });
+    const role = userId === o.buyerId ? "Buyer" : "Seller";
+    await this.logSystemMessage(o.id, `⚠️ ${role} buka dispute (${input.kind}): "${input.reason}". Admin akan review.`);
     return { ok: true, disputeId: d.id };
   }
 
@@ -667,6 +680,7 @@ export class OrdersService {
       await this.addBackStockOnRefund(d.orderId);
       await this.tryRefund(d.orderId, "dispute");
     }
+    await this.logSystemMessage(d.orderId, `🛡️ Admin putuskan: ${labelDecision(input.decision)}${input.adminNote ? ` Catatan admin: "${input.adminNote}"` : ""}`);
     return { ok: true, decision: input.decision };
   }
 
@@ -776,6 +790,119 @@ export class OrdersService {
         "Refund kamu sedang diproses manual oleh tim Hoobiq. Mohon ditunggu.",
         { humanId: order.humanId, reason }, { important: true });
     }
+  }
+
+  /* ----------------------- escrow chat ----------------------- */
+
+  /** Append a system-generated event row to an order's chat thread.
+   *  No notification fires here — every status change that calls this
+   *  already drops its own notify() for the relevant party, and we
+   *  don't want users to get a second push for the same event. Best-
+   *  effort: silently no-ops on a DB hiccup (chat is auxiliary, not
+   *  load-bearing for the order itself). */
+  async logSystemMessage(orderId: string, body: string) {
+    await this.prisma.orderMessage.create({
+      data: { orderId, kind: "system", body },
+    }).catch(() => undefined);
+  }
+
+  /** Buyer + seller can read; everyone else gets 403. Returns messages
+   *  oldest-first so the UI can append-render straight from the array. */
+  async listMessages(userId: string, humanId: string) {
+    const o = await this.prisma.order.findUnique({
+      where: { humanId },
+      select: { id: true, buyerId: true, sellerId: true },
+    });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (o.buyerId !== userId && o.sellerId !== userId) {
+      throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    }
+    const rows = await this.prisma.orderMessage.findMany({
+      where: { orderId: o.id },
+      orderBy: { createdAt: "asc" },
+      take: 500,
+      include: { sender: { select: { id: true, username: true, name: true, avatarUrl: true } } },
+    });
+    const role = o.buyerId === userId ? "buyer" as const : "seller" as const;
+    return {
+      role,
+      buyerId: o.buyerId,
+      sellerId: o.sellerId,
+      items: rows.map((m) => ({
+        id: m.id,
+        kind: m.kind,
+        body: m.body,
+        senderId: m.senderId,
+        sender: m.sender ? {
+          id: m.sender.id,
+          username: m.sender.username,
+          name: m.sender.name,
+          avatarUrl: m.sender.avatarUrl,
+        } : null,
+        createdAt: m.createdAt.toISOString(),
+        readByBuyerAt:  m.readByBuyerAt?.toISOString()  ?? null,
+        readBySellerAt: m.readBySellerAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
+  /** Buyer or seller posts a text message. Notifies the other party
+   *  (in-app only — too chatty for email). */
+  async postMessage(userId: string, humanId: string, body: string) {
+    const o = await this.prisma.order.findUnique({
+      where: { humanId },
+      select: { id: true, buyerId: true, sellerId: true, status: true },
+    });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (o.buyerId !== userId && o.sellerId !== userId) {
+      throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    }
+    if (body.trim().length === 0) {
+      throw new BadRequestException({ code: "empty", message: "Pesan kosong." });
+    }
+    const isBuyer = o.buyerId === userId;
+    const otherId = isBuyer ? o.sellerId : o.buyerId;
+    const m = await this.prisma.orderMessage.create({
+      data: {
+        orderId: o.id,
+        senderId: userId,
+        kind: "user",
+        body: body.trim(),
+        // Stamp the sender's own side as read on insert so the unread
+        // counter on their UI doesn't bump from their own message.
+        ...(isBuyer ? { readByBuyerAt: new Date() } : { readBySellerAt: new Date() }),
+      },
+    });
+    await this.notify(
+      otherId,
+      "order_message",
+      "Pesan baru di pesanan",
+      body.trim().slice(0, 80),
+      { humanId },
+      { important: false },
+    );
+    return { id: m.id, createdAt: m.createdAt.toISOString() };
+  }
+
+  /** Mark every unread message in this thread as read for the caller's
+   *  side. Called by the chat UI on mount + when the user scrolls past
+   *  the latest unread row. */
+  async markMessagesRead(userId: string, humanId: string) {
+    const o = await this.prisma.order.findUnique({
+      where: { humanId },
+      select: { id: true, buyerId: true, sellerId: true },
+    });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (o.buyerId !== userId && o.sellerId !== userId) {
+      throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    }
+    const isBuyer = o.buyerId === userId;
+    const field = isBuyer ? "readByBuyerAt" as const : "readBySellerAt" as const;
+    await this.prisma.orderMessage.updateMany({
+      where: { orderId: o.id, [field]: null },
+      data: { [field]: new Date() },
+    });
+    return { ok: true };
   }
 }
 

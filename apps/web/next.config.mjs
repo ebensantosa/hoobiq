@@ -6,6 +6,17 @@ const nextConfig = {
   // contains a self-contained server.js + only the deps it needs. We use this
   // on the VPS so we don't have to ship node_modules.
   output: "standalone",
+  // Keep Sentry's OpenTelemetry/Prisma instrumentation out of the webpack
+  // bundle — they use dynamic require() which webpack can't statically
+  // analyze, producing a "Critical dependency: the request of a dependency
+  // is an expression" warning. Resolving them via Node at runtime sidesteps
+  // that and matches Sentry's official guidance for Next 15.
+  serverExternalPackages: [
+    "@sentry/node",
+    "@sentry/nextjs",
+    "@prisma/instrumentation",
+    "@opentelemetry/instrumentation",
+  ],
   images: {
     remotePatterns: [
       // Cloudflare R2 CDN (production)

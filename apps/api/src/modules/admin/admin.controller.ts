@@ -480,18 +480,89 @@ export class AdminController {
     return { ok: true };
   }
 
-  /** Soft-delete only — hard delete would orphan orders, listings, posts. */
+  /** Hard-delete user + all owned data. Blocked if the user has any
+   *  Order record (buyer or seller side) — purging would orphan the
+   *  counterparty's order history. Admin should soft-suspend those
+   *  legacy users instead. */
   @Delete("users/:id")
   @HttpCode(204)
   async deleteUser(@CurrentUser() user: SessionUser, @Param("id") id: string) {
     if (id === user.id) {
-      throw new NotFoundException({ code: "self_delete_forbidden", message: "Tidak bisa menghapus akunmu sendiri." });
+      throw new BadRequestException({ code: "self_delete_forbidden", message: "Tidak bisa menghapus akunmu sendiri." });
     }
-    await this.prisma.user.update({
-      where: { id },
-      data: { status: "deleted", deletedAt: new Date() },
+    const target = await this.prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!target) throw new NotFoundException({ code: "not_found", message: "User tidak ditemukan." });
+    if (target.role === "superadmin") {
+      throw new BadRequestException({ code: "cannot_delete_superadmin", message: "Akun superadmin tidak boleh dihapus." });
+    }
+    const orderCount = await this.prisma.order.count({
+      where: { OR: [{ buyerId: id }, { sellerId: id }] },
     });
-    await this.writeAudit(user.id, "user.soft_delete", `user:${id}`);
+    if (orderCount > 0) {
+      throw new BadRequestException({
+        code: "user_has_orders",
+        message: `User punya ${orderCount} order historis. Hard-delete akan mengorbankan riwayat counterparty — gunakan suspend.`,
+      });
+    }
+
+    // Collect listing ids — children of listings need explicit purge
+    // because Listing has no onDelete cascade for its review/cart/wishlist
+    // children (those are FK'd from the user too, but a listing may also
+    // have children belonging to OTHER users we mustn't touch).
+    const listingIds = (await this.prisma.listing.findMany({
+      where: { sellerId: id }, select: { id: true },
+    })).map((l) => l.id);
+
+    const postIds = (await this.prisma.post.findMany({
+      where: { authorId: id }, select: { id: true },
+    })).map((p) => p.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Children of this user's listings (any user can have wishlisted /
+      // carted / reviewed them).
+      if (listingIds.length) {
+        await tx.wishlistItem.deleteMany({ where: { listingId: { in: listingIds } } });
+        await tx.cartItem.deleteMany({ where: { listingId: { in: listingIds } } });
+        await tx.listingReview.deleteMany({ where: { listingId: { in: listingIds } } });
+      }
+      // Children of this user's posts.
+      if (postIds.length) {
+        await tx.postLike.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.postComment.deleteMany({ where: { postId: { in: postIds } } });
+      }
+
+      // User-owned rows. Most have onDelete: Cascade, but we delete
+      // explicitly so the audit trail in the transaction is obvious
+      // and so we don't depend on schema flags that vary per relation.
+      await tx.session.deleteMany({ where: { userId: id } });
+      await tx.address.deleteMany({ where: { userId: id } });
+      await tx.bankAccount.deleteMany({ where: { userId: id } });
+      await tx.payoutRequest.deleteMany({ where: { userId: id } });
+      await tx.wishlistItem.deleteMany({ where: { userId: id } });
+      await tx.cartItem.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({ where: { userId: id } });
+      await tx.listingReview.deleteMany({ where: { buyerId: id } });
+      await tx.report.deleteMany({ where: { reporterId: id } });
+      await tx.categoryRequest.updateMany({ where: { decidedById: id }, data: { decidedById: null } });
+      await tx.categoryRequest.deleteMany({ where: { userId: id } });
+      await tx.payoutRequest.updateMany({ where: { decidedById: id }, data: { decidedById: null } });
+      await tx.tradeProposal.deleteMany({ where: { OR: [{ fromUserId: id }, { toUserId: id }] } });
+      await tx.tradePass.deleteMany({ where: { userId: id } });
+      await tx.tradeSwipe.deleteMany({ where: { OR: [{ userId: id }, { targetOwnerId: id }] } });
+      await tx.boostPurchase.deleteMany({ where: { userId: id } });
+      await tx.message.deleteMany({ where: { senderId: id } });
+      await tx.conversationMember.deleteMany({ where: { userId: id } });
+      await tx.postLike.deleteMany({ where: { userId: id } });
+      await tx.postComment.deleteMany({ where: { authorId: id } });
+      await tx.post.deleteMany({ where: { authorId: id } });
+      await tx.listing.deleteMany({ where: { sellerId: id } });
+      // AuditEntry.actor — keep history but null the FK so we can drop user.
+      await tx.auditEntry.updateMany({ where: { actorId: id }, data: { actorId: null } });
+
+      await tx.user.delete({ where: { id } });
+    }, { timeout: 30_000 });
+
+    await this.writeAudit(user.id, "user.hard_delete", `user:${id}`);
   }
 
   /* ------------------------------------------------------------------ */

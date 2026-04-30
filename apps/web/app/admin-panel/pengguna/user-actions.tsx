@@ -37,10 +37,10 @@ export function UserActions({ id, status }: { id: string; status: string }) {
 
   function remove() {
     dialog.open({
-      title: "Soft-delete user?",
-      description: "Akun ditandai 'deleted' tapi data historis (order, listing) tetap untuk audit. Aksi tidak bisa dibatalkan tanpa intervensi DB.",
+      title: "Hapus user permanen?",
+      description: "Semua data user (listing, post, wishlist, cart, sesi, payout, dll) akan dihapus dari database. Tidak bisa di-undo. Akan ditolak jika user punya riwayat order — gunakan suspend untuk akun lama.",
       tone: "danger",
-      confirmLabel: "Soft-delete",
+      confirmLabel: "Hapus permanen",
       onConfirm: async () => {
         setBusy("delete"); setErr(null);
         try {

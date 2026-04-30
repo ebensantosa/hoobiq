@@ -154,6 +154,16 @@ export const CreateListingInput = z.object({
   // and the per-item opt-out is surfaced as a checkbox in the upload form
   // for sellers who explicitly don't want trade offers on a piece.
   tradeable: z.boolean().default(true),
+  // When the seller typed a brand-new sub-category or series in the
+  // creatable picker, this carries the proposed name. The server
+  // creates a CategoryRequest, links the listing to it, and parks
+  // the listing at moderation="pending_category" / isPublished=false
+  // until an admin approves the request. `categoryId` in that case
+  // points to the PARENT (level above), so the listing has a valid
+  // category ancestor while waiting.
+  pendingCategory: z.object({
+    name: z.string().trim().min(2).max(80),
+  }).optional(),
 });
 export type CreateListingInput = z.infer<typeof CreateListingInput>;
 

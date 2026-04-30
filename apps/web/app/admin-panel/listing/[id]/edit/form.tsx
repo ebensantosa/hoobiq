@@ -47,7 +47,7 @@ export type AdminListingDetail = {
   stock: number;
   weightGrams: number;
   tradeable: boolean;
-  moderation: "pending" | "active" | "hidden" | "rejected";
+  moderation: "pending" | "pending_category" | "active" | "hidden" | "rejected";
   isPublished: boolean;
   images: string[];
   seller: { id: string; username: string; name: string | null; email: string };
@@ -65,7 +65,7 @@ const CONDITIONS: AdminListingDetail["condition"][] = [
   "POOR",
 ];
 
-const MOD_OPTIONS: AdminListingDetail["moderation"][] = ["active", "pending", "hidden", "rejected"];
+const MOD_OPTIONS: AdminListingDetail["moderation"][] = ["active", "pending", "pending_category", "hidden", "rejected"];
 
 export function ListingEditForm({
   initial,

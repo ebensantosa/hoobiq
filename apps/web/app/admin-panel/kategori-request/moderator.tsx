@@ -16,6 +16,8 @@ type RequestItem = {
   rejectNote: string | null;
   parent: { slug: string; name: string; level: number };
   user:   { username: string; name: string | null; avatarUrl: string | null };
+  listings?: Array<{ id: string; slug: string; title: string }>;
+  listingsCount?: number;
   createdAt: string;
   decidedAt: string | null;
 };
@@ -98,11 +100,15 @@ function Row({ item, onChange, status }: { item: RequestItem; onChange: () => vo
   function approve() {
     start(async () => {
       try {
-        await api(`/categories/requests/${item.id}/approve`, {
-          method: "POST",
-          body: { slug, name },
-        });
-        toast.success("Kategori disetujui", `${name} sekarang aktif.`);
+        const res = await api<{ publishedCount?: number }>(
+          `/categories/requests/${item.id}/approve`,
+          { method: "POST", body: { slug, name } },
+        );
+        const n = res?.publishedCount ?? 0;
+        toast.success(
+          "Kategori disetujui",
+          n > 0 ? `${name} aktif · ${n} listing langsung publish.` : `${name} sekarang aktif.`,
+        );
         onChange();
       } catch (e) {
         const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal approve.";
@@ -149,6 +155,40 @@ function Row({ item, onChange, status }: { item: RequestItem; onChange: () => vo
           {item.description && (
             <p className="mt-2 text-sm text-fg-muted">“{item.description}”</p>
           )}
+
+          {/* Linked listings — surface the products waiting on this
+              category so the admin understands the impact of approve
+              vs reject. Approving live-publishes them; rejecting
+              parks them at moderation="rejected" until the seller
+              picks a different category and re-saves. */}
+          {(item.listingsCount ?? 0) > 0 && (
+            <div className="mt-3 rounded-md border border-rule bg-panel/40 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">
+                {item.listingsCount} produk terkait
+                {status === "pending" && " — akan auto-publish setelah disetujui"}
+              </p>
+              {item.listings && item.listings.length > 0 && (
+                <ul className="mt-1 space-y-0.5 text-xs text-fg-muted">
+                  {item.listings.map((l) => (
+                    <li key={l.id} className="truncate">
+                      <Link
+                        href={`/admin-panel/listing/${l.id}/edit`}
+                        className="hover:text-brand-500"
+                      >
+                        {l.title}
+                      </Link>
+                    </li>
+                  ))}
+                  {(item.listingsCount ?? 0) > (item.listings?.length ?? 0) && (
+                    <li className="text-fg-subtle">
+                      …dan {(item.listingsCount ?? 0) - (item.listings?.length ?? 0)} lainnya
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+
           {status === "rejected" && item.rejectNote && (
             <p className="mt-2 rounded-md border border-flame-400/30 bg-flame-400/5 px-3 py-2 text-xs text-flame-600">
               <span className="font-semibold">Ditolak:</span> {item.rejectNote}

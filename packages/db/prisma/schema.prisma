@@ -200,6 +200,7 @@ model CategoryRequest {
   user     User      @relation("CategoryRequestUser",   fields: [userId],     references: [id], onDelete: Cascade)
   parent   Category  @relation(                          fields: [parentId],   references: [id])
   decidedBy User?    @relation("CategoryRequestDecider", fields: [decidedById],references: [id])
+  listings Listing[]
 
   @@index([status, createdAt])
   @@index([userId, createdAt])
@@ -229,6 +230,13 @@ model Listing {
   brand        String?
   variant      String?
   warranty     String?
+  // Set when a seller created this listing with a brand-new
+  // sub-category or series the marketplace doesn't have yet. The
+  // listing stays at moderation="pending_category" / isPublished=false
+  // until the linked CategoryRequest is approved by an admin; on
+  // approval, the cascade in approveRequest() flips this listing
+  // (and any siblings) to active + clears this column.
+  categoryRequestId String? @map("category_request_id")
   // Owner has flagged this item as available for trade. When true the
   // listing surfaces in /trades deck for everyone (not just wishlist
   // matches). Doesn't disable purchase — buyers can still checkout normally.
@@ -252,6 +260,7 @@ model Listing {
 
   seller   User            @relation("SellerListings", fields: [sellerId], references: [id])
   category Category        @relation(fields: [categoryId], references: [id])
+  categoryRequest CategoryRequest? @relation(fields: [categoryRequestId], references: [id])
   orders   Order[]
   wishes   WishlistItem[]
   reviews  ListingReview[]

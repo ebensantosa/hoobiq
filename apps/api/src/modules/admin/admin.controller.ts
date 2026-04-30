@@ -17,7 +17,7 @@ const ListingPatch = z.object({
   compareAtIdr: z.number().int().positive().nullable().optional(),
   categoryId:   z.string().min(1).optional(),
   condition:    z.enum(["BRAND_NEW_SEALED", "LIKE_NEW", "EXCELLENT", "GOOD", "FAIR", "POOR"]).optional(),
-  moderation:   z.enum(["pending", "active", "hidden", "rejected"]).optional(),
+  moderation:   z.enum(["pending", "pending_category", "active", "hidden", "rejected"]).optional(),
   isPublished:  z.boolean().optional(),
   // New admin-only powers — full content edit + transfer ownership.
   images:       z.array(z.string().min(1)).min(1).max(8).optional(),

@@ -279,12 +279,50 @@ export class ListingsService {
         message: "Harga coret harus lebih tinggi dari harga jual.",
       });
     }
+    // Pending-category branch — seller typed a brand-new sub-cat or
+    // series in the creatable picker. We create a CategoryRequest
+    // linked to the parent (input.categoryId), then create the listing
+    // pointing at the parent + that request id, parked at
+    // moderation="pending_category" / isPublished=false until admin
+    // approves. categoryId stays as the parent so foreign-key constraints
+    // and the rollup-counts query don't break in the meantime.
+    let categoryRequestId: string | null = null;
+    let initialModeration: string = "active";
+    let initialPublished = true;
+    if (input.pendingCategory) {
+      const parent = await this.prisma.category.findUnique({
+        where: { id: input.categoryId },
+        select: { id: true, level: true },
+      });
+      if (!parent) {
+        throw new NotFoundException({ code: "parent_not_found", message: "Kategori induk tidak ditemukan." });
+      }
+      if (parent.level >= 3) {
+        throw new BadRequestException({
+          code: "max_depth",
+          message: "Sudah di kedalaman maksimum (3 level). Pilih induk lain.",
+        });
+      }
+      const req = await this.prisma.categoryRequest.create({
+        data: {
+          userId: sellerId,
+          parentId: parent.id,
+          name: input.pendingCategory.name,
+        },
+        select: { id: true },
+      });
+      categoryRequestId = req.id;
+      initialModeration = "pending_category";
+      initialPublished = false;
+    }
+
     const slug = await this.uniqueSlug(input.title);
     const listing = await this.prisma.listing.create({
       data: {
         slug,
         sellerId,
         categoryId: input.categoryId,
+        ...(categoryRequestId && { categoryRequestId }),
         title: input.title,
         description: input.description,
         priceCents: BigInt(input.priceIdr) * CENTS_PER_RUPIAH,
@@ -302,16 +340,12 @@ export class ListingsService {
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
         // Default trade-on per spec — sellers opt out, not in.
         tradeable: input.tradeable ?? true,
-        // Auto-publish on create. We don't have a moderator workforce or
-        // automated review pipeline yet, and the previous "pending" default
-        // meant new listings were invisible until an admin manually flipped
-        // them — most never did. Admin can still hide via /admin-panel/listing.
-        isPublished: true,
-        moderation: "active",
+        isPublished: initialPublished,
+        moderation: initialModeration,
       },
     });
     await this.redis.invalidate("listings:search:*");
-    return { id: listing.id, slug: listing.slug };
+    return { id: listing.id, slug: listing.slug, pendingCategory: !!categoryRequestId };
   }
 
   async update(sellerId: string, id: string, input: UpdateListingInput) {

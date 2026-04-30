@@ -187,6 +187,15 @@ export class CategoriesController {
       include: {
         user:   { select: { username: true, name: true, avatarUrl: true } },
         parent: { select: { slug: true, name: true, level: true } },
+        // Up to 5 linked listings inline so the admin can preview what
+        // approving/rejecting will affect without opening a separate
+        // tab. _count gives the full total when there are more.
+        listings: {
+          where: { deletedAt: null },
+          take: 5,
+          select: { id: true, slug: true, title: true },
+        },
+        _count: { select: { listings: true } },
       },
     });
     return {
@@ -199,6 +208,8 @@ export class CategoriesController {
         rejectNote: r.rejectNote,
         parent: r.parent,
         user: r.user,
+        listings: r.listings,
+        listingsCount: r._count.listings,
         createdAt: r.createdAt.toISOString(),
         decidedAt: r.decidedAt?.toISOString() ?? null,
       })),
@@ -228,7 +239,7 @@ export class CategoriesController {
     const slugTaken = await this.prisma.category.findUnique({ where: { slug: body.slug } });
     if (slugTaken) throw new BadRequestException({ code: "slug_taken", message: "Slug sudah dipakai." });
 
-    const newCat = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const cat = await tx.category.create({
         data: {
           slug: body.slug,
@@ -246,11 +257,54 @@ export class CategoriesController {
           decidedAt: new Date(),
         },
       });
-      return cat;
+      // Cascade-publish — every listing parked behind this request
+      // now has a real category to point at. Flip them to active +
+      // published in one shot and clear the pending link so the
+      // listing detail / admin queries stop treating them as pending.
+      const linked = await tx.listing.findMany({
+        where: { categoryRequestId: id, deletedAt: null },
+        select: { id: true, sellerId: true, slug: true, title: true },
+      });
+      if (linked.length > 0) {
+        await tx.listing.updateMany({
+          where: { categoryRequestId: id, deletedAt: null },
+          data: {
+            categoryId: cat.id,
+            categoryRequestId: null,
+            moderation: "active",
+            isPublished: true,
+          },
+        });
+        // Notification per affected seller. Buyer experience-wise this
+        // is the moment the listing actually goes live, so the seller
+        // gets a heads-up + deep link to the listing.
+        await tx.notification.createMany({
+          data: linked.map((l) => ({
+            userId: l.sellerId,
+            kind: "category.approved",
+            title: "Kategori disetujui — listing kamu live",
+            body: `"${l.title}" sekarang tampil di marketplace di kategori ${cat.name}.`,
+            dataJson: JSON.stringify({
+              listingId: l.id,
+              listingSlug: l.slug,
+              categoryId: cat.id,
+              categorySlug: cat.slug,
+            }),
+          })),
+        });
+      }
+      return { cat, publishedCount: linked.length };
     });
 
     await this.redis.client.del("categories:tree:v3").catch(() => undefined);
-    return { id: newCat.id, slug: newCat.slug, name: newCat.name, level: newCat.level };
+    await this.redis.invalidate("listings:search:*").catch(() => undefined);
+    return {
+      id: result.cat.id,
+      slug: result.cat.slug,
+      name: result.cat.name,
+      level: result.cat.level,
+      publishedCount: result.publishedCount,
+    };
   }
 
   @Post("requests/:id/reject")
@@ -269,15 +323,41 @@ export class CategoriesController {
     if (req.status !== "pending") {
       throw new BadRequestException({ code: "bad_state", message: "Request sudah diproses." });
     }
-    await this.prisma.categoryRequest.update({
-      where: { id },
-      data: {
-        status: "rejected",
-        rejectNote: body.note,
-        decidedById: admin.id,
-        decidedAt: new Date(),
-      },
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.categoryRequest.update({
+        where: { id },
+        data: {
+          status: "rejected",
+          rejectNote: body.note,
+          decidedById: admin.id,
+          decidedAt: new Date(),
+        },
+      });
+      // Linked listings stay parked but flip to "rejected" so the
+      // seller sees a clear state in the dashboard and can edit + pick
+      // a different (existing) category to resubmit. We do NOT delete
+      // the listing — content stays so the seller can edit in place.
+      const linked = await tx.listing.findMany({
+        where: { categoryRequestId: id, deletedAt: null },
+        select: { id: true, sellerId: true, slug: true, title: true },
+      });
+      if (linked.length > 0) {
+        await tx.listing.updateMany({
+          where: { categoryRequestId: id, deletedAt: null },
+          data: { moderation: "rejected", isPublished: false },
+        });
+        await tx.notification.createMany({
+          data: linked.map((l) => ({
+            userId: l.sellerId,
+            kind: "category.rejected",
+            title: "Kategori ditolak — listing perlu diedit",
+            body: `Request kategori untuk "${l.title}" ditolak: ${body.note}. Edit listing dan pilih kategori yang sudah ada.`,
+            dataJson: JSON.stringify({ listingId: l.id, listingSlug: l.slug, note: body.note }),
+          })),
+        });
+      }
+      return { affectedCount: linked.length };
     });
-    return { ok: true };
+    return { ok: true, affectedCount: result.affectedCount };
   }
 }

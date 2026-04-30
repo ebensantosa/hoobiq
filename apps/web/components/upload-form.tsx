@@ -135,6 +135,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   // Default ON — collectors expect listings to be at least theoretically
   // tradeable. Sellers untick to opt out per item.
   const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? true);
+  /** Set when the seller picks "Buat baru" in the sub-kategori or
+   *  series/set combobox. Submit handler bundles this into the
+   *  pendingCategory payload; categoryId stays at the parent. */
+  const [pendingCategoryName, setPendingCategoryName] = React.useState<string | null>(null);
 
   // Track which fields the user has actually interacted with — we only
   // surface errors after they've been touched (avoids "all red on first
@@ -205,6 +209,13 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           stock:       Number(state.stock),
           condition,
           categoryId:  state.categoryId,
+          // When the seller typed a brand-new sub-cat / series in the
+          // creatable picker, the server creates a CategoryRequest and
+          // parks the listing at moderation="pending_category" until
+          // an admin approves. categoryId above stays at the parent.
+          ...(pendingCategoryName && {
+            pendingCategory: { name: pendingCategoryName },
+          }),
           images:      finalImages,
           weightGrams: Number(state.weight),
           couriers:    couriers as CreateListingPayload["couriers"],
@@ -215,7 +226,14 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           ? await listingsWriteApi.update(existing.id, payload)
           : await listingsWriteApi.create(payload);
         setProgress({ stage: "idle", done: 0, total: 0 });
-        router.push(`/listing/${res.slug}`);
+        // Pending-category listings aren't public yet — bounce the
+        // seller to their dashboard so the "menunggu approval" state
+        // is the first thing they see, instead of a 404-ish detail page.
+        if (!existing && "pendingCategory" in res && res.pendingCategory) {
+          router.push("/jual?from=pending");
+        } else {
+          router.push(`/listing/${res.slug}`);
+        }
       } catch (e) {
         setProgress({ stage: "idle", done: 0, total: 0 });
         // Surface server validation errors in the same inline slots — never
@@ -257,6 +275,8 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           value={state.categoryId}
           onChange={(id) => { set("categoryId", id); blur("categoryId"); }}
           error={showErr("categoryId")}
+          pendingName={pendingCategoryName}
+          onPendingChange={setPendingCategoryName}
         />
         <p className="-mt-3 text-[11px] text-fg-subtle">
           Belum ada series/anime yang kamu cari?{" "}
@@ -445,25 +465,29 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
 }
 
 /**
- * Three dependent dropdowns matching the Hoobiq spec wording:
+ * Three dependent pickers matching the Hoobiq spec wording:
  *   Kategori → Sub Kategori → Series/Set
  *
- * The form's persisted `categoryId` is the deepest selected node, so when
- * the seller picks just a category we save the level-1 id; if they go
- * deeper we save level-2 or level-3. The marketplace filter rolls up
- * counts so saving deep is always correct.
+ * Level 1 stays a plain select (5 fixed primary buckets). Level 2
+ * and Level 3 are creatable comboboxes — the seller can pick an
+ * existing option OR type a brand-new name. When they pick "Buat
+ * baru: <name>", the form sets `pendingCategoryName` and the listing
+ * gets created at moderation="pending_category" with a CategoryRequest
+ * linked to it. Admin approval cascades a publish.
  *
- * Resets cascade downward — picking a new "Kategori" clears the sub +
- * series fields automatically. We resolve the active path from the
- * existing categoryId on mount so editing an existing listing works.
+ * The form's persisted `categoryId` is the deepest existing ancestor
+ * (the parent of the new node when pendingCategoryName is set, or
+ * the leaf id otherwise).
  */
 function CategoryPicker({
-  tree, value, onChange, error,
+  tree, value, onChange, error, pendingName, onPendingChange,
 }: {
   tree: Node[];
   value: string;
   onChange: (id: string) => void;
   error?: string;
+  pendingName: string | null;
+  onPendingChange: (name: string | null) => void;
 }) {
   // Build a flat lookup so we can resolve the ancestor chain of the
   // currently-stored value when the form mounts.
@@ -515,59 +539,228 @@ function CategoryPicker({
     (hasError ? "border-flame-400 focus:border-flame-400" : "border-rule focus:border-brand-400/60");
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Field label="Kategori" error={error}>
-        <select
-          value={l1}
-          onChange={(e) => {
-            const v = e.target.value;
-            setL1(v); setL2(""); setL3("");
-            onChange(v);
-          }}
-          className={selectClass(!!error && !l1)}
-        >
-          <option value="">— Pilih —</option>
-          {l1Nodes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </Field>
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="Kategori" error={error}>
+          <select
+            value={l1}
+            onChange={(e) => {
+              const v = e.target.value;
+              setL1(v); setL2(""); setL3("");
+              onPendingChange(null);
+              onChange(v);
+            }}
+            className={selectClass(!!error && !l1)}
+          >
+            <option value="">— Pilih —</option>
+            {l1Nodes.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </Field>
 
-      <Field label="Sub Kategori" hint={l1 && l2Nodes.length === 0 ? "(tidak ada sub)" : undefined}>
-        <select
-          value={l2}
-          onChange={(e) => {
-            const v = e.target.value;
-            setL2(v); setL3("");
-            onChange(v || l1);
-          }}
-          disabled={!l1 || l2Nodes.length === 0}
-          className={selectClass(false) + (!l1 || l2Nodes.length === 0 ? " opacity-50" : "")}
+        <Field
+          label="Sub Kategori"
+          hint={l1 && l2Nodes.length === 0 ? "Belum ada sub — ketik untuk buat baru." : undefined}
         >
-          <option value="">{l1 ? "— Pilih —" : "Pilih kategori dulu"}</option>
-          {l2Nodes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </Field>
+          <CreatablePicker
+            disabled={!l1}
+            disabledHint="Pilih kategori dulu"
+            options={l2Nodes.map((c) => ({ id: c.id, name: c.name }))}
+            selectedId={l2}
+            pendingName={pendingName !== null && !l3 ? pendingName : null}
+            onPick={(id) => {
+              setL2(id); setL3("");
+              onPendingChange(null);
+              onChange(id);
+            }}
+            onCreate={(name) => {
+              // Buat baru di level 2 — parent is L1.
+              setL2(""); setL3("");
+              onPendingChange(name);
+              onChange(l1);
+            }}
+          />
+        </Field>
 
-      <Field label="Series/Set" hint={l2 && l3Nodes.length === 0 ? "(tidak ada series)" : undefined}>
-        <select
-          value={l3}
-          onChange={(e) => {
-            const v = e.target.value;
-            setL3(v);
-            onChange(v || l2 || l1);
-          }}
-          disabled={!l2 || l3Nodes.length === 0}
-          className={selectClass(false) + (!l2 || l3Nodes.length === 0 ? " opacity-50" : "")}
+        <Field
+          label="Series / Set"
+          hint={
+            l2 && l3Nodes.length === 0
+              ? "Belum ada series — ketik untuk buat baru."
+              : undefined
+          }
         >
-          <option value="">{l2 ? "— Pilih —" : "Pilih sub kategori dulu"}</option>
-          {l3Nodes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </Field>
+          <CreatablePicker
+            disabled={!l2}
+            disabledHint="Pilih sub kategori dulu"
+            options={l3Nodes.map((c) => ({ id: c.id, name: c.name }))}
+            selectedId={l3}
+            pendingName={pendingName !== null && !!l2 && !l3 ? pendingName : null}
+            onPick={(id) => {
+              setL3(id);
+              onPendingChange(null);
+              onChange(id);
+            }}
+            onCreate={(name) => {
+              // Buat baru di level 3 — parent is L2.
+              setL3("");
+              onPendingChange(name);
+              onChange(l2);
+            }}
+          />
+        </Field>
+      </div>
+
+      {pendingName && (
+        <div className="rounded-md border border-brand-400/40 bg-brand-400/5 px-3 py-2 text-xs text-fg">
+          <span className="font-semibold text-brand-500">Kategori baru:</span>{" "}
+          “{pendingName}” akan direview admin. Listing kamu tersimpan di
+          dashboard tapi <b>belum tampil di marketplace</b> sampai disetujui.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Creatable combobox — search existing options, or press Enter (or
+ * click the "+ Buat baru" row) to propose a new one. Single shared
+ * UI for sub-kategori + series/set so both pickers behave identically.
+ */
+function CreatablePicker({
+  disabled, disabledHint, options, selectedId, pendingName, onPick, onCreate,
+}: {
+  disabled: boolean;
+  disabledHint: string;
+  options: { id: string; name: string }[];
+  selectedId: string;
+  /** Name the seller has typed but not yet committed; surfaces as a chip. */
+  pendingName: string | null;
+  onPick: (id: string) => void;
+  onCreate: (name: string) => void;
+}) {
+  const selected = options.find((o) => o.id === selectedId) ?? null;
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Reset query when the picker closes or the parent changes.
+  React.useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      // `Node` is shadowed by the local category-tree Node type at the
+      // top of this file, so disambiguate to the DOM Node here.
+      if (!containerRef.current?.contains(e.target as globalThis.Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const matches = q.length === 0
+    ? options
+    : options.filter((o) => o.name.toLowerCase().includes(q));
+  const exactExists = q.length > 0 && options.some((o) => o.name.toLowerCase() === q);
+  const canCreate = q.length >= 2 && !exactExists;
+
+  // The trigger doubles as the displayed label (selected name, pending
+  // chip, or placeholder). Clicking opens the dropdown which holds the
+  // search field + filtered list + create row.
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className={
+          "flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-rule bg-panel px-3 text-left text-sm text-fg transition-colors hover:border-brand-400/50 focus:outline-none focus:ring-2 focus:ring-brand-400/20 " +
+          (disabled ? "opacity-50" : "")
+        }
+      >
+        <span className="truncate">
+          {selected ? (
+            selected.name
+          ) : pendingName ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span>{pendingName}</span>
+              <span className="rounded-sm bg-brand-400/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-brand-500">
+                BARU
+              </span>
+            </span>
+          ) : (
+            <span className="text-fg-subtle">
+              {disabled ? disabledHint : "— Pilih atau ketik baru —"}
+            </span>
+          )}
+        </span>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+          className={"text-fg-subtle transition-transform " + (open ? "rotate-180" : "")}
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && !disabled && (
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-rule bg-canvas shadow-xl">
+          <div className="border-b border-rule p-2">
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canCreate) {
+                  e.preventDefault();
+                  onCreate(query.trim());
+                  setOpen(false);
+                }
+              }}
+              placeholder="Cari atau ketik baru…"
+              className="h-9 w-full rounded-md border border-rule bg-panel px-3 text-sm text-fg placeholder:text-fg-subtle focus:border-brand-400/60 focus:outline-none focus:ring-2 focus:ring-brand-400/15"
+            />
+          </div>
+          <ul className="max-h-56 overflow-y-auto py-1 text-sm">
+            {matches.length === 0 && q.length === 0 && (
+              <li className="px-3 py-2 text-xs text-fg-subtle">
+                Belum ada pilihan. Ketik untuk buat baru.
+              </li>
+            )}
+            {matches.map((o) => (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  onClick={() => { onPick(o.id); setOpen(false); }}
+                  className={
+                    "flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-panel " +
+                    (o.id === selectedId ? "bg-brand-400/10 text-fg" : "text-fg-muted")
+                  }
+                >
+                  <span className="truncate">{o.name}</span>
+                  {o.id === selectedId && <span className="text-brand-500">✓</span>}
+                </button>
+              </li>
+            ))}
+            {canCreate && (
+              <li className="border-t border-rule">
+                <button
+                  type="button"
+                  onClick={() => { onCreate(query.trim()); setOpen(false); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold text-brand-500 hover:bg-brand-400/10"
+                >
+                  <span aria-hidden>+</span>
+                  <span className="truncate">Buat baru: “{query.trim()}”</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

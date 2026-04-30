@@ -183,7 +183,10 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @HttpCode(200)
   async verifyEmail(
-    @Body(new ZodPipe(z.object({ token: z.string().min(16).max(128) })))
+    // Token min length 4 to accept the 6-digit OTP code path; max 128
+    // still covers the legacy long random token if any old emails are
+    // still in flight.
+    @Body(new ZodPipe(z.object({ token: z.string().trim().min(4).max(128) })))
     body: { token: string },
   ) {
     return this.auth.verifyEmail(body.token);

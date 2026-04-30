@@ -32,38 +32,43 @@ export class AuthService {
     return `${base}/verifikasi-email?token=${encodeURIComponent(rawToken)}`;
   }
 
-  private verificationEmailHtml(name: string, link: string): string {
-    // Inline-styled, simple HTML — Resend renders this verbatim. Kept
-    // minimal so it works in plain-text email previews and on mobile.
+  private verificationEmailHtml(name: string, code: string, link: string): string {
+    // The email shows the 6-digit code prominently AND a clickable
+    // link that auto-fills the same code in the verify-email page.
+    // The two paths converge to the same POST /auth/verify-email,
+    // which hashes whatever token came in and looks up the user row.
     return `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #111;">
         <h1 style="font-size: 22px; margin: 0 0 16px;">Halo ${escapeHtml(name)}, selamat datang di Hoobiq! 👋</h1>
         <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
-          Yuk konfirmasi email kamu dulu supaya akun-mu aktif sepenuhnya. Klik tombol di bawah:
+          Yuk konfirmasi email kamu pakai kode 6-digit di bawah. Ketik di halaman verifikasi:
         </p>
-        <p style="margin: 24px 0;">
+        <div style="margin: 24px 0; padding: 24px; background: #faf6fb; border: 1px solid #efd9e7; border-radius: 12px; text-align: center;">
+          <p style="font-size: 11px; color: #6b7280; margin: 0 0 8px; letter-spacing: 0.18em; text-transform: uppercase;">Kode verifikasi</p>
+          <p style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 32px; font-weight: 800; letter-spacing: 0.32em; color: #e7559f; margin: 0;">${code}</p>
+        </div>
+        <p style="font-size: 14px; line-height: 1.6; margin: 16px 0 0;">Atau klik tombol berikut — kami isi kodenya otomatis:</p>
+        <p style="margin: 12px 0;">
           <a href="${link}" style="display: inline-block; background: #e7559f; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
             Verifikasi email
           </a>
         </p>
-        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 16px 0 0;">
-          Atau copy-paste link ini ke browser: <br/>
-          <a href="${link}" style="color: #e7559f; word-break: break-all;">${link}</a>
-        </p>
         <p style="font-size: 12px; color: #9ca3af; margin: 32px 0 0;">
-          Link ini berlaku ${VERIFY_TOKEN_TTL_HOURS} jam. Kalau bukan kamu yang daftar, abaikan email ini.
+          Kode berlaku ${VERIFY_TOKEN_TTL_HOURS} jam. Kalau bukan kamu yang daftar, abaikan email ini.
         </p>
       </div>
     `.trim();
   }
 
-  /** Issue a fresh verification token, persist its hash, and email
-   *  the raw token to the user. Used by both register() and the
-   *  resend-email endpoint. Best-effort email — failures are logged
-   *  but never thrown (we don't want a Resend hiccup to fail register). */
+  /** Issue a fresh 6-digit verification code, persist its hash, and
+   *  email it to the user. Used by both register() and resend-email.
+   *  Best-effort email — failures are logged but never thrown (we
+   *  don't want a Resend hiccup to fail register). */
   private async issueVerificationEmail(userId: string, email: string, displayName: string) {
-    const rawToken = crypto.randomBytes(32).toString("base64url");
-    const tokenHash = sha256(rawToken);
+    // 6-digit numeric code (000000 – 999999). Easier to read off
+    // an email + type into a phone keyboard than a random hex blob.
+    const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+    const tokenHash = sha256(code);
     const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_HOURS * 3600 * 1000);
     await this.prisma.user.update({
       where: { id: userId },
@@ -75,8 +80,8 @@ export class AuthService {
     try {
       await this.email.send(
         email,
-        "Verifikasi email kamu di Hoobiq",
-        this.verificationEmailHtml(displayName, this.verifyLink(rawToken)),
+        `Hoobiq · Kode verifikasi: ${code}`,
+        this.verificationEmailHtml(displayName, code, this.verifyLink(code)),
       );
     } catch (e) {
       this.log.error(`verify email send failed for ${email}: ${(e as Error).message}`);
@@ -288,6 +293,17 @@ export class AuthService {
       throw new UnauthorizedException({
         code: "account_not_active",
         message: "Akun kamu sedang dibatasi. Hubungi bantuan@hoobiq.id.",
+      });
+    }
+    // Block login until the email is confirmed. Frontend reads the
+    // `email_not_verified` code and bounces to /verifikasi-email so
+    // the user can enter the OTP. Skipped for legacy seed accounts
+    // that were created before email verification existed (their
+    // emailVerified is set during seed).
+    if (!user.emailVerified) {
+      throw new UnauthorizedException({
+        code: "email_not_verified",
+        message: "Email kamu belum diverifikasi. Cek inbox dan masukkan kode 6-digit.",
       });
     }
 

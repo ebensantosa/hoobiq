@@ -36,20 +36,19 @@ export default function RegisterPage() {
     setFieldErrors({});
     start(async () => {
       try {
+        const email = String(fd.get("email") ?? "").trim();
         await authApi.register({
           username: String(fd.get("username") ?? "").trim(),
-          email: String(fd.get("email") ?? "").trim(),
+          email,
           phone: String(fd.get("phone") ?? "").trim(),
           password: String(fd.get("password") ?? ""),
           acceptTerms: true,
         });
-        // API returns 201 without a session — we log in immediately after
-        await authApi.login({
-          identifier: String(fd.get("email") ?? "").trim(),
-          password: String(fd.get("password") ?? ""),
-          remember: true,
-        });
-        router.push("/onboarding");
+        // No auto-login — server now blocks login until the email is
+        // verified (POST /auth/login throws email_not_verified). Send
+        // the user to the OTP page so they can enter the code from
+        // the email immediately.
+        router.push(`/verifikasi-email?email=${encodeURIComponent(email)}`);
         router.refresh();
       } catch (e) {
         if (e instanceof ApiError && Array.isArray(e.details)) {

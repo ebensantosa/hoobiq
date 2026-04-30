@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
 import { ResendEmailButton } from "@/components/resend-email-button";
+import { OtpForm } from "./otp-form";
 
 export const metadata = { title: "Verifikasi email · Hoobiq" };
 export const dynamic = "force-dynamic";
@@ -101,14 +102,14 @@ export default async function VerifikasiEmailPage({
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <Link
-            href="/onboarding"
+            href="/masuk"
             className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-400 px-6 text-sm font-semibold text-white hover:bg-brand-500"
           >
-            Lanjut ke onboarding
+            Masuk sekarang
           </Link>
-          <Link href="/marketplace" className="text-center text-sm text-fg-muted hover:text-fg">
-            Atau langsung ke marketplace
-          </Link>
+          <p className="text-center text-xs text-fg-subtle">
+            Login pakai email + password yang sama saat daftar.
+          </p>
         </div>
       </AuthShell>
     );
@@ -116,11 +117,11 @@ export default async function VerifikasiEmailPage({
 
   return (
     <AuthShell
-      sideTitle="Cek inbox kamu dulu."
+      sideTitle="Konfirmasi email kamu dulu."
       sideBullets={[
-        "Email verifikasi kami kirim dari noreply@hoobiq.id.",
-        "Tautan berlaku 24 jam.",
-        "Kalau belum masuk dalam 3 menit, cek folder spam atau promosi.",
+        "Kode 6-digit kami kirim ke email kamu.",
+        "Kode berlaku 24 jam — bisa minta kirim ulang setiap 30 detik.",
+        "Kalau belum masuk dalam 3 menit, cek folder spam / promosi.",
       ]}
     >
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-400/15 text-brand-400">
@@ -130,24 +131,14 @@ export default async function VerifikasiEmailPage({
         Cek email kamu.
       </h1>
       <p className="mt-3 text-sm text-fg-muted">
-        Kami kirim tautan verifikasi ke{" "}
-        <b className="text-fg">{email}</b>. Klik tautan di email untuk mengaktifkan akun.
+        Kami kirim kode 6-digit ke <b className="text-fg">{email}</b>. Masukkan
+        di bawah untuk mengaktifkan akun.
       </p>
 
-      <div className="mt-8 flex flex-col gap-3">
-        <ResendEmailButton email={email} />
-        <Link href="/masuk" className="text-center text-sm text-fg-muted hover:text-fg">
-          Kembali ke masuk
-        </Link>
-      </div>
+      <OtpForm email={email} />
 
-      <p className="mt-10 rounded-xl border border-rule bg-panel/60 p-4 text-xs leading-relaxed text-fg-muted">
-        <b className="text-fg">Salah alamat email?</b> Kamu bisa mengubah email sebelum
-        verifikasi dari halaman ini. Kontak{" "}
-        <a href="mailto:bantuan@hoobiq.id" className="text-brand-400">
-          bantuan@hoobiq.id
-        </a>{" "}
-        kalau kesulitan.
+      <p className="mt-8 text-center text-sm text-fg-muted">
+        <Link href="/masuk" className="hover:text-fg">Kembali ke masuk</Link>
       </p>
     </AuthShell>
   );

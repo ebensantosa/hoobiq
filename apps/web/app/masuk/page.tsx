@@ -30,10 +30,11 @@ function LoginPageInner() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setErr(null);
+    const identifier = String(fd.get("identifier") ?? "").trim();
     start(async () => {
       try {
         await authApi.login({
-          identifier: String(fd.get("identifier") ?? "").trim(),
+          identifier,
           password: String(fd.get("password") ?? ""),
           remember: fd.get("remember") === "on",
         });
@@ -44,6 +45,15 @@ function LoginPageInner() {
         router.push(dest);
         router.refresh();
       } catch (e) {
+        // Email-not-verified bounce — server gates login until OTP
+        // confirmation. Take them straight to /verifikasi-email so
+        // they don't sit on /masuk wondering what to do next.
+        if (e instanceof ApiError && e.code === "email_not_verified") {
+          const isEmail = identifier.includes("@");
+          const url = "/verifikasi-email" + (isEmail ? `?email=${encodeURIComponent(identifier)}` : "");
+          router.push(url);
+          return;
+        }
         setErr(e instanceof ApiError ? e.message : "Tidak bisa terhubung ke server.");
       }
     });

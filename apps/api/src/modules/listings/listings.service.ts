@@ -266,6 +266,19 @@ export class ListingsService {
         message: `Batas ${DAILY_LISTING_LIMIT} listing per hari. Coba lagi besok.`,
       });
     }
+    // Reject backwards discounts up front so the UI doesn't have to
+     // guard against showing a "before" price that's lower than the
+     // live one. Equal values are also rejected — a 0% discount is just
+     // the regular price.
+    if (
+      input.compareAtIdr != null
+      && input.compareAtIdr <= input.priceIdr
+    ) {
+      throw new BadRequestException({
+        code: "compare_at_invalid",
+        message: "Harga coret harus lebih tinggi dari harga jual.",
+      });
+    }
     const slug = await this.uniqueSlug(input.title);
     const listing = await this.prisma.listing.create({
       data: {
@@ -275,6 +288,12 @@ export class ListingsService {
         title: input.title,
         description: input.description,
         priceCents: BigInt(input.priceIdr) * CENTS_PER_RUPIAH,
+        ...(input.compareAtIdr != null && {
+          compareAtCents: BigInt(input.compareAtIdr) * CENTS_PER_RUPIAH,
+        }),
+        ...(input.brand    !== undefined && { brand:    input.brand    || null }),
+        ...(input.variant  !== undefined && { variant:  input.variant  || null }),
+        ...(input.warranty !== undefined && { warranty: input.warranty || null }),
         stock: input.stock,
         condition: input.condition,
         imagesJson: JSON.stringify(input.images),
@@ -304,6 +323,33 @@ export class ListingsService {
     if (input.priceIdr !== undefined) {
       data.priceCents = BigInt(input.priceIdr) * CENTS_PER_RUPIAH;
       delete data.priceIdr;
+    }
+    // compareAtIdr: null clears the discount; a number sets it; undefined
+    // leaves it untouched. Reject when the resulting compareAt would
+    // sit at or below the live price (whether the live price was just
+    // updated above or is the existing one).
+    if (input.compareAtIdr !== undefined) {
+      if (input.compareAtIdr === null) {
+        data.compareAtCents = null;
+      } else {
+        const livePriceIdr =
+          input.priceIdr ?? Number(existing.priceCents / CENTS_PER_RUPIAH);
+        if (input.compareAtIdr <= livePriceIdr) {
+          throw new BadRequestException({
+            code: "compare_at_invalid",
+            message: "Harga coret harus lebih tinggi dari harga jual.",
+          });
+        }
+        data.compareAtCents = BigInt(input.compareAtIdr) * CENTS_PER_RUPIAH;
+      }
+      delete data.compareAtIdr;
+    }
+    // brand/variant/warranty: trim + treat empty string as a clear.
+    for (const k of ["brand", "variant", "warranty"] as const) {
+      if (data[k] !== undefined) {
+        const v = typeof data[k] === "string" ? (data[k] as string).trim() : data[k];
+        data[k] = v === "" ? null : v;
+      }
     }
     if (input.images !== undefined) {
       data.imagesJson = JSON.stringify(input.images);
@@ -371,17 +417,29 @@ export class ListingsService {
 
 type Row = {
   id: string; slug: string; title: string; priceCents: bigint;
+  compareAtCents?: bigint | null;
   condition: string; imagesJson: string; boostedUntil: Date | null; createdAt: Date;
   seller: { username: string; city: string | null; trustScore: number };
 };
 
 function toSummary(l: Row) {
   const images = parseImages(l.imagesJson);
+  // Only emit compareAtIdr when it's actually higher than the live
+  // price — a stale value at or below priceCents would render an
+  // upside-down "discount" so we pre-filter here rather than in every
+  // UI surface.
+  const priceCents = l.priceCents;
+  const compareCents = l.compareAtCents ?? null;
+  const compareAtIdr =
+    compareCents != null && compareCents > priceCents
+      ? Number(compareCents / CENTS_PER_RUPIAH)
+      : null;
   return {
     id: l.id,
     slug: l.slug,
     title: l.title,
-    priceIdr: Number(l.priceCents / CENTS_PER_RUPIAH),
+    priceIdr: Number(priceCents / CENTS_PER_RUPIAH),
+    compareAtIdr,
     // Stored as a string column — the type union covers the new enum
     // (BRAND_NEW_SEALED, LIKE_NEW, EXCELLENT, GOOD, FAIR, POOR) plus
     // legacy values still on un-migrated rows (MINT, NEAR_MINT). UI uses
@@ -399,6 +457,7 @@ function toSummary(l: Row) {
 
 function toDetail(l: Row & {
   description: string; stock: number; weightGrams: number;
+  brand?: string | null; variant?: string | null; warranty?: string | null;
   couriersJson?: string; originSubdistrictId?: number | null; tradeable?: boolean;
   category: { id: string; slug: string; name: string };
 }) {
@@ -409,9 +468,21 @@ function toDetail(l: Row & {
     description: l.description,
     stock: l.stock,
     weightGrams: l.weightGrams,
+    // Empty strings round-trip from the form as "" rather than null;
+    // normalize both to null so the renderer's "show only when truthy"
+    // check matches once instead of twice.
+    brand:    nullableTrim(l.brand),
+    variant:  nullableTrim(l.variant),
+    warranty: nullableTrim(l.warranty),
     couriers,
     originSubdistrictId: l.originSubdistrictId ?? null,
     tradeable: l.tradeable ?? false,
     category: l.category,
   };
+}
+
+function nullableTrim(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const t = v.trim();
+  return t.length > 0 ? t : null;
 }

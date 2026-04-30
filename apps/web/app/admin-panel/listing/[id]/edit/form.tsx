@@ -15,6 +15,10 @@ const FIELD_LABEL: Record<string, string> = {
   title: "Judul",
   description: "Deskripsi",
   priceIdr: "Harga",
+  compareAtIdr: "Harga coret",
+  brand: "Brand",
+  variant: "Varian",
+  warranty: "Garansi",
   categoryId: "Kategori",
   condition: "Kondisi",
   stock: "Stok",
@@ -34,6 +38,11 @@ export type AdminListingDetail = {
   title: string;
   description: string;
   priceIdr: number;
+  /** Strike-through "before" price. null = no discount. */
+  compareAtIdr: number | null;
+  brand: string | null;
+  variant: string | null;
+  warranty: string | null;
   condition: "BRAND_NEW_SEALED" | "LIKE_NEW" | "EXCELLENT" | "GOOD" | "FAIR" | "POOR";
   stock: number;
   weightGrams: number;
@@ -70,6 +79,13 @@ export function ListingEditForm({
     title: initial.title,
     description: initial.description,
     priceIdr: initial.priceIdr,
+    // Empty string in the form = no discount; a number sets it. Send
+    // null to the API on save when the field is cleared so the server
+    // wipes the persisted compareAt.
+    compareAtIdr: initial.compareAtIdr != null ? String(initial.compareAtIdr) : "",
+    brand: initial.brand ?? "",
+    variant: initial.variant ?? "",
+    warranty: initial.warranty ?? "",
     condition: initial.condition,
     categoryId: initial.category.id,
     stock: initial.stock,
@@ -162,6 +178,12 @@ export function ListingEditForm({
         title: state.title.trim(),
         description: state.description.trim(),
         priceIdr: Number(state.priceIdr) || 0,
+        // "" → null (clear discount); number string → number; trim
+        // catches accidental whitespace from copy/paste.
+        compareAtIdr: state.compareAtIdr.trim() === "" ? null : Number(state.compareAtIdr),
+        brand:    state.brand.trim()    || null,
+        variant:  state.variant.trim()  || null,
+        warranty: state.warranty.trim() || null,
         categoryId: state.categoryId,
         condition: state.condition,
         stock: Number(state.stock) || 0,
@@ -264,6 +286,42 @@ export function ListingEditForm({
                   value={state.weightGrams}
                   onChange={(e) => patch("weightGrams", Number(e.target.value))}
                   className="font-mono"
+                />
+              </Field>
+              <Field label="Harga coret (IDR · opsional)">
+                <Input
+                  type="number"
+                  value={state.compareAtIdr}
+                  onChange={(e) => patch("compareAtIdr", e.target.value)}
+                  placeholder="kosongin = tanpa diskon"
+                  className="font-mono"
+                />
+                {fieldErrs.compareAtIdr && (
+                  <p className="mt-1 text-[11px] text-flame-600">{fieldErrs.compareAtIdr}</p>
+                )}
+              </Field>
+              <Field label="Brand">
+                <Input
+                  value={state.brand}
+                  onChange={(e) => patch("brand", e.target.value)}
+                  placeholder="—"
+                  maxLength={80}
+                />
+              </Field>
+              <Field label="Varian">
+                <Input
+                  value={state.variant}
+                  onChange={(e) => patch("variant", e.target.value)}
+                  placeholder="—"
+                  maxLength={120}
+                />
+              </Field>
+              <Field label="Garansi">
+                <Input
+                  value={state.warranty}
+                  onChange={(e) => patch("warranty", e.target.value)}
+                  placeholder="—"
+                  maxLength={160}
                 />
               </Field>
               <Field label="Tradeable">

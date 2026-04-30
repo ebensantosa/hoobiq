@@ -38,6 +38,10 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
     title: listing.title,
     description: listing.description,
     priceIdr: listing.priceIdr,
+    compareAtIdr: listing.compareAtIdr ?? null,
+    brand: listing.brand ?? null,
+    variant: listing.variant ?? null,
+    warranty: listing.warranty ?? null,
     stock: listing.stock,
     weightGrams: listing.weightGrams,
     condition: listing.condition,
@@ -55,7 +59,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
 
   return (
     <AppShell active="Marketplace">
-      <div className="mx-auto max-w-5xl px-6 pb-12 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-8">
           <h1 className="text-3xl font-bold text-fg md:text-4xl">Edit listing</h1>
           <p className="mt-3 text-sm leading-relaxed text-fg-muted md:text-base">

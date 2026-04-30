@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { DisputeDecideInput, type SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -12,6 +12,9 @@ const ListingPatch = z.object({
   title:        z.string().min(3).max(140).optional(),
   description:  z.string().max(8_000).optional(),
   priceIdr:     z.number().int().positive().optional(),
+  // null clears the discount; number sets the strike-through "before"
+  // price. Server validates compareAt > priceIdr.
+  compareAtIdr: z.number().int().positive().nullable().optional(),
   categoryId:   z.string().min(1).optional(),
   condition:    z.enum(["BRAND_NEW_SEALED", "LIKE_NEW", "EXCELLENT", "GOOD", "FAIR", "POOR"]).optional(),
   moderation:   z.enum(["pending", "active", "hidden", "rejected"]).optional(),
@@ -21,6 +24,10 @@ const ListingPatch = z.object({
   stock:        z.number().int().min(0).max(999).optional(),
   weightGrams:  z.number().int().min(10).max(50_000).optional(),
   tradeable:    z.boolean().optional(),
+  // Spec-block fields. Empty string from the form clears the field.
+  brand:    z.string().trim().max(80).nullable().optional(),
+  variant:  z.string().trim().max(120).nullable().optional(),
+  warranty: z.string().trim().max(160).nullable().optional(),
   /** Reassign the listing to a different seller. Identifier can be a
    *  user id, username, or email — server resolves it. */
   sellerRef:    z.string().min(1).max(80).optional(),
@@ -334,6 +341,10 @@ export class AdminController {
       title: l.title,
       description: l.description,
       priceIdr: Number(l.priceCents / 100n),
+      compareAtIdr: l.compareAtCents != null ? Number(l.compareAtCents / 100n) : null,
+      brand: l.brand,
+      variant: l.variant,
+      warranty: l.warranty,
       condition: l.condition,
       stock: l.stock,
       weightGrams: l.weightGrams,
@@ -352,8 +363,22 @@ export class AdminController {
     @Param("id") id: string,
     @Body(new ZodPipe(ListingPatch)) input: ListingPatch,
   ) {
-    const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true, sellerId: true } });
+    const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true, sellerId: true, priceCents: true } });
     if (!exists) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+
+    // Validate compareAtIdr (when set) against the live price — either
+    // the just-supplied priceIdr or the existing one. Reject equal-or-
+    // lower so a stale strike-through can't accidentally raise the
+    // displayed price.
+    if (input.compareAtIdr != null) {
+      const livePriceIdr = input.priceIdr ?? Number(exists.priceCents / 100n);
+      if (input.compareAtIdr <= livePriceIdr) {
+        throw new BadRequestException({
+          code: "compare_at_invalid",
+          message: "Harga coret harus lebih tinggi dari harga jual.",
+        });
+      }
+    }
 
     // Resolve transfer target — accepts id, username, or email so the
     // admin doesn't have to copy the user id from another tab.
@@ -382,6 +407,14 @@ export class AdminController {
         ...(input.title       !== undefined && { title:       input.title }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.priceIdr    !== undefined && { priceCents:  BigInt(input.priceIdr) * 100n }),
+        ...(input.compareAtIdr !== undefined && {
+          compareAtCents: input.compareAtIdr === null
+            ? null
+            : BigInt(input.compareAtIdr) * 100n,
+        }),
+        ...(input.brand       !== undefined && { brand:       input.brand    || null }),
+        ...(input.variant     !== undefined && { variant:     input.variant  || null }),
+        ...(input.warranty    !== undefined && { warranty:    input.warranty || null }),
         ...(input.categoryId  !== undefined && { categoryId:  input.categoryId }),
         ...(input.condition   !== undefined && { condition:   input.condition }),
         ...(input.moderation  !== undefined && { moderation:  input.moderation }),

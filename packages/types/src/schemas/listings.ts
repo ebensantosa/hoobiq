@@ -31,6 +31,10 @@ export const ListingSummarySchema = z.object({
   slug: z.string(),
   title: z.string(),
   priceIdr: z.number(),     // IDR rupiah (not cents) for client convenience
+  // Optional "before" price for the strike-through + percent-off badge.
+  // Null when the seller hasn't set a discount; UI hides the strike row
+  // entirely in that case so plain-priced listings stay clean.
+  compareAtIdr: z.number().nullable().optional(),
   condition: ConditionSchema,
   images: z.array(z.string()),
   cover: z.string().nullable(),
@@ -48,6 +52,12 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   description: z.string(),
   stock: z.number(),
   weightGrams: z.number(),
+  // Spec-block extras. All optional/nullable — only the rows with
+  // actual values show up in the "Spesifikasi produk" block on the
+  // detail page, so empty fields don't pollute the layout.
+  brand: z.string().nullable().optional(),
+  variant: z.string().nullable().optional(),
+  warranty: z.string().nullable().optional(),
   couriers: z.array(z.string()).default([]),
   originSubdistrictId: z.number().int().nullable().optional(),
   tradeable: z.boolean().default(false).optional(),
@@ -126,6 +136,14 @@ export const CreateListingInput = z.object({
     .min(3, "Minimal 3 foto.")
     .max(8),
   weightGrams: z.number().int().min(10).max(50_000).default(500),
+  // Optional discount + spec extras. compareAtIdr is the "before" price;
+  // server validates it's > priceIdr at write time so a misconfigured
+  // discount can't accidentally raise the price. brand/variant/warranty
+  // are free-form strings surfaced in the detail spec block.
+  compareAtIdr: z.number().int().min(1000).max(1_000_000_000).nullable().optional(),
+  brand:    z.string().trim().max(80).nullable().optional(),
+  variant:  z.string().trim().max(120).nullable().optional(),
+  warranty: z.string().trim().max(160).nullable().optional(),
   // Shipping (RajaOngkir/Komerce). couriers is the set the seller will accept;
   // originSubdistrictId is the Komerce id of the seller's pickup point. Both
   // optional on create — listing falls back to "hubungi seller" until set.

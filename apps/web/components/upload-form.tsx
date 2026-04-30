@@ -34,6 +34,11 @@ export type UploadFormExisting = {
   title: string;
   description: string;
   priceIdr: number;
+  /** Optional "before" price for the strike-through display. */
+  compareAtIdr?: number | null;
+  brand?: string | null;
+  variant?: string | null;
+  warranty?: string | null;
   stock: number;
   weightGrams: number;
   condition: Condition;
@@ -48,6 +53,12 @@ type FormState = {
   title: string;
   description: string;
   price: string;     // string so the empty state is "" not 0 / NaN
+  /** Optional "before" price the buyer sees struck through. Empty string
+   *  = no discount; the form leaves the field cleared. */
+  compareAt: string;
+  brand: string;
+  variant: string;
+  warranty: string;
   stock: string;
   weight: string;
   categoryId: string;
@@ -74,6 +85,16 @@ function validate(state: FormState, images: string[], condition: string): Errors
   if (!Number.isFinite(price) || price < 1000)    e.price = "Harga minimal Rp 1.000.";
   else if (price > 1_000_000_000)                 e.price = "Harga terlalu besar.";
 
+  // compareAt is optional — but when present it must be a valid number
+  // strictly higher than `price` so the strike-through actually reads
+  // as a discount. Empty string skips the check entirely.
+  if (state.compareAt.trim() !== "") {
+    const cmp = Number(state.compareAt);
+    if (!Number.isFinite(cmp) || cmp < 1000)      e.compareAt = "Minimal Rp 1.000.";
+    else if (cmp > 1_000_000_000)                 e.compareAt = "Terlalu besar.";
+    else if (Number.isFinite(price) && cmp <= price) e.compareAt = "Harus lebih tinggi dari harga jual.";
+  }
+
   const stock = Number(state.stock);
   if (!Number.isInteger(stock) || stock < 1)      e.stock = "Stok minimal 1.";
   else if (stock > 999)                           e.stock = "Maksimal 999.";
@@ -96,6 +117,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
     title:       existing?.title ?? "",
     description: existing?.description ?? "",
     price:       existing?.priceIdr != null ? String(existing.priceIdr) : "",
+    compareAt:   existing?.compareAtIdr != null ? String(existing.compareAtIdr) : "",
+    brand:       existing?.brand ?? "",
+    variant:     existing?.variant ?? "",
+    warranty:    existing?.warranty ?? "",
     stock:       String(existing?.stock ?? 1),
     weight:      String(existing?.weightGrams ?? 500),
     categoryId:  existing?.categoryId ?? "",
@@ -136,7 +161,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitErr(null);
-    setTouched({ title: true, description: true, price: true, stock: true, weight: true, categoryId: true, images: true, condition: true });
+    setTouched({ title: true, description: true, price: true, compareAt: true, stock: true, weight: true, categoryId: true, images: true, condition: true });
 
     if (!isValid) {
       setSubmitErr("Periksa lagi field yang ditandai merah.");
@@ -165,10 +190,18 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         const finalImages = [...passthrough, ...uploaded];
 
         setProgress({ stage: "save", done: 0, total: 0 });
+        const compareAtNum = state.compareAt.trim() === "" ? null : Number(state.compareAt);
         const payload = {
           title:       state.title.trim(),
           description: state.description.trim(),
           priceIdr:    Number(state.price),
+          // null clears compareAt on update; create just omits it via
+          // the spread when null. Either way the server treats null as
+          // "no discount" (no strike-through rendered).
+          compareAtIdr: compareAtNum,
+          brand:    state.brand.trim()    || null,
+          variant:  state.variant.trim()  || null,
+          warranty: state.warranty.trim() || null,
           stock:       Number(state.stock),
           condition,
           categoryId:  state.categoryId,
@@ -245,6 +278,22 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
               invalid={!!showErr("price")}
             />
           </Field>
+          <Field
+            label="Harga coret (opsional)"
+            hint="Harga sebelum diskon. Buyer lihat strike-through + persen hemat."
+            error={showErr("compareAt")}
+          >
+            <Input
+              type="number"
+              min={1000}
+              max={1_000_000_000}
+              placeholder="kosongin kalau tidak ada diskon"
+              value={state.compareAt}
+              onChange={(e) => set("compareAt", e.target.value)}
+              onBlur={() => blur("compareAt")}
+              invalid={!!showErr("compareAt")}
+            />
+          </Field>
           <Field label="Stok" error={showErr("stock")}>
             <Input
               type="number"
@@ -302,6 +351,38 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
             {state.description.length} / 4000
           </div>
         </Field>
+      </Section>
+
+      <Section
+        title="Spesifikasi (opsional)"
+        subtitle="Kalau diisi, muncul di blok Spesifikasi produk pada halaman detail."
+      >
+        <div className="grid gap-5 md:grid-cols-3">
+          <Field label="Brand" hint="Pop Mart, Bandai, Pokémon, dll.">
+            <Input
+              value={state.brand}
+              onChange={(e) => set("brand", e.target.value)}
+              maxLength={80}
+              placeholder="—"
+            />
+          </Field>
+          <Field label="Varian" hint="Warna, edisi, ukuran, atau seri.">
+            <Input
+              value={state.variant}
+              onChange={(e) => set("variant", e.target.value)}
+              maxLength={120}
+              placeholder="—"
+            />
+          </Field>
+          <Field label="Garansi" hint="Resmi 1 tahun, no warranty, dll.">
+            <Input
+              value={state.warranty}
+              onChange={(e) => set("warranty", e.target.value)}
+              maxLength={160}
+              placeholder="—"
+            />
+          </Field>
+        </div>
       </Section>
 
       <Section title="Pengiriman" subtitle="Wajib di-set supaya pembeli bisa hitung ongkir.">

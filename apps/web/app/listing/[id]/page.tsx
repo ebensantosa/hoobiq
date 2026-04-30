@@ -58,25 +58,45 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               title={listing.title}
             />
 
-            {/* Description */}
+            {/* Spesifikasi produk — compact table-style block. Each
+                row is a label/value pair; visual weight stays low so
+                the gallery and price (right column) keep buyer focus.
+                Ordered by what shoppers actually scan first: Kategori,
+                Kondisi, Stok, Berat, Tradeable. */}
+            <section className="mt-6">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
+                Spesifikasi produk
+              </h2>
+              <dl className="mt-3 divide-y divide-rule rounded-lg border border-rule bg-panel/40 text-sm">
+                <SpecRow label="Kategori" value={listing.category.name} />
+                {listing.brand && <SpecRow label="Brand" value={listing.brand} />}
+                <SpecRow
+                  label="Kondisi"
+                  value={cond.label}
+                  valueClass="text-brand-600 dark:text-brand-400"
+                />
+                {listing.variant && <SpecRow label="Varian" value={listing.variant} />}
+                <SpecRow label="Stok" value={`${listing.stock.toLocaleString("id-ID")} pcs`} />
+                <SpecRow label="Berat" value={`${listing.weightGrams.toLocaleString("id-ID")} gr`} />
+                {listing.warranty && <SpecRow label="Garansi" value={listing.warranty} />}
+                <SpecRow
+                  label="Bisa ditukar"
+                  value={listing.tradeable ? "Ya — terbuka untuk Meet Match" : "Tidak"}
+                />
+              </dl>
+            </section>
+
+            {/* Deskripsi — sits below the spec block per the redesign
+                so the at-a-glance facts come first and the long-form
+                story comes second. */}
             <section className="mt-8">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Deskripsi</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
+                Deskripsi
+              </h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-fg">
                 {listing.description}
               </p>
             </section>
-
-            {/* Specs — radius 4 (rounded-md) per spec, no oversized lozenges.
-                Each cell has a defined card-style border + bg so the
-                "Brand New / kondisi" info is visually distinct from the
-                surrounding text. */}
-            <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SpecCard label="Kondisi"  value={cond.label} accent />
-              <SpecCard label="Stok"     value={String(listing.stock)} />
-              <SpecCard label="Berat"    value={`${listing.weightGrams} gr`} />
-              <SpecCard label="Kategori" value={listing.category.name} />
-            </section>
-
           </div>
 
           {/* Right — sticky aside (price + buy + seller + protections) */}
@@ -108,7 +128,41 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
-            <p className="mt-4 text-3xl font-bold text-fg">Rp {listing.priceIdr.toLocaleString("id-ID")}</p>
+            {/* Price block — when a compareAt price is set, the
+                live price stays the headline (3xl, brand colour)
+                and the strike-through + savings line floats just
+                above so the buyer sees BOTH numbers at a glance.
+                Without a discount, it collapses back to a single
+                price headline. */}
+            {listing.compareAtIdr != null && listing.compareAtIdr > listing.priceIdr ? (
+              <div className="mt-4">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-xs font-medium text-fg-subtle line-through">
+                    Rp {listing.compareAtIdr.toLocaleString("id-ID")}
+                  </span>
+                  <span className="inline-flex items-center rounded bg-flame-500/15 px-1.5 py-0.5 text-[11px] font-bold text-flame-600 dark:text-flame-400">
+                    -
+                    {Math.max(
+                      1,
+                      Math.round(
+                        ((listing.compareAtIdr - listing.priceIdr) / listing.compareAtIdr) * 100,
+                      ),
+                    )}
+                    %
+                  </span>
+                </div>
+                <p className="text-3xl font-extrabold tracking-tight text-brand-600 dark:text-brand-400">
+                  Rp {listing.priceIdr.toLocaleString("id-ID")}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-flame-600 dark:text-flame-400">
+                  Hemat Rp {(listing.compareAtIdr - listing.priceIdr).toLocaleString("id-ID")}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-brand-600 dark:text-brand-400">
+                Rp {listing.priceIdr.toLocaleString("id-ID")}
+              </p>
+            )}
             <p className="mt-1 text-xs text-fg-subtle">Termasuk proteksi Hoobiq Pay · 2% platform fee</p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -266,35 +320,16 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   );
 }
 
-function Spec({ label, value }: { label: string; value: string }) {
+/** Single label/value row inside the Spesifikasi block. Compact dl
+ *  pattern (definition list) keeps semantics correct for screen
+ *  readers and dual-column row alignment without a real <table>. */
+function SpecRow({
+  label, value, valueClass,
+}: { label: string; value: string; valueClass?: string }) {
   return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">{label}</p>
-      <p className="mt-1 text-sm font-medium text-fg">{value}</p>
-    </div>
-  );
-}
-
-/**
- * Spec cell rendered as its own little card. Per spec: radius 4 (Tailwind
- * `rounded-md` ≈ 6px is the closest scale token; `rounded` is 4px). The
- * "Kondisi" cell uses `accent=true` so brand-new / used info reads
- * unmistakably even at a glance.
- */
-function SpecCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div
-      className={
-        "rounded p-3 " +
-        (accent
-          ? "border border-brand-400/50 bg-brand-400/10"
-          : "border border-rule bg-panel")
-      }
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">{label}</p>
-      <p className={"mt-1 text-sm font-semibold " + (accent ? "text-brand-500" : "text-fg")}>
-        {value}
-      </p>
+    <div className="flex gap-4 px-4 py-2.5">
+      <dt className="w-32 shrink-0 text-fg-subtle">{label}</dt>
+      <dd className={"flex-1 font-medium text-fg " + (valueClass ?? "")}>{value}</dd>
     </div>
   );
 }

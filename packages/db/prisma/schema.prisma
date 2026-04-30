@@ -214,10 +214,21 @@ model Listing {
   title        String
   description  String
   priceCents   BigInt    @map("price_cents")
+  // Optional "before" price for strike-through display. When non-null
+  // and > priceCents, UI surfaces the discount badge (Hemat Rp X · -Y%)
+  // on the card and detail page. Stored in cents to match priceCents.
+  compareAtCents BigInt? @map("compare_at_cents")
   stock        Int       @default(1)
   condition    String
   imagesJson   String    @default("[]") @map("images_json")
   weightGrams  Int       @default(500) @map("weight_grams")
+  // Spec-block fields surfaced on the listing detail page. All optional:
+  // not every category has a brand (toys yes, used komik usually no), and
+  // varian/garansi only make sense for some items. Empty string treated
+  // the same as null at render time.
+  brand        String?
+  variant      String?
+  warranty     String?
   // Owner has flagged this item as available for trade. When true the
   // listing surfaces in /trades deck for everyone (not just wishlist
   // matches). Doesn't disable purchase — buyers can still checkout normally.

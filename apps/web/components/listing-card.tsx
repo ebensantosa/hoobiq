@@ -7,23 +7,55 @@ import { conditionBadge } from "@/lib/condition-badge";
 import type { ListingSummary } from "@hoobiq/types";
 
 /**
- * Premium marketplace card. Shared by /marketplace, /kategori/[slug],
- * /home, and any related-products section so visual tweaks land
- * everywhere in one place.
+ * Price line for the card. Renders the live price prominently;
+ * when a compareAt price exists (strictly higher than the live
+ * price; the API already filters bad data), surfaces a strike-
+ * through + percent-off chip on the same line.
+ */
+function PriceLine({
+  priceIdr, compareAtIdr,
+}: { priceIdr: number; compareAtIdr: number | null }) {
+  const hasDiscount = compareAtIdr != null && compareAtIdr > priceIdr;
+  const off = hasDiscount
+    ? Math.max(1, Math.round(((compareAtIdr - priceIdr) / compareAtIdr) * 100))
+    : 0;
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      <span className="text-lg font-extrabold leading-none tracking-tight text-brand-600 dark:text-brand-400">
+        Rp {priceIdr.toLocaleString("id-ID")}
+      </span>
+      {hasDiscount && (
+        <>
+          <span className="inline-flex items-center rounded bg-flame-500/15 px-1.5 py-0.5 text-[10px] font-bold leading-none text-flame-600 dark:text-flame-400">
+            -{off}%
+          </span>
+          <span className="text-[11px] font-medium text-fg-subtle line-through">
+            Rp {compareAtIdr!.toLocaleString("id-ID")}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Marketplace listing card. Shared by /marketplace, /kategori, /home,
+ * and any related-products section so visual tweaks land everywhere
+ * in one place.
  *
- * Visual notes (per spec):
- *   - Border radius `rounded-md` (≈6px) instead of the previous
- *     `rounded-2xl` lozenge — feels more grown-up, less playful.
- *   - All metadata sits BELOW the image, never overlaid. The condition
- *     badge that used to float on the cover photo now lives in the
- *     body block as a neutral pill so the photo can breathe.
- *   - Two compact action buttons at the foot of the card: "+ Keranjang"
- *     and "Beli langsung". Buying still deep-links to /checkout?listing=
- *     for the bypass-cart fast path; cart fires POST /cart from the
- *     existing card without a route change.
+ * Visual notes per the marketplace redesign:
+ *   - Price is the loudest element on the card — large, brand-coloured,
+ *     left-aligned. Buyers should be able to scan a grid by price alone.
+ *   - Condition pill is small + neutral so it informs without competing.
+ *   - The boost badge stays on the cover but gets a subtler treatment
+ *     so it doesn't visually shout over the title at scale.
+ *   - Action buttons sit in a single bottom row; "Beli" picks up the
+ *     primary CTA colour to match the header's Jual button.
  *
- * Owner-of-listing case stays click-through — they see the owner menu
- * (edit/hide) and the action buttons render disabled with a tooltip.
+ * Pricing data note: there is no oldPrice / discountPercent on
+ * ListingSummary today. When that lands, swap the price line below for
+ * the strike-through + percent-saved variant; the surrounding spacing
+ * is already designed to absorb it.
  */
 export function ListingCard({
   l, meUsername,
@@ -40,11 +72,10 @@ export function ListingCard({
     : "border-rule bg-panel-2 text-fg-muted";
 
   return (
-    <div className="group relative overflow-hidden rounded-md border border-rule bg-panel transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400/50 hover:shadow-[0_12px_28px_-16px_rgba(0,0,0,0.18)]">
+    <div className="group relative flex flex-col overflow-hidden rounded-lg border border-rule bg-canvas transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400/50 hover:shadow-[0_12px_28px_-16px_rgba(0,0,0,0.18)]">
       {isOwn && <ListingOwnerMenu listingId={l.id} slug={l.slug} />}
 
       <Link href={`/listing/${l.slug}`} className="block">
-        {/* Image — clean, no overlays. Lets the photograph sell the piece. */}
         <div className="relative aspect-square overflow-hidden bg-panel-2">
           {l.cover ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -58,7 +89,7 @@ export function ListingCard({
             <CardArt variant={pickArt(l.slug)} />
           )}
           {l.boosted && (
-            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-sm bg-flame-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow">
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-flame-500/95 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
               ⚡ Boost
             </span>
           )}
@@ -69,37 +100,40 @@ export function ListingCard({
           )}
         </div>
 
-        {/* Body — all info lives here, nothing overlaid on the image. */}
-        <div className="px-3 pt-3">
-          <span
-            className={
-              "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider " +
-              tonePill
-            }
-          >
-            {cond.label}
-          </span>
-          <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-fg transition-colors group-hover:text-brand-500">
+        <div className="flex flex-1 flex-col gap-1.5 px-3 pt-2.5">
+          <p className="line-clamp-2 min-h-[2.5rem] text-[13px] font-semibold leading-snug text-fg transition-colors group-hover:text-brand-500">
             {l.title}
           </p>
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-fg-subtle">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z" />
-              <circle cx="12" cy="10" r="2.5" />
-            </svg>
-            <span className="truncate">{l.seller.city ?? "Lokasi belum diisi"}</span>
-          </p>
-          <p className="mt-2 text-base font-extrabold tracking-tight text-fg">
-            Rp {l.priceIdr.toLocaleString("id-ID")}
-          </p>
+
+          {/* Price — the loudest line. brand-500 puts it on the
+              same colour as the primary CTA so the buyer's eye
+              connects price → buy without effort. When the seller
+              has set a compareAt price, the strike-through + "-N%"
+              chip render in the same row to keep the card height
+              constant across discounted and non-discounted items. */}
+          <PriceLine priceIdr={l.priceIdr} compareAtIdr={l.compareAtIdr ?? null} />
+
+          <div className="flex items-center justify-between gap-2 text-[11px] text-fg-subtle">
+            <span className="flex items-center gap-1 truncate">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+              <span className="truncate">{l.seller.city ?? "—"}</span>
+            </span>
+            <span
+              className={
+                "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider " +
+                tonePill
+              }
+            >
+              {cond.label}
+            </span>
+          </div>
         </div>
       </Link>
 
-      {/* Action row — sits outside the card-cover Link so clicking a
-          button doesn't navigate to the detail page. We don't need to
-          stop click propagation here (and can't, from a Server
-          Component anyway — passing onClick to Link errors at SSR). */}
-      <div className="flex items-center gap-2 px-3 pb-3 pt-3">
+      <div className="mt-auto flex items-center gap-2 px-3 pb-3 pt-3">
         <CartButton listingId={l.id} ownListing={isOwn} size="sm" />
         <Link
           href={

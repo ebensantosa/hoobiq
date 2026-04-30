@@ -1,18 +1,22 @@
 import { TopNav } from "./top-nav";
-import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
 import { AppFooter } from "./app-footer";
 import { getSessionUser } from "@/lib/server/session";
 
 /**
- * App shell — fixed header + offset content. Using `position: fixed` (not
- * sticky) for the header so it works regardless of whatever transforms,
- * filters, or overflow rules a child page might set. We compensate by
- * pushing the main content down with `pt-20` matching the header height.
+ * Public app shell — fixed header on top, full-width content below,
+ * mobile bottom nav for tablet/phone. Per the redesign: no sidebar on
+ * any public surface. Categories, search, wishlist, cart, account etc.
+ * all live in the header now (see TopNav). The Sidebar component is
+ * still around but is reserved for the admin panel via AdminShell.
+ *
+ * `withSidebar` is preserved as an opt-in escape hatch so a callsite
+ * could re-enable a future contextual sidebar without rewriting every
+ * page, but defaults to `false` and is unused at the moment.
  */
 export async function AppShell({
   active,
-  withSidebar = true,
+  withSidebar = false,
   withFooter = true,
   children,
 }: {
@@ -21,6 +25,7 @@ export async function AppShell({
   withFooter?: boolean;
   children: React.ReactNode;
 }) {
+  void withSidebar;
   const user = await getSessionUser();
   return (
     <div className="flex min-h-screen flex-col">
@@ -28,16 +33,12 @@ export async function AppShell({
       {/* Header height: 56px on mobile (h-14) and 64px on sm+ (h-16).
           The spacer matches both so content never tucks under the bar. */}
       <div className="pt-14 sm:pt-16" />
-      {/* No `flex-1` here — we want the footer to follow the content
-          immediately, not get pushed to the bottom of the viewport on
-          short pages (which produced a huge empty band between the
-          last card and the footer). */}
+      {/* Public marketplace layout — full width up to 1440px, no
+          sidebar. Pages own their own horizontal padding so wide
+          listings (marketplace grid) and narrow forms (checkout) can
+          each pick the right gutter. `pb-20 lg:pb-0` reserves space
+          for the mobile bottom nav. */}
       <div className="mx-auto flex w-full max-w-[1440px]">
-        {withSidebar && <Sidebar />}
-        {/* `pt-4 sm:pt-6` keeps tighter spacing on mobile, looser on
-            desktop. Pages should NOT add their own `pt-*` — keep all
-            top spacing centralized so the gap matches across the app.
-            `pb-20 lg:pb-0` reserves space for the mobile bottom nav. */}
         <main className="min-w-0 flex-1 pt-4 pb-20 sm:pt-6 lg:pb-0">{children}</main>
       </div>
       {withFooter && <AppFooter />}

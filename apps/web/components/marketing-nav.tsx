@@ -8,10 +8,10 @@ export async function MarketingNav() {
   const user = await getSessionUser();
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/85 backdrop-blur supports-[backdrop-filter]:bg-canvas/75">
-      <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6 lg:px-10">
         <Link
           href={user ? "/marketplace" : "/"}
-          className="flex shrink-0 items-center self-center -ml-1 sm:ml-0"
+          className="flex shrink-0 items-center self-center"
           aria-label="Hoobiq"
         >
           <BrandLogo size="responsive" />

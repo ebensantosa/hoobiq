@@ -90,7 +90,6 @@ export default async function LandingPage() {
       <Hero picks={heroPicks} t={t} />
       <LatestStrip items={listings.slice(0, 12)} />
       <Trending items={trending} />
-      {posts.length > 0 && <CommunityPreview posts={posts} />}
       <BottomCTA />
       <MarketingFooter />
     </main>
@@ -100,9 +99,10 @@ export default async function LandingPage() {
 /* ---------------- Hero ---------------- */
 
 function Hero({ picks, t }: { picks: ListingSummary[]; t: (k: import("@/lib/copy/keys").CopyKey) => string }) {
-  const chips = ["Charizard", "Luffy", "Labubu", "Nendoroid", "Genshin"];
+  // Top 3 popular search seeds — keeps the hero compact on mobile.
+  const chips = ["Charizard", "Luffy", "Labubu"];
   return (
-    <section className="mx-auto grid max-w-[1280px] items-start gap-10 px-6 pb-8 pt-10 md:grid-cols-[1.05fr_1fr] md:gap-14 md:px-10 md:pb-12 md:pt-14">
+    <section className="mx-auto grid max-w-[1280px] items-start gap-10 px-4 pb-8 pt-10 sm:px-6 md:grid-cols-[1.05fr_1fr] md:gap-14 md:pb-12 md:pt-14 lg:px-10">
       <div>
         <h1 className="text-3xl font-bold leading-[1.1] tracking-tight text-fg md:text-[44px] md:leading-[1.08]">
           Tempat jual-beli &amp; pamer
@@ -195,7 +195,7 @@ function LatestStrip({ items }: { items: ListingSummary[] }) {
   const loop = [...items, ...items];
   return (
     <section className="border-y border-rule bg-panel/40 py-8">
-      <div className="mx-auto max-w-[1280px] px-6 md:px-10">
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <span className="relative flex h-2 w-2 items-center justify-center">

@@ -166,7 +166,26 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 2 } }) // 2 resends/min/ip
   @HttpCode(200)
   async resendEmail(@Body(new ZodPipe(ResendEmailInput)) body: z.infer<typeof ResendEmailInput>) {
-    void body.email;
-    return { ok: true, queued: true };
+    return this.auth.resendVerificationEmail(body.email);
+  }
+
+  /**
+   * Validate the verification token clicked from the email link.
+   * Public — the user clicks this directly from their inbox before
+   * they log in, so no session is required.
+   *
+   * On success the response carries `{ ok: true }`; the verifikasi-email
+   * page bounces to `?status=success`. Throttled aggressively because
+   * a brute-force iterating tokens would otherwise be cheap.
+   */
+  @Public()
+  @Post("verify-email")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(200)
+  async verifyEmail(
+    @Body(new ZodPipe(z.object({ token: z.string().min(16).max(128) })))
+    body: { token: string },
+  ) {
+    return this.auth.verifyEmail(body.token);
   }
 }

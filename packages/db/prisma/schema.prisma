@@ -34,6 +34,12 @@ model User {
   // Soft cooldown for password changes — UI + API enforce a minimum
   // gap between changes via this timestamp.
   lastPasswordChangeAt DateTime? @map("last_password_change_at")
+  // Email verification — single-use token sent at register time. We
+  // store sha256(rawToken) so a DB dump alone can't impersonate; the
+  // user clicks a link with the raw token, the verify endpoint hashes
+  // it again, looks the row up, and sets emailVerified on match.
+  emailVerificationTokenHash      String?   @map("email_verification_token_hash")
+  emailVerificationExpiresAt      DateTime? @map("email_verification_expires_at")
   // KTP verification tracking. `ktpVerified` is the existing simple
   // flag; the timestamp lets the UI show "verified on …" and the
   // status field carries pending/rejected nuance for moderation.

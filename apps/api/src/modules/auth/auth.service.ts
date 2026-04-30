@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import bcrypt from "bcryptjs";
@@ -8,17 +10,78 @@ import crypto from "node:crypto";
 import type { LoginInput, RegisterInput, SessionUser } from "@hoobiq/types";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { RedisService } from "../../infrastructure/redis/redis.service";
+import { EmailService } from "../email/email.service";
 import { env } from "../../config/env";
 
 const BCRYPT_ROUNDS = 12;
 const SESSION_CACHE_TTL = 60; // seconds — keep /me fast, revocations take effect within 1 min
+const VERIFY_TOKEN_TTL_HOURS = 24;
 
 @Injectable()
 export class AuthService {
+  private readonly log = new Logger(AuthService.name);
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService
+    private readonly redis: RedisService,
+    private readonly email: EmailService,
   ) {}
+
+  /** Build the verify-email link the user clicks from their inbox. */
+  private verifyLink(rawToken: string): string {
+    const base = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    return `${base}/verifikasi-email?token=${encodeURIComponent(rawToken)}`;
+  }
+
+  private verificationEmailHtml(name: string, link: string): string {
+    // Inline-styled, simple HTML — Resend renders this verbatim. Kept
+    // minimal so it works in plain-text email previews and on mobile.
+    return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #111;">
+        <h1 style="font-size: 22px; margin: 0 0 16px;">Halo ${escapeHtml(name)}, selamat datang di Hoobiq! 👋</h1>
+        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
+          Yuk konfirmasi email kamu dulu supaya akun-mu aktif sepenuhnya. Klik tombol di bawah:
+        </p>
+        <p style="margin: 24px 0;">
+          <a href="${link}" style="display: inline-block; background: #e7559f; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
+            Verifikasi email
+          </a>
+        </p>
+        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 16px 0 0;">
+          Atau copy-paste link ini ke browser: <br/>
+          <a href="${link}" style="color: #e7559f; word-break: break-all;">${link}</a>
+        </p>
+        <p style="font-size: 12px; color: #9ca3af; margin: 32px 0 0;">
+          Link ini berlaku ${VERIFY_TOKEN_TTL_HOURS} jam. Kalau bukan kamu yang daftar, abaikan email ini.
+        </p>
+      </div>
+    `.trim();
+  }
+
+  /** Issue a fresh verification token, persist its hash, and email
+   *  the raw token to the user. Used by both register() and the
+   *  resend-email endpoint. Best-effort email — failures are logged
+   *  but never thrown (we don't want a Resend hiccup to fail register). */
+  private async issueVerificationEmail(userId: string, email: string, displayName: string) {
+    const rawToken = crypto.randomBytes(32).toString("base64url");
+    const tokenHash = sha256(rawToken);
+    const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_HOURS * 3600 * 1000);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationExpiresAt: expiresAt,
+      },
+    });
+    try {
+      await this.email.send(
+        email,
+        "Verifikasi email kamu di Hoobiq",
+        this.verificationEmailHtml(displayName, this.verifyLink(rawToken)),
+      );
+    } catch (e) {
+      this.log.error(`verify email send failed for ${email}: ${(e as Error).message}`);
+    }
+  }
 
   /* ------------------------- Registration ------------------------- */
 
@@ -46,7 +109,60 @@ export class AuthService {
       data: { email, username, passwordHash, phone: input.phone.trim() },
       select: { id: true, username: true, email: true },
     });
+    // Fire-and-forget verification email. Register response stays
+    // synchronous on the user create; the email lands a moment later.
+    void this.issueVerificationEmail(user.id, user.email, user.username);
     return user;
+  }
+
+  /* -------------------- Email verification -------------------- */
+
+  /** Validate the raw token from the email link. On success: marks
+   *  emailVerified=now() + clears the token columns. */
+  async verifyEmail(rawToken: string): Promise<{ ok: true; userId: string }> {
+    const tokenHash = sha256(rawToken);
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationTokenHash: tokenHash },
+      select: { id: true, emailVerificationExpiresAt: true, emailVerified: true },
+    });
+    if (!user) {
+      throw new BadRequestException({ code: "invalid_token", message: "Link verifikasi tidak valid." });
+    }
+    if (user.emailVerified) {
+      // Already verified — friendly idempotent response so a buyer
+      // clicking the link twice doesn't get an error.
+      return { ok: true, userId: user.id };
+    }
+    if (!user.emailVerificationExpiresAt || user.emailVerificationExpiresAt < new Date()) {
+      throw new BadRequestException({ code: "expired_token", message: "Link verifikasi sudah kadaluarsa. Minta kirim ulang." });
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: new Date(),
+        emailVerificationTokenHash: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+    return { ok: true, userId: user.id };
+  }
+
+  /** Re-issue the verification token + email. Always returns ok:true
+   *  even when the email isn't on file, to avoid leaking which emails
+   *  are registered (timing-safe enumeration guard).  */
+  async resendVerificationEmail(emailRaw: string) {
+    const email = emailRaw.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, username: true, emailVerified: true },
+    });
+    if (!user || user.emailVerified) {
+      // Silent success — never reveal whether the email is registered
+      // or already verified.
+      return { ok: true };
+    }
+    await this.issueVerificationEmail(user.id, user.email, user.username);
+    return { ok: true };
   }
 
   /* ---------------------------- Login ---------------------------- */
@@ -150,6 +266,15 @@ export class AuthService {
 }
 
 /* ------------------------------- Helpers ------------------------------- */
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function sha256(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");

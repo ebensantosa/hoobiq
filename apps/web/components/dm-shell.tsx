@@ -3,7 +3,7 @@ import * as React from "react";
 import { Avatar } from "@hoobiq/ui";
 import { dmApi, type DMConversation, type DMMessage } from "@/lib/api/dm";
 import { getSocket } from "@/lib/socket";
-import { EmojiGifPicker, asGifUrl, insertAtCaret } from "./emoji-gif-picker";
+import { EmojiGifPicker, insertAtCaret } from "./emoji-picker";
 
 /**
  * Two-pane DM client. Left: conversations list. Right: active thread.
@@ -236,36 +236,20 @@ export function DMShell({
                 Mulai percakapan — sapa @{active.counterpart?.username} dengan pesan pertama.
               </div>
             ) : (
-              messages.map((m) => {
-                const gif = asGifUrl(m.body);
-                if (gif) {
-                  return (
-                    <div key={m.id} className={"flex " + (m.fromMe ? "justify-end" : "justify-start")}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={gif}
-                        alt=""
-                        className="max-h-64 max-w-[75%] rounded-2xl border border-rule"
-                        loading="lazy"
-                      />
-                    </div>
-                  );
-                }
-                return (
-                  <div key={m.id} className={"flex " + (m.fromMe ? "justify-end" : "justify-start")}>
-                    <div
-                      className={
-                        "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed break-words " +
-                        (m.fromMe
-                          ? "bg-brand-400 text-white"
-                          : "border border-rule bg-panel text-fg")
-                      }
-                    >
-                      {m.body}
-                    </div>
+              messages.map((m) => (
+                <div key={m.id} className={"flex " + (m.fromMe ? "justify-end" : "justify-start")}>
+                  <div
+                    className={
+                      "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed break-words " +
+                      (m.fromMe
+                        ? "bg-brand-400 text-white"
+                        : "border border-rule bg-panel text-fg")
+                    }
+                  >
+                    {m.body}
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </div>
 
@@ -286,7 +270,6 @@ export function DMShell({
               align="right"
               direction="up"
               onEmoji={(e) => insertAtCaret(inputRef.current, e, text, setText)}
-              onGif={(url) => sendBody(url)}
             />
             <button
               type="submit"

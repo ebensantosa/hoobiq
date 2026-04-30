@@ -1,22 +1,17 @@
-import { forwardRef, Module } from "@nestjs/common";
-import { RedisModule } from "../../infrastructure/redis/redis.module";
+import { Module } from "@nestjs/common";
 import { MidtransProvider } from "./midtrans.provider";
-import { KomercePaymentService } from "./komerce-payment.service";
-import { PaymentsController } from "./payments.controller";
 import { PAYMENT_PROVIDER } from "./payment-provider.interface";
-import { OrdersModule } from "../orders/orders.module";
 
+/**
+ * Payment provider wiring. Single live provider (Midtrans Snap);
+ * the legacy Komerce VA picker + reconcile loop were dropped after
+ * the buyer flow standardised on Midtrans Snap's hosted page.
+ */
 @Module({
-  // forwardRef breaks the circular import — OrdersModule depends on
-  // PaymentsModule (it creates charges) and PaymentsModule now depends on
-  // OrdersService.markPaid() for the reconcile endpoint.
-  imports: [RedisModule, forwardRef(() => OrdersModule)],
   providers: [
     MidtransProvider,
-    KomercePaymentService,
     { provide: PAYMENT_PROVIDER, useExisting: MidtransProvider },
   ],
-  controllers: [PaymentsController],
-  exports: [PAYMENT_PROVIDER, KomercePaymentService],
+  exports: [PAYMENT_PROVIDER],
 })
 export class PaymentsModule {}

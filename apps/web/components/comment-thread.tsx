@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Avatar } from "@hoobiq/ui";
 import { api } from "@/lib/api/client";
-import { EmojiGifPicker, asGifUrl, insertAtCaret } from "./emoji-gif-picker";
+import { EmojiGifPicker, insertAtCaret } from "./emoji-picker";
 
 type Comment = {
   id: string;
@@ -104,7 +104,6 @@ export function CommentThread({
             align="right"
             direction="up"
             onEmoji={(e) => insertAtCaret(inputRef.current, e, body, setBody)}
-            onGif={(url) => sendBody(url)}
           />
           <button
             type="submit"
@@ -124,13 +123,6 @@ export function CommentThread({
 }
 
 function CommentBody({ body }: { body: string }) {
-  const gif = asGifUrl(body);
-  if (gif) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={gif} alt="" className="mt-1 max-h-60 rounded-lg border border-rule" loading="lazy" />
-    );
-  }
   return <p className="mt-0.5 text-fg whitespace-pre-line break-words">{body}</p>;
 }
 

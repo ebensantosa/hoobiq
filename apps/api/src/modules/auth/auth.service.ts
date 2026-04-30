@@ -100,12 +100,15 @@ export class AuthService {
       select: { id: true, email: true, username: true },
     });
     if (existing) {
+      const emailTaken = existing.email === email;
       throw new ConflictException({
         code: "account_exists",
-        message:
-          existing.email === email
-            ? "Email sudah terdaftar. Coba masuk atau pakai email lain."
-            : "Username sudah dipakai. Coba yang lain.",
+        message: emailTaken
+          ? "Email sudah terdaftar. Coba masuk atau pakai email lain."
+          : "Username sudah dipakai. Coba yang lain.",
+        details: emailTaken
+          ? [{ path: "email", message: "Email sudah terdaftar." }]
+          : [{ path: "username", message: "Username sudah dipakai." }],
       });
     }
 

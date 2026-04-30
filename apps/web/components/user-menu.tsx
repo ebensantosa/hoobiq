@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@hoobiq/ui";
 import { ThemeToggle } from "./theme-toggle";
+import { useActionDialog } from "./action-dialog";
 import { authApi } from "@/lib/api/auth";
 import type { SessionUser } from "@hoobiq/types";
 
@@ -41,6 +42,7 @@ export function UserMenu({
 
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
+  const dialog = useActionDialog();
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -60,11 +62,19 @@ export function UserMenu({
     };
   }, [open]);
 
-  async function logout() {
-    try { await authApi.logout(); } catch { /* ignore */ }
+  function logout() {
     setOpen(false);
-    router.replace("/");
-    router.refresh();
+    dialog.open({
+      title: "Keluar dari Hoobiq?",
+      description: `Akun ${user.name?.trim() || `@${user.username}`} akan logout di device ini. Bisa masuk lagi kapan aja pakai email + password.`,
+      tone: "danger",
+      confirmLabel: "Keluar",
+      onConfirm: async () => {
+        try { await authApi.logout(); } catch { /* ignore */ }
+        router.replace("/");
+        router.refresh();
+      },
+    });
   }
 
   return (

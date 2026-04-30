@@ -40,6 +40,12 @@ model User {
   // it again, looks the row up, and sets emailVerified on match.
   emailVerificationTokenHash      String?   @map("email_verification_token_hash")
   emailVerificationExpiresAt      DateTime? @map("email_verification_expires_at")
+  // Password reset — same hash-only-store pattern as email verify.
+  // 30-min expiry. Reset endpoint also revokes every active session
+  // so an attacker who triggered the flow can't keep an existing
+  // session alive after the legitimate user resets.
+  passwordResetTokenHash          String?   @map("password_reset_token_hash")
+  passwordResetExpiresAt          DateTime? @map("password_reset_expires_at")
   // KTP verification tracking. `ktpVerified` is the existing simple
   // flag; the timestamp lets the UI show "verified on …" and the
   // status field carries pending/rejected nuance for moderation.

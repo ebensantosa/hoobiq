@@ -28,6 +28,8 @@ export function UserMenu({
     { href: `/u/${user.username}`, label: "Profil" },
     { href: "/pesanan",   label: "Pesanan saya" },
     { href: "/wishlist",  label: "Wishlist" },
+    { href: "/feeds",     label: "Feeds" },
+    { href: "/trades",    label: "Meet Match" },
     { href: "/saldo",     label: "Hoobiq Pay" },
     { href: "/pengaturan", label: "Pengaturan" },
   ];

@@ -165,6 +165,104 @@ export class AuthService {
     return { ok: true };
   }
 
+  /* -------------------- Password reset -------------------- */
+
+  private resetEmailHtml(name: string, link: string): string {
+    return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #111;">
+        <h1 style="font-size: 22px; margin: 0 0 16px;">Reset password Hoobiq</h1>
+        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
+          Halo ${escapeHtml(name)}, kami terima permintaan reset password untuk akun-mu. Klik tombol di bawah untuk bikin password baru:
+        </p>
+        <p style="margin: 24px 0;">
+          <a href="${link}" style="display: inline-block; background: #e7559f; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
+            Reset password
+          </a>
+        </p>
+        <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 16px 0 0;">
+          Atau copy-paste link ini: <br/>
+          <a href="${link}" style="color: #e7559f; word-break: break-all;">${link}</a>
+        </p>
+        <p style="font-size: 12px; color: #9ca3af; margin: 32px 0 0;">
+          Link berlaku 30 menit. Kalau bukan kamu yang minta reset, abaikan email ini — password kamu tetap aman.
+        </p>
+      </div>
+    `.trim();
+  }
+
+  /** Issue a password-reset token + email it to the user. Always
+   *  returns ok:true (silent for unknown email / inactive account)
+   *  to prevent enumeration. 30-min token TTL — short enough to limit
+   *  brute force, long enough that the email isn't lost in mobile
+   *  notification queues. */
+  async forgotPassword(emailRaw: string) {
+    const email = emailRaw.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, username: true, status: true, deletedAt: true },
+    });
+    if (!user || user.status !== "active" || user.deletedAt) {
+      return { ok: true };
+    }
+    const rawToken = crypto.randomBytes(32).toString("base64url");
+    const tokenHash = sha256(rawToken);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+    const base = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    const link = `${base}/reset-password/${encodeURIComponent(rawToken)}`;
+    try {
+      await this.email.send(
+        user.email,
+        "Reset password Hoobiq",
+        this.resetEmailHtml(user.username, link),
+      );
+    } catch (e) {
+      this.log.error(`reset email send failed for ${user.email}: ${(e as Error).message}`);
+    }
+    return { ok: true };
+  }
+
+  /** Validate the reset token + set a new password. Also revokes every
+   *  active session for that user so an attacker who triggered the flow
+   *  can't keep a stolen session alive past the reset. The fresh
+   *  lastPasswordChangeAt prevents the same-minute change-again attack. */
+  async resetPassword(rawToken: string, newPassword: string) {
+    const tokenHash = sha256(rawToken);
+    const user = await this.prisma.user.findFirst({
+      where: { passwordResetTokenHash: tokenHash },
+      select: { id: true, passwordResetExpiresAt: true },
+    });
+    if (!user) {
+      throw new BadRequestException({ code: "invalid_token", message: "Link reset tidak valid." });
+    }
+    if (!user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
+      throw new BadRequestException({ code: "expired_token", message: "Link reset sudah kadaluarsa. Minta link baru." });
+    }
+    const passwordHash = await bcrypt.hash(newPassword + env.PASSWORD_PEPPER, BCRYPT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordResetTokenHash: null,
+          passwordResetExpiresAt: null,
+          lastPasswordChangeAt: new Date(),
+        },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
   /* ---------------------------- Login ---------------------------- */
 
   async login(input: LoginInput, ctx: { userAgent?: string; ip?: string }) {

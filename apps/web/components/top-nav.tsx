@@ -9,6 +9,7 @@ import {
   type MenuCategory,
 } from "./header-categories-menu";
 import { HeaderMobileDrawer } from "./header-mobile-drawer";
+import { HeaderSearchPopup } from "./header-search-popup";
 import { getSessionUser } from "@/lib/server/session";
 import { getSiteSettings } from "@/lib/site-settings";
 import { resolveCopy } from "@/lib/copy/keys";
@@ -105,18 +106,16 @@ export async function TopNav({ active: _active }: { active?: string }) {
           <NavPill href="/trades">Meet Match</NavPill>
         </nav>
 
-        {/* Search bar — visible at every breakpoint. On mobile it
-            takes the remaining width between the logo and the
-            account cluster; on desktop it caps at max-w-xl so the
-            row stays balanced. Real <form> so Enter submits → q
-            param goes to /marketplace which now searches title,
-            seller username, name, and city in one query. */}
+        {/* Search — inline pill on desktop, icon trigger on mobile/
+            tablet that opens a fullscreen popup. Both submit q to
+            /marketplace which searches title + seller username +
+            name + city in one query. */}
         <form
           action="/marketplace"
-          className="ml-auto flex h-10 min-w-0 flex-1 max-w-xl"
+          className="ml-auto hidden h-10 min-w-0 flex-1 max-w-xl lg:flex"
           role="search"
         >
-          <label className="group flex h-full w-full items-center gap-2 rounded-full border border-rule bg-panel px-3 text-sm transition-colors focus-within:border-brand-400/70 focus-within:bg-canvas focus-within:ring-2 focus-within:ring-brand-400/20 sm:px-4 sm:gap-2.5">
+          <label className="group flex h-full w-full items-center gap-2.5 rounded-full border border-rule bg-panel px-4 text-sm transition-colors focus-within:border-brand-400/70 focus-within:bg-canvas focus-within:ring-2 focus-within:ring-brand-400/20">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-fg-subtle">
               <circle cx="11" cy="11" r="8"/>
               <path d="m21 21-4.3-4.3"/>
@@ -132,6 +131,9 @@ export async function TopNav({ active: _active }: { active?: string }) {
             <kbd className="hidden rounded border border-rule bg-canvas px-1.5 py-0.5 font-mono text-[10px] text-fg-muted lg:inline">↵</kbd>
           </label>
         </form>
+        <div className="ml-auto lg:hidden">
+          <HeaderSearchPopup />
+        </div>
 
         {/* Action cluster — buyer-first per the redesign spec. The
             "Jual" CTA was removed from this row; selling now lives

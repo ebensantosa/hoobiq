@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, useTransition } from "react";
 import { Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 import { Spinner } from "@/components/spinner";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
@@ -75,7 +76,7 @@ function LoginPageInner() {
               Lupa password?
             </Link>
           </div>
-          <Input type="password" name="password" autoComplete="current-password" placeholder="••••••••" required />
+          <PasswordField name="password" autoComplete="current-password" placeholder="••••••••" required />
         </div>
 
         <label className="flex items-center gap-2 text-sm text-fg-muted">

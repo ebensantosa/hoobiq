@@ -140,7 +140,7 @@ export function DMShell({
   const active = conversations.find((c) => c.id === activeId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col">
+    <div className="flex h-[calc(100dvh-9rem)] flex-col lg:h-[calc(100vh-5rem)]">
       {!connected && (
         <div className="flex items-center justify-center gap-2 border-b border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />

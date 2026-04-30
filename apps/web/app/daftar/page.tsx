@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Badge, Button, Input, Label } from "@hoobiq/ui";
 import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 import { Spinner } from "@/components/spinner";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
@@ -83,7 +84,7 @@ export default function RegisterPage() {
         </Field>
 
         <Field label="Password" error={fieldErrors.password}>
-          <Input type="password" name="password" autoComplete="new-password" placeholder="Min 8 karakter" minLength={8} required />
+          <PasswordField name="password" autoComplete="new-password" placeholder="Min 8 karakter" minLength={8} required />
           <p className="text-[11px] text-fg-subtle">Min 8 karakter, campur huruf besar-kecil + angka.</p>
         </Field>
 

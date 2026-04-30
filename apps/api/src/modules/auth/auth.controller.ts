@@ -188,4 +188,29 @@ export class AuthController {
   ) {
     return this.auth.verifyEmail(body.token);
   }
+
+  @Public()
+  @Post("forgot-password")
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })  // 3 / min / ip — generous for legit users, tight enough vs spam
+  @HttpCode(200)
+  async forgotPassword(
+    @Body(new ZodPipe(z.object({ email: z.string().email().toLowerCase() })))
+    body: { email: string },
+  ) {
+    return this.auth.forgotPassword(body.email);
+  }
+
+  @Public()
+  @Post("reset-password")
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @HttpCode(200)
+  async resetPassword(
+    @Body(new ZodPipe(z.object({
+      token: z.string().min(16).max(128),
+      password: PasswordSchema,
+    })))
+    body: { token: string; password: string },
+  ) {
+    return this.auth.resetPassword(body.token, body.password);
+  }
 }

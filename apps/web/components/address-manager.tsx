@@ -4,6 +4,7 @@ import { Badge, Button, Card, Input, Label } from "@hoobiq/ui";
 import { addressesApi, type Address, type AddressInput } from "@/lib/api/addresses";
 import { ApiError } from "@/lib/api/client";
 import { DestinationPicker, type Destination } from "./destination-picker";
+import { useActionDialog } from "./action-dialog";
 
 const empty: AddressInput = {
   label: "Rumah", name: "", phone: "", line: "", city: "", province: "", postal: "",
@@ -12,6 +13,7 @@ const empty: AddressInput = {
 };
 
 export function AddressManager({ initial }: { initial: Address[] }) {
+  const dialog = useActionDialog();
   const [items, setItems] = React.useState(initial);
   const [editing, setEditing] = React.useState<{ id?: string; data: AddressInput } | null>(null);
   const [pending, start] = React.useTransition();
@@ -49,12 +51,21 @@ export function AddressManager({ initial }: { initial: Address[] }) {
     } catch { /* ignore */ }
   }
 
-  async function remove(id: string) {
-    if (!confirm("Hapus alamat ini?")) return;
-    try {
-      await addressesApi.remove(id);
-      setItems((rows) => rows.filter((r) => r.id !== id));
-    } catch { /* ignore */ }
+  function remove(id: string, label: string) {
+    dialog.open({
+      title: "Hapus alamat?",
+      description: `"${label}" akan dihapus dari daftar alamat. Aksi ini tidak bisa dibatalkan.`,
+      tone: "danger",
+      confirmLabel: "Hapus",
+      onConfirm: async () => {
+        try {
+          await addressesApi.remove(id);
+          setItems((rows) => rows.filter((r) => r.id !== id));
+        } catch (e) {
+          return e instanceof ApiError ? e.message : "Gagal hapus alamat.";
+        }
+      },
+    });
   }
 
   return (
@@ -192,7 +203,7 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                   {!a.primary && (
                     <button onClick={() => makePrimary(a.id)} className="text-xs text-fg-muted hover:text-fg">Jadikan utama</button>
                   )}
-                  <button onClick={() => remove(a.id)} className="text-xs text-fg-subtle hover:text-flame-500">Hapus</button>
+                  <button onClick={() => remove(a.id, a.label)} className="text-xs text-fg-subtle hover:text-flame-500">Hapus</button>
                 </div>
               </div>
             </Card>

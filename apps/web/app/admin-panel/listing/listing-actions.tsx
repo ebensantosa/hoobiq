@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/client";
+import { useActionDialog } from "@/components/action-dialog";
 
 const NEXT_MOD: Record<string, string> = {
   active:   "hidden",
@@ -13,6 +14,7 @@ const NEXT_MOD: Record<string, string> = {
 
 export function ListingActions({ id, moderation }: { id: string; moderation: string }) {
   const router = useRouter();
+  const dialog = useActionDialog();
   const [busy, setBusy] = React.useState<"toggle" | "delete" | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
@@ -35,17 +37,24 @@ export function ListingActions({ id, moderation }: { id: string; moderation: str
     }
   }
 
-  async function remove() {
-    if (!confirm("Hapus listing ini? Kalau ada order historis, akan di-soft-disable; kalau tidak, dihapus permanen.")) return;
-    setBusy("delete"); setErr(null);
-    try {
-      await api(`/admin/listings/${id}`, { method: "DELETE" });
-      router.refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal menghapus");
-    } finally {
-      setBusy(null);
-    }
+  function remove() {
+    dialog.open({
+      title: "Hapus listing?",
+      description: "Kalau ada order historis, listing akan di-soft-disable (tetap di-trace). Kalau tidak, dihapus permanen.",
+      tone: "danger",
+      confirmLabel: "Hapus listing",
+      onConfirm: async () => {
+        setBusy("delete"); setErr(null);
+        try {
+          await api(`/admin/listings/${id}`, { method: "DELETE" });
+          router.refresh();
+        } catch (e) {
+          setBusy(null);
+          return e instanceof Error ? e.message : "Gagal menghapus";
+        }
+        setBusy(null);
+      },
+    });
   }
 
   return (

@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api/client";
 import { uploadImage } from "@/lib/api/uploads";
 import { Spinner } from "@/components/spinner";
 import { useToast } from "@/components/toast-provider";
+import { useActionDialog } from "@/components/action-dialog";
 
 export type BannerRow = {
   id: string;
@@ -107,6 +108,7 @@ function Row({
   onDeleted: (id: string) => void;
 }) {
   const toast = useToast();
+  const dialog = useActionDialog();
   const [editing, setEditing] = React.useState(false);
   const [pending, start] = React.useTransition();
 
@@ -125,14 +127,19 @@ function Row({
   }
 
   function remove() {
-    if (!window.confirm(`Hapus banner "${row.title}"?`)) return;
-    start(async () => {
-      try {
-        await api(`/banners/admin/${row.id}`, { method: "DELETE" });
-        onDeleted(row.id);
-      } catch (e) {
-        toast.error("Gagal hapus", e instanceof ApiError ? e.message : "Coba lagi.");
-      }
+    dialog.open({
+      title: "Hapus banner?",
+      description: `Banner "${row.title}" akan dihapus permanen dari home slider.`,
+      tone: "danger",
+      confirmLabel: "Hapus",
+      onConfirm: async () => {
+        try {
+          await api(`/banners/admin/${row.id}`, { method: "DELETE" });
+          onDeleted(row.id);
+        } catch (e) {
+          return e instanceof ApiError ? e.message : "Gagal hapus.";
+        }
+      },
     });
   }
 

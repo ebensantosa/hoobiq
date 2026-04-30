@@ -3,6 +3,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { listingsWriteApi } from "@/lib/api/listings-write";
+import { useActionDialog } from "./action-dialog";
 
 /**
  * Owner-only kebab menu for marketplace cards. Sits absolutely over the
@@ -18,6 +19,7 @@ export function ListingOwnerMenu({
   onRemoved?: () => void;
 }) {
   const router = useRouter();
+  const dialog = useActionDialog();
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -31,19 +33,26 @@ export function ListingOwnerMenu({
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  async function remove() {
+  function remove() {
     if (pending) return;
-    if (!window.confirm("Hapus listing ini? Tindakan tidak bisa dibatalkan.")) return;
-    setPending(true); setErr(null);
-    try {
-      await listingsWriteApi.remove(listingId);
-      setOpen(false);
-      if (onRemoved) onRemoved();
-      else router.refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal menghapus listing.");
-      setPending(false);
-    }
+    setOpen(false);
+    dialog.open({
+      title: "Hapus listing?",
+      description: "Listing akan dihapus dari marketplace dan tidak bisa dipulihkan. Order historis tetap ada di /pesanan.",
+      tone: "danger",
+      confirmLabel: "Hapus listing",
+      onConfirm: async () => {
+        setPending(true); setErr(null);
+        try {
+          await listingsWriteApi.remove(listingId);
+          if (onRemoved) onRemoved();
+          else router.refresh();
+        } catch (e) {
+          setPending(false);
+          return e instanceof Error ? e.message : "Gagal menghapus listing.";
+        }
+      },
+    });
   }
 
   return (

@@ -6,6 +6,7 @@ import { CardArt, pickArt } from "./card-art";
 import { CommentThread } from "./comment-thread";
 import { PullRateWidget } from "./pull-rate-widget";
 import { TrustBadges, deriveTrustBadges } from "./trust-badges";
+import { useActionDialog } from "./action-dialog";
 import type { FeedPost } from "@/app/feeds/page";
 import { api } from "@/lib/api/client";
 
@@ -14,6 +15,7 @@ import { api } from "@/lib/api/client";
  * expand; views fire once when the card is 50% on-screen.
  */
 export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: string | null }) {
+  const dialog = useActionDialog();
   const isOwn = !!meUsername && meUsername === post.author.username;
   const [liked, setLiked]       = React.useState(post.liked);
   const [likes, setLikes]       = React.useState(post.likes);
@@ -96,16 +98,25 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
     setShareOpen(false);
   }
 
-  async function report() {
+  function report() {
     setMenuOpen(false);
-    const reason = window.prompt("Alasan melaporkan postingan ini?\n(spam, penipuan, konten tidak pantas, dll.)");
-    if (!reason || !reason.trim()) return;
-    try {
-      await api(`/posts/${post.id}/report`, { method: "POST", body: { reason: reason.trim() } });
-      setToast("Laporan terkirim. Terima kasih.");
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : "Gagal mengirim laporan.");
-    }
+    dialog.open({
+      title: "Laporkan postingan",
+      description: "Tim moderasi akan review dalam 24 jam. Berikan konteks supaya keputusan cepat.",
+      fields: [
+        { key: "reason", label: "Alasan", type: "textarea", placeholder: "spam, penipuan, konten tidak pantas, dll.", minLength: 3 },
+      ],
+      tone: "danger",
+      confirmLabel: "Kirim laporan",
+      onConfirm: async (v) => {
+        try {
+          await api(`/posts/${post.id}/report`, { method: "POST", body: { reason: v.reason.trim() } });
+          setToast("Laporan terkirim. Terima kasih.");
+        } catch (e) {
+          return e instanceof Error ? e.message : "Gagal mengirim laporan.";
+        }
+      },
+    });
   }
 
   async function saveEdit() {
@@ -124,17 +135,25 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
     }
   }
 
-  async function deletePost() {
+  function deletePost() {
     if (deletePending) return;
-    if (!window.confirm("Hapus postingan ini? Tindakan tidak bisa dibatalkan.")) return;
-    setDeletePending(true);
-    try {
-      await api(`/posts/${post.id}`, { method: "DELETE" });
-      setRemoved(true);
-    } catch {
-      setToast("Gagal menghapus");
-      setDeletePending(false);
-    }
+    setMenuOpen(false);
+    dialog.open({
+      title: "Hapus postingan?",
+      description: "Postingan akan hilang dari feed dan tidak bisa dipulihkan.",
+      tone: "danger",
+      confirmLabel: "Hapus",
+      onConfirm: async () => {
+        setDeletePending(true);
+        try {
+          await api(`/posts/${post.id}`, { method: "DELETE" });
+          setRemoved(true);
+        } catch (e) {
+          setDeletePending(false);
+          return e instanceof Error ? e.message : "Gagal menghapus.";
+        }
+      },
+    });
   }
 
   React.useEffect(() => {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@hoobiq/ui";
 import { api, ApiError } from "@/lib/api/client";
 import { useToast } from "@/components/toast-provider";
+import { useActionDialog } from "@/components/action-dialog";
 
 export type PayoutRow = {
   id: string;
@@ -28,11 +29,10 @@ const TABS = [
 export function PayoutQueue({ initial, status }: { initial: PayoutRow[]; status: string }) {
   const router = useRouter();
   const toast = useToast();
+  const dialog = useActionDialog();
   const [pending, start] = React.useTransition();
 
-  function decide(id: string, decision: "approve" | "reject" | "mark_paid") {
-    const note = decision === "reject" ? window.prompt("Alasan penolakan:")?.trim() : undefined;
-    if (decision === "reject" && !note) return;
+  function runDecide(id: string, decision: "approve" | "reject" | "mark_paid", note?: string) {
     start(async () => {
       try {
         await api(`/payouts/${encodeURIComponent(id)}/decide`, {
@@ -46,6 +46,25 @@ export function PayoutQueue({ initial, status }: { initial: PayoutRow[]; status:
         toast.error("Gagal update", msg);
       }
     });
+  }
+
+  function decide(id: string, decision: "approve" | "reject" | "mark_paid") {
+    if (decision === "reject") {
+      dialog.open({
+        title: "Tolak permintaan payout",
+        description: "Alasan akan ditampilkan ke user di /pengaturan dan riwayat payout.",
+        fields: [
+          { key: "note", label: "Alasan tolak", type: "textarea", minLength: 3 },
+        ],
+        tone: "danger",
+        confirmLabel: "Tolak payout",
+        onConfirm: (v) => {
+          runDecide(id, decision, v.note.trim());
+        },
+      });
+      return;
+    }
+    runDecide(id, decision);
   }
 
   return (

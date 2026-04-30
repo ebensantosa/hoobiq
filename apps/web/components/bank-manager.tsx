@@ -3,10 +3,12 @@ import * as React from "react";
 import { Badge, Button, Card, Input, Label } from "@hoobiq/ui";
 import { banksApi, type BankAccount, type BankInput } from "@/lib/api/banks";
 import { ApiError } from "@/lib/api/client";
+import { useActionDialog } from "./action-dialog";
 
 const banksList = ["BCA", "Mandiri", "BNI", "BRI", "CIMB", "Permata", "BSI"] as const;
 
 export function BankManager({ initial }: { initial: BankAccount[] }) {
+  const dialog = useActionDialog();
   const [items, setItems] = React.useState(initial);
   const [adding, setAdding] = React.useState(false);
   const [form, setForm] = React.useState<BankInput>({ bank: "BCA", number: "", holderName: "", primary: false });
@@ -36,12 +38,21 @@ export function BankManager({ initial }: { initial: BankAccount[] }) {
     } catch { /* ignore */ }
   }
 
-  async function remove(id: string) {
-    if (!confirm("Hapus rekening ini?")) return;
-    try {
-      await banksApi.remove(id);
-      setItems((rows) => rows.filter((r) => r.id !== id));
-    } catch { /* ignore */ }
+  function remove(id: string, last4: string) {
+    dialog.open({
+      title: "Hapus rekening?",
+      description: `Rekening •••• ${last4} akan dihapus dari profil. Aksi ini tidak bisa dibatalkan.`,
+      tone: "danger",
+      confirmLabel: "Hapus",
+      onConfirm: async () => {
+        try {
+          await banksApi.remove(id);
+          setItems((rows) => rows.filter((r) => r.id !== id));
+        } catch (e) {
+          return e instanceof ApiError ? e.message : "Gagal hapus rekening.";
+        }
+      },
+    });
   }
 
   return (
@@ -130,7 +141,7 @@ export function BankManager({ initial }: { initial: BankAccount[] }) {
                   {!b.primary && (
                     <button onClick={() => makePrimary(b.id)} className="text-xs text-brand-500">Jadikan utama</button>
                   )}
-                  <button onClick={() => remove(b.id)} className="text-xs text-fg-subtle hover:text-flame-500">Hapus</button>
+                  <button onClick={() => remove(b.id, b.numberLast4)} className="text-xs text-fg-subtle hover:text-flame-500">Hapus</button>
                 </div>
               </div>
             </Card>

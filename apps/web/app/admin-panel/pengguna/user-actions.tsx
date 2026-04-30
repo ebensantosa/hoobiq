@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api/client";
+import { useActionDialog } from "@/components/action-dialog";
 
 const NEXT_STATUS: Record<string, "active" | "suspended"> = {
   active:    "suspended",
@@ -11,6 +12,7 @@ const NEXT_STATUS: Record<string, "active" | "suspended"> = {
 
 export function UserActions({ id, status }: { id: string; status: string }) {
   const router = useRouter();
+  const dialog = useActionDialog();
   const [busy, setBusy] = React.useState<"toggle" | "delete" | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
@@ -33,17 +35,24 @@ export function UserActions({ id, status }: { id: string; status: string }) {
     }
   }
 
-  async function remove() {
-    if (!confirm("Soft-delete user ini? Akun ditandai 'deleted' tapi data historis (order, listing) tetap.")) return;
-    setBusy("delete"); setErr(null);
-    try {
-      await api(`/admin/users/${id}`, { method: "DELETE" });
-      router.refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal");
-    } finally {
-      setBusy(null);
-    }
+  function remove() {
+    dialog.open({
+      title: "Soft-delete user?",
+      description: "Akun ditandai 'deleted' tapi data historis (order, listing) tetap untuk audit. Aksi tidak bisa dibatalkan tanpa intervensi DB.",
+      tone: "danger",
+      confirmLabel: "Soft-delete",
+      onConfirm: async () => {
+        setBusy("delete"); setErr(null);
+        try {
+          await api(`/admin/users/${id}`, { method: "DELETE" });
+          router.refresh();
+        } catch (e) {
+          setBusy(null);
+          return e instanceof Error ? e.message : "Gagal";
+        }
+        setBusy(null);
+      },
+    });
   }
 
   return (

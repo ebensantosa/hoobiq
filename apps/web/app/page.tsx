@@ -7,6 +7,7 @@ import { HomeFeed, type HomeCategory } from "@/components/home-feed";
 import { CardArt, pickArt } from "@/components/card-art";
 import { getSessionUser } from "@/lib/server/session";
 import { serverApi } from "@/lib/server/api";
+import { pickPrimaryCategories } from "@/lib/primary-categories";
 import { conditionLabel } from "@/lib/condition-badge";
 import { copyFor } from "@/lib/copy/server";
 import type { ListingSummary } from "@hoobiq/types";
@@ -40,7 +41,9 @@ export default async function LandingPage() {
     ]);
     const trendingAll = trendingRes?.items ?? [];
     const fresh = freshRes?.items ?? [];
-    const categories = (treeRes ?? []).filter((c) => c.level === 1);
+    const categories = pickPrimaryCategories(
+      (treeRes ?? []).filter((c) => c.level === 1),
+    );
     const boosted = trendingAll.filter((l) => l.boosted);
     const trending = trendingAll.filter((l) => !l.boosted).slice(0, 8);
     const popular = trendingAll.slice(8, 16);

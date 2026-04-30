@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { CategoryTreeView } from "@/components/category-tree-view";
 import { serverApi } from "@/lib/server/api";
+import { pickPrimaryCategories } from "@/lib/primary-categories";
 
 export const metadata = { title: "Kategori · Hoobiq" };
 export const dynamic = "force-dynamic";
@@ -103,7 +104,7 @@ const fallback = {
 
 export default async function CategoryIndexPage() {
   const tree = await serverApi<Node[]>("/categories", { revalidate: 60 });
-  const roots = (tree ?? []).filter((n) => n.level === 1);
+  const roots = pickPrimaryCategories((tree ?? []).filter((n) => n.level === 1));
 
   return (
     <AppShell active="Kategori">

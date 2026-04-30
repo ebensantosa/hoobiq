@@ -1,5 +1,6 @@
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
+import { pickPrimaryCategories } from "@/lib/primary-categories";
 import { SidebarItem } from "./sidebar-item";
 
 type Node = {
@@ -53,7 +54,10 @@ export async function Sidebar() {
     serverApi<Node[]>("/categories", { revalidate: 60 }),
     getSessionUser(),
   ]);
-  const explore = (tree ?? []).filter((n) => n.level === 1);
+  // Restrict to the canonical 5 primary buckets in spec order. Legacy
+  // rows that lingered at level=1 (action-figure, blind-box, komik —
+  // now demoted to sub-categories) get filtered out here.
+  const explore = pickPrimaryCategories((tree ?? []).filter((n) => n.level === 1));
 
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-rule bg-canvas/50 px-4 pt-4 pb-8 lg:flex">

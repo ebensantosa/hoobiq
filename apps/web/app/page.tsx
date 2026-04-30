@@ -34,7 +34,7 @@ export default async function LandingPage() {
     // grids. Pulls every counter in parallel so the whole page lays out
     // in one render pass; failures degrade gracefully (counter just
     // shows 0 instead of blocking the whole page).
-    const [trendingRes, freshRes, treeRes, wishlistRes, ordersRes, mineRes] =
+    const [trendingRes, freshRes, treeRes, wishlistRes, ordersRes, mineRes, bannersRes] =
       await Promise.all([
         serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=24"),
         serverApi<{ items: ListingSummary[] }>("/listings?sort=newest&limit=12"),
@@ -42,6 +42,8 @@ export default async function LandingPage() {
         serverApi<{ items: unknown[] }>("/wishlist").catch(() => null),
         serverApi<{ items: unknown[] }>("/orders?role=buyer").catch(() => null),
         serverApi<{ items: unknown[] }>("/listings/mine").catch(() => null),
+        serverApi<{ items: import("@/components/home/hero-slider").HeroBanner[] }>("/banners", { revalidate: 60 })
+          .catch(() => null),
       ]);
     const trendingAll = trendingRes?.items ?? [];
     const fresh = freshRes?.items ?? [];
@@ -68,6 +70,7 @@ export default async function LandingPage() {
         popular={popular}
         fresh={fresh}
         stats={stats}
+        banners={bannersRes?.items ?? []}
       />
     );
   }

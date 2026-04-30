@@ -46,6 +46,12 @@ const nav: { group: string; items: NavItem[] }[] = [
     ],
   },
   {
+    group: "Konten",
+    items: [
+      { href: "/admin-panel/homepage-banners", label: "Hero banner" },
+    ],
+  },
+  {
     group: "Sistem",
     items: [
       { href: "/admin-panel/pengaturan", label: "Pengaturan" },

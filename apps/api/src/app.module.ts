@@ -29,6 +29,7 @@ import { CartModule } from "./modules/cart/cart.module";
 import { EmailModule } from "./modules/email/email.module";
 import { BoostModule } from "./modules/boost/boost.module";
 import { PayoutsModule } from "./modules/payouts/payouts.module";
+import { BannersModule } from "./modules/banners/banners.module";
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { PayoutsModule } from "./modules/payouts/payouts.module";
     UploadsModule,
     ShippingModule,
     HealthModule,
+    BannersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

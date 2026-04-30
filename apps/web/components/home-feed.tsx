@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
 import { PilihanTabs } from "@/components/home/pilihan-tabs";
+import { HeroSlider, type HeroBanner as HeroBannerData } from "@/components/home/hero-slider";
 import { CardArt, pickArt } from "@/components/card-art";
 import type { ListingSummary } from "@hoobiq/types";
 
@@ -54,6 +55,7 @@ export function HomeFeed({
   popular,
   fresh,
   stats,
+  banners,
 }: {
   username: string;
   categories: HomeCategory[];
@@ -62,6 +64,7 @@ export function HomeFeed({
   popular: ListingSummary[];
   fresh: ListingSummary[];
   stats: HomeStats;
+  banners: HeroBannerData[];
 }) {
   // Pool for the "Pilihan Untukmu" tabs — boosted on top so Terlaris's
   // boosted-first heuristic surfaces them, then dedupe.
@@ -75,7 +78,7 @@ export function HomeFeed({
   return (
     <AppShell active="Home">
       <div className="px-4 pb-16 sm:px-6 lg:px-10">
-        <HeroBanner />
+        <HeroSlider banners={banners} />
 
         {/* Quick stats are dashboard-y — hide on mobile per the latest
             UX feedback. Mobile home flows hero → kategori → produk

@@ -779,3 +779,33 @@ model BoostPurchase {
   @@index([listingId, status])
   @@map("boost_purchases")
 }
+
+/// Hero slider banner shown at the top of the logged-in home page.
+/// CMS-managed via /admin-panel/homepage-banners — admins can add /
+/// edit / reorder / activate-deactivate without a code deploy. The
+/// public GET /banners endpoint returns the active set ordered by
+/// sortOrder for the slider to render.
+model HomepageBanner {
+  id        String   @id @default(cuid())
+  /// Bold heading on the banner ("Lengkapi Koleksimu...").
+  title     String
+  /// Smaller subtitle line below the heading (optional).
+  subtitle  String?
+  /// Small uppercase tag chip ("HOT COLLECTION", "FEATURED", ...).
+  kicker    String?
+  /// CTA button label ("Jelajahi Sekarang").
+  ctaLabel  String   @default("Jelajahi Sekarang")
+  /// Internal href the CTA goes to ("/marketplace?sort=trending").
+  ctaHref   String   @default("/marketplace")
+  /// Hero image — typically a product collage uploaded by admin.
+  imageUrl  String   @map("image_url")
+  /// Display order — lower = earlier in the slider rotation.
+  sortOrder Int      @default(0) @map("sort_order")
+  /// Toggle to hide a banner without deleting it (e.g. seasonal swaps).
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([active, sortOrder])
+  @@map("homepage_banners")
+}

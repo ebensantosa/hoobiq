@@ -525,7 +525,7 @@ function TrustSection() {
     { title: "Komunitas Aktif", sub: "Bergabung dengan ribuan kolektor Indonesia.", color: "bg-ultra-500/15 text-ultra-600 dark:text-ultra-400",       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   ];
   return (
-    <section className="mt-14 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <section className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
       {items.map((it) => (
         <div key={it.title} className="flex items-center gap-3 rounded-2xl border border-rule bg-panel p-4">
           <div className={"grid h-10 w-10 shrink-0 place-items-center rounded-xl " + it.color}>

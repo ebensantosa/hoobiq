@@ -142,12 +142,17 @@ export async function TopNav({ active: _active }: { active?: string }) {
           <ThemeToggle />
           {user ? (
             <>
-              <IconButton href="/wishlist" label="Wishlist">
+              {/* Wishlist + DM hidden on mobile — both already
+                  reachable from the avatar dropdown / mobile drawer
+                  / bottom tab bar (DM = "Pesan"). Keeps the mobile
+                  header focused on search + cart + notif + avatar so
+                  the row stops feeling cramped on phone widths. */}
+              <IconButton href="/wishlist" label="Wishlist" hideOnMobile>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </IconButton>
-              <IconButton href="/dm" label="Pesan">
+              <IconButton href="/dm" label="Pesan" hideOnMobile>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
@@ -190,17 +195,26 @@ function IconButton({
   href,
   label,
   children,
+  hideOnMobile = false,
 }: {
   href: string;
   label: string;
   children: React.ReactNode;
+  /** When true, the button collapses on phone widths and only
+   *  appears at sm+. Used for header chrome (Wishlist, DM) that has
+   *  alternate access points on mobile (avatar dropdown / drawer /
+   *  bottom nav) — keeps the mobile header from getting cramped. */
+  hideOnMobile?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-label={label}
       title={label}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted transition-all duration-200 hover:bg-panel hover:text-brand-500"
+      className={
+        "relative h-9 w-9 items-center justify-center rounded-lg text-fg-muted transition-all duration-200 hover:bg-panel hover:text-brand-500 " +
+        (hideOnMobile ? "hidden sm:inline-flex" : "inline-flex")
+      }
     >
       {children}
     </Link>

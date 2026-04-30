@@ -72,22 +72,10 @@ export function CheckoutForm({
   const [costErr, setCostErr] = React.useState<string | null>(null);
   const [pickedCourier, setPickedCourier] = React.useState<string | null>(null);
 
-  // Real payment methods from /payments/komerce/methods (live list of
-  // enabled banks + QRIS). Falls back to a basic "QRIS only" option if
-  // Komerce is unreachable.
-  type Method = { paymentType: string; bankCode: string; displayName: string; logoUrl: string };
-  const [methods, setMethods] = React.useState<Method[] | null>(null);
-  const [pickedPay, setPickedPay] = React.useState<{ type: string; code: string } | null>(null);
-
-  React.useEffect(() => {
-    api<{ items: Method[] }>("/payments/komerce/methods")
-      .then((res) => {
-        setMethods(res.items);
-        const first = res.items[0];
-        if (first) setPickedPay({ type: first.paymentType, code: first.bankCode });
-      })
-      .catch(() => setMethods([]));
-  }, []);
+  // Payment methods are picked on Midtrans Snap's hosted page (the
+  // buyer is redirected there after submit and chooses BCA/BNI/QRIS/
+  // GoPay/etc inside Snap). The previous in-app Komerce VA picker is
+  // gone — Hoobiq's own UI doesn't need to enumerate banks anymore.
 
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
 
@@ -143,10 +131,6 @@ export function CheckoutForm({
       setErr(costErr ?? "Pilih ekspedisi dulu.");
       return;
     }
-    if (!pickedPay) {
-      setErr("Pilih metode pembayaran dulu.");
-      return;
-    }
     setErr(null);
     setPending(true);
     try {
@@ -159,7 +143,9 @@ export function CheckoutForm({
           courierCode: `${selectedCost.courier}-${selectedCost.service.toLowerCase()}`,
           shippingCents: selectedCost.cost * 100,
           insurance,
-          payMethod: "snap",
+          // "page" = Midtrans Snap hosted Payment Page. Buyer picks
+          // VA/e-wallet/QRIS on Snap's UI after the redirect.
+          payMethod: "page",
         },
       });
       // Midtrans Snap is a hosted page — bounce the buyer straight to
@@ -341,47 +327,25 @@ export function CheckoutForm({
           </Card>
         </Section>
 
-        {/* Payment method picker — live list from Komerce */}
+        {/* Payment — handed off to Midtrans Snap. The hosted page lets
+            the buyer pick VA / e-wallet / QRIS / kartu in one screen
+            with merchant-side method toggles, so we don't enumerate
+            banks here. */}
         <Section title="Metode pembayaran">
-          {methods === null ? (
-            <Card><div className="p-5 text-sm text-fg-muted">Memuat metode pembayaran…</div></Card>
-          ) : methods.length === 0 ? (
-            <Card><div className="p-5 text-sm text-flame-600">Pembayaran belum dikonfigurasi. Hubungi admin.</div></Card>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {methods.map((m) => {
-                const id = `${m.paymentType}-${m.bankCode}`;
-                const isPicked = pickedPay?.type === m.paymentType && pickedPay.code === m.bankCode;
-                return (
-                  <Card key={id} className={isPicked ? "border-brand-400 bg-brand-400/5" : ""}>
-                    <label className="flex cursor-pointer items-center gap-4 p-3">
-                      <input
-                        type="radio"
-                        name="paymethod"
-                        checked={isPicked}
-                        onChange={() => setPickedPay({ type: m.paymentType, code: m.bankCode })}
-                        className="h-4 w-4 accent-brand-400"
-                      />
-                      <div className="flex h-10 w-14 items-center justify-center overflow-hidden rounded-lg border border-rule bg-white p-1">
-                        {m.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.logoUrl} alt={m.displayName} className="max-h-full max-w-full object-contain" />
-                        ) : (
-                          <span className="font-mono text-[10px] text-fg-muted">{m.bankCode || m.paymentType}</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-fg">{m.displayName}</p>
-                        <p className="mt-0.5 text-xs text-fg-muted">
-                          {m.paymentType === "qris" ? "Scan dari app mobile banking / e-wallet" : "Virtual Account"}
-                        </p>
-                      </div>
-                    </label>
-                  </Card>
-                );
-              })}
+          <Card>
+            <div className="flex items-center gap-4 p-4">
+              <div className="grid h-10 w-14 place-items-center rounded-lg border border-rule bg-white">
+                <span className="font-mono text-[10px] font-semibold text-brand-500">SNAP</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-fg">Hoobiq Pay (Midtrans Snap)</p>
+                <p className="mt-0.5 text-xs text-fg-muted">
+                  Pilih VA bank, e-wallet (GoPay/OVO/Dana/ShopeePay), QRIS, atau kartu
+                  langsung di halaman pembayaran setelah klik "Lanjut ke pembayaran".
+                </p>
+              </div>
             </div>
-          )}
+          </Card>
         </Section>
       </div>
 

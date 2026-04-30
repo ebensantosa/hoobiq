@@ -30,15 +30,19 @@ export default async function LandingPage() {
   // and /feeds per spec). Anonymous visitors still see the marketing
   // landing below.
   if (user) {
-    const [trendingRes, freshRes, treeRes] = await Promise.all([
-      serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=24"),
-      serverApi<{ items: ListingSummary[] }>("/listings?sort=newest&limit=12"),
-      // Top-level categories rendered as a strip beneath the welcome
-      // header. Cached server-side; level filter trims to L1 only because
-      // the strip only surfaces the entry-points (deeper picking happens
-      // on /kategori or via the marketplace filter).
-      serverApi<HomeCategory[]>("/categories", { revalidate: 60 }),
-    ]);
+    // Marketplace-style home — hero, quick stats, category cards, tab
+    // grids. Pulls every counter in parallel so the whole page lays out
+    // in one render pass; failures degrade gracefully (counter just
+    // shows 0 instead of blocking the whole page).
+    const [trendingRes, freshRes, treeRes, wishlistRes, ordersRes, mineRes] =
+      await Promise.all([
+        serverApi<{ items: ListingSummary[] }>("/listings?sort=trending&limit=24"),
+        serverApi<{ items: ListingSummary[] }>("/listings?sort=newest&limit=12"),
+        serverApi<HomeCategory[]>("/categories", { revalidate: 60 }),
+        serverApi<{ items: unknown[] }>("/wishlist").catch(() => null),
+        serverApi<{ items: unknown[] }>("/orders?role=buyer").catch(() => null),
+        serverApi<{ items: unknown[] }>("/listings/mine").catch(() => null),
+      ]);
     const trendingAll = trendingRes?.items ?? [];
     const fresh = freshRes?.items ?? [];
     const categories = pickPrimaryCategories(
@@ -47,6 +51,13 @@ export default async function LandingPage() {
     const boosted = trendingAll.filter((l) => l.boosted);
     const trending = trendingAll.filter((l) => !l.boosted).slice(0, 8);
     const popular = trendingAll.slice(8, 16);
+    const stats = {
+      collection: mineRes?.items.length ?? 0,
+      wishlist:   wishlistRes?.items.length ?? 0,
+      orders:     ordersRes?.items.length ?? 0,
+      rating:     user.trustScore,
+      verified:   user.role === "verified" || user.role === "admin" || user.role === "superadmin",
+    };
 
     return (
       <HomeFeed
@@ -56,6 +67,7 @@ export default async function LandingPage() {
         trending={trending}
         popular={popular}
         fresh={fresh}
+        stats={stats}
       />
     );
   }

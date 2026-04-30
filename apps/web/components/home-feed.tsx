@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
-import { conditionLabel } from "@/lib/condition-badge";
+import { PilihanTabs } from "@/components/home/pilihan-tabs";
+import { CardArt, pickArt } from "@/components/card-art";
 import type { ListingSummary } from "@hoobiq/types";
 
-/** Shape of the category data we surface in the top strip. */
+/** Shape of the category data we surface on the home page. */
 export type HomeCategory = {
   id: string;
   slug: string;
@@ -15,20 +16,35 @@ export type HomeCategory = {
   children: HomeCategory[];
 };
 
+export type HomeStats = {
+  collection: number;
+  wishlist: number;
+  orders: number;
+  rating: number;
+  verified: boolean;
+};
+
 /**
- * The logged-in home page — purposely distinct from /marketplace (the
- * filterable grid) and /feeds (the social timeline). Spec says clicking
- * the Hoobiq logo lands here, with viral/popular/boosted/general grids.
+ * Logged-in marketplace home — V1 of the redesigned layout per the
+ * mockup. Top-down structure:
  *
- * Sections, top to bottom:
- *   1. Boosted now — paid placements, large cards
- *   2. Viral / trending — top by recent views
- *   3. Populer — top by all-time views
- *   4. Grid — most recent across the marketplace
+ *   1. Hero banner — full-width gradient + CTA. Static for V1; an
+ *      admin CMS pass will let ops swap image/title/CTA without code
+ *      edits, but the layout below is built so that only the inner
+ *      <HeroBanner> needs to swap to a CMS-driven variant later.
+ *   2. Quick stats — Koleksimu / Wishlist / Transaksi / Rating + a
+ *      Verified Seller trust card.
+ *   3. Category grid — visual circle cards driven by the live category
+ *      tree (with imageUrl when admin set one, gradient fallback otherwise).
+ *   4. "Pilihan Untukmu" — tabbed product grid (Semua / Baru / Terlaris
+ *      / Rare). Tabs are client-side; the server hands the full pool.
+ *   5. Trending Minggu Ini — small horizontal scroller.
+ *   6. Rare / Premium Collection — dark-gradient standout cards.
+ *   7. Trust / Benefit — five static promise cards.
  *
- * Each section reuses ListingCard so condition pills, location, and
- * boost badges stay consistent. If a section is empty (e.g. no boosts
- * active right now), it just doesn't render.
+ * The previous "Halo, {username}" greeting + dashboard tone is gone —
+ * the page now leads with product, not personalisation, matching the
+ * mockup's marketplace-first feel.
  */
 export function HomeFeed({
   username,
@@ -37,77 +53,73 @@ export function HomeFeed({
   trending,
   popular,
   fresh,
+  stats,
 }: {
   username: string;
-  /** Top-level categories rendered as a horizontal pill strip directly
-   *  beneath the welcome header. Profile-page placement was easy to miss;
-   *  this puts the entry-points in the buyer's primary line of sight. */
   categories: HomeCategory[];
   boosted: ListingSummary[];
   trending: ListingSummary[];
   popular: ListingSummary[];
   fresh: ListingSummary[];
+  stats: HomeStats;
 }) {
+  // Pool for the "Pilihan Untukmu" tabs — boosted on top so Terlaris's
+  // boosted-first heuristic surfaces them, then dedupe.
+  const seen = new Set<string>();
+  const pool = [...boosted, ...trending, ...popular, ...fresh].filter((l) => {
+    if (seen.has(l.id)) return false;
+    seen.add(l.id);
+    return true;
+  });
+
   return (
     <AppShell active="Home">
-      <div className="px-4 pb-12 sm:px-6 lg:px-10">
-        <header className="border-b border-rule pb-6">
-          <h1 className="text-3xl font-bold text-fg md:text-4xl">
-            Halo, {username}.
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-            Etalase Hoobiq hari ini — yang lagi viral, paling dicari, dan
-            listing baru langsung dari kolektor.
-          </p>
-        </header>
+      <div className="px-4 pb-16 sm:px-6 lg:px-10">
+        <HeroBanner />
 
-        {categories.length > 0 && <CategoryStrip categories={categories} />}
+        <QuickStats stats={stats} />
 
-        {boosted.length > 0 && (
-          <Section
-            kicker="Sponsored · Boost aktif"
-            title="Lagi disorot"
-            href="/marketplace?sort=trending"
-            ctaLabel="Lihat semua trending"
-          >
-            <BoostStrip items={boosted.slice(0, 6)} />
-          </Section>
+        {categories.length > 0 && (
+          <SectionHeader
+            title="Jelajahi Kategori"
+            href="/kategori"
+            ctaLabel="Lihat semua"
+          />
+        )}
+        {categories.length > 0 && (
+          <CategoryRow categories={categories} />
         )}
 
+        <div className="mt-12">
+          <SectionHeader title="Pilihan Untukmu" />
+          <PilihanTabs listings={pool} meUsername={username} />
+        </div>
+
         {trending.length > 0 && (
-          <Section
-            kicker="Trending"
-            title="Viral minggu ini"
-            href="/marketplace?sort=trending"
-            ctaLabel="Lihat semua"
-          >
-            <Grid items={trending.slice(0, 8)} />
-          </Section>
+          <div className="mt-12">
+            <SectionHeader
+              title="Trending Minggu Ini"
+              href="/marketplace?sort=trending"
+              ctaLabel="Lihat semua"
+            />
+            <TrendingStrip items={trending.slice(0, 5)} />
+          </div>
         )}
 
         {popular.length > 0 && (
-          <Section
-            kicker="Most viewed"
-            title="Paling populer"
-            href="/marketplace?sort=trending"
-            ctaLabel="Lihat lebih banyak"
-          >
-            <Grid items={popular.slice(0, 8)} />
-          </Section>
+          <div className="mt-12">
+            <SectionHeader
+              title="Rare Collection"
+              href="/marketplace?sort=trending"
+              ctaLabel="Lihat semua"
+            />
+            <PremiumGrid items={popular.slice(0, 5)} />
+          </div>
         )}
 
-        {fresh.length > 0 && (
-          <Section
-            kicker="Baru di Hoobiq"
-            title="Listing terbaru"
-            href="/marketplace"
-            ctaLabel="Buka marketplace"
-          >
-            <Grid items={fresh.slice(0, 12)} />
-          </Section>
-        )}
+        <TrustSection />
 
-        {boosted.length === 0 && trending.length === 0 && popular.length === 0 && fresh.length === 0 && (
+        {pool.length === 0 && (
           <div className="mt-10 rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
             Belum ada listing untuk ditampilkan.{" "}
             <Link href="/upload" className="font-semibold text-brand-500">
@@ -120,142 +132,259 @@ export function HomeFeed({
   );
 }
 
-/**
- * Top-of-home category strip. Per-category quick-jump card with an
- * accent gradient + listing count, plus a "Lihat semua" rail link to
- * the full /kategori page. Sits right after the welcome header so
- * buyers see entry-points before any listings load.
- *
- * Each card links to /kategori/<slug>: for level-1 categories with
- * children that page renders the next-level kotak picker; for
- * leaf-level it redirects straight to /marketplace?cat=<slug>. Either
- * way, this strip is the spec-aligned "klik kategori" entry point.
- */
-function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
+/* -------------------------------------------------------------------- */
+/*  Hero banner — V1 static. CMS-driven variant lives behind the same    */
+/*  visual contract so the swap later is a single component change.      */
+/* -------------------------------------------------------------------- */
+
+function HeroBanner() {
   return (
-    <section className="mt-6">
-      <div className="flex items-end justify-between gap-3">
+    <section className="relative mt-2 overflow-hidden rounded-2xl border border-rule bg-gradient-to-br from-brand-100 via-ultra-100 to-flame-100 dark:from-brand-500/10 dark:via-ultra-500/10 dark:to-flame-500/10">
+      <div className="grid items-center gap-6 p-6 sm:p-10 md:grid-cols-[1.1fr_1fr]">
         <div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-500">
-            Jelajah kategori
+          <span className="inline-block rounded-full bg-brand-500/15 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">
+            Featured Collection
           </span>
-          <h2 className="mt-1 text-base font-bold text-fg">Pilih dari mana mau mulai</h2>
+          <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-fg sm:text-4xl md:text-5xl">
+            Temukan Koleksi{" "}
+            <span className="bg-gradient-to-r from-brand-500 via-ultra-500 to-flame-500 bg-clip-text text-transparent">
+              Premium &amp; Langka
+            </span>
+          </h1>
+          <p className="mt-3 max-w-md text-sm text-fg-muted sm:text-base">
+            Dari kartu langka hingga figure eksklusif, semua ada di Hoobiq.
+          </p>
+          <Link
+            href="/marketplace"
+            className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-brand-500 px-6 text-sm font-bold text-white shadow-lg shadow-brand-500/25 transition-all hover:-translate-y-0.5 hover:bg-brand-600 hover:shadow-xl hover:shadow-brand-500/30"
+          >
+            Jelajahi Sekarang
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
-        <Link href="/kategori" className="text-xs font-semibold text-brand-500">
-          Lihat semua
-        </Link>
-      </div>
-      {/* Horizontal slider — snap-based scroll on every breakpoint so
-          buyers can flick through categories with one thumb on mobile,
-          and admin-uploaded hero images get room to breathe on desktop.
-          Each card is a fixed pixel width so widths stay consistent
-          regardless of category name length. Stays inside the page
-          gutter so left/right edges line up with the heading row. */}
-      <div
-        className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {categories.map((c) => {
-          const tone = CATEGORY_TONE[c.slug] ?? FALLBACK_TONE;
-          return (
-            <Link
-              key={c.id}
-              href={`/kategori/${c.slug}`}
-              className={
-                "group relative flex w-44 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border transition-all hover:-translate-y-0.5 sm:w-48 " +
-                tone.border + " " + tone.shadow
-              }
-            >
-              {/* Image (or gradient fallback) header — 4:3 keeps the
-                  card compact while still giving the photo enough room
-                  to read. */}
-              <div className={"relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br " + tone.bg}>
-                {c.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={c.imageUrl}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <span
-                    className={
-                      "absolute inset-0 grid place-items-center " + tone.iconColor
-                    }
-                  >
-                    <span className="scale-150">{categoryIcon(c.slug)}</span>
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col gap-1 p-3">
-                <p className="text-sm font-bold leading-tight text-fg">{c.name}</p>
-                <p className="font-mono text-[10px] text-fg-muted">
-                  {c.listingCount.toLocaleString("id-ID")} listing
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {/* Visual side — deliberately abstract until CMS hero ships;
+            the gradient + floating cards read as "premium collection"
+            without needing a real photo asset. */}
+        <div className="relative hidden h-56 md:block">
+          <div className="absolute right-8 top-2 h-44 w-32 rotate-[-8deg] rounded-xl border-2 border-amber-300/60 bg-gradient-to-br from-amber-200 to-amber-400 shadow-xl">
+            <div className="m-2 h-20 rounded-md bg-amber-50/80" />
+            <div className="mx-2 mt-2 h-2 rounded-full bg-amber-700/40" />
+            <div className="mx-2 mt-1 h-2 w-2/3 rounded-full bg-amber-700/30" />
+          </div>
+          <div className="absolute right-32 top-8 h-44 w-32 rotate-[4deg] rounded-xl border-2 border-rose-300/60 bg-gradient-to-br from-rose-200 to-rose-400 shadow-xl">
+            <div className="m-2 h-20 rounded-md bg-rose-50/80" />
+            <div className="mx-2 mt-2 h-2 rounded-full bg-rose-700/40" />
+            <div className="mx-2 mt-1 h-2 w-2/3 rounded-full bg-rose-700/30" />
+          </div>
+          <div className="absolute right-56 top-12 h-44 w-32 rotate-[-3deg] rounded-xl border-2 border-violet-300/60 bg-gradient-to-br from-violet-200 to-violet-400 shadow-xl">
+            <div className="m-2 h-20 rounded-md bg-violet-50/80" />
+            <div className="mx-2 mt-2 h-2 rounded-full bg-violet-700/40" />
+            <div className="mx-2 mt-1 h-2 w-2/3 rounded-full bg-violet-700/30" />
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-/** Per-slug colour palette: gradient bg + matching ring/shadow on
- *  hover + icon-tile colour. Mirrors the sidebar's iconFor() colour
- *  language so the strip and the sidebar speak the same visual idiom. */
-const CATEGORY_TONE: Record<string, {
-  bg: string; border: string; shadow: string; iconBg: string; iconColor: string;
-}> = {
-  "collection-cards": {
-    bg: "from-emerald-100 to-emerald-50 dark:from-emerald-400/15 dark:to-emerald-400/5",
-    border: "border-emerald-300/40 hover:border-emerald-400/70",
-    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-emerald-400/40",
-    iconBg: "bg-emerald-500/15 dark:bg-emerald-400/20",
-    iconColor: "text-emerald-600 dark:text-emerald-300",
-  },
-  "trading-cards": {
-    bg: "from-brand-100 to-brand-50 dark:from-brand-400/15 dark:to-brand-400/5",
-    border: "border-brand-300/40 hover:border-brand-400/70",
-    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40",
-    iconBg: "bg-brand-500/15 dark:bg-brand-400/20",
-    iconColor: "text-brand-600 dark:text-brand-300",
-  },
-  "merchandise": {
-    bg: "from-sky-100 to-sky-50 dark:from-sky-400/15 dark:to-sky-400/5",
-    border: "border-sky-300/40 hover:border-sky-400/70",
-    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-sky-400/40",
-    iconBg: "bg-sky-500/15 dark:bg-sky-400/20",
-    iconColor: "text-sky-600 dark:text-sky-300",
-  },
-  "toys": {
-    bg: "from-ultra-100 to-ultra-50 dark:from-ultra-400/15 dark:to-ultra-400/5",
-    border: "border-ultra-300/40 hover:border-ultra-400/70",
-    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-ultra-400/40",
-    iconBg: "bg-ultra-500/15 dark:bg-ultra-400/20",
-    iconColor: "text-ultra-600 dark:text-ultra-300",
-  },
-  "others": {
-    bg: "from-flame-100 to-flame-50 dark:from-flame-400/15 dark:to-flame-400/5",
-    border: "border-flame-300/40 hover:border-flame-400/70",
-    shadow: "hover:shadow-[0_8px_24px_-12px] hover:shadow-flame-400/40",
-    iconBg: "bg-flame-500/15 dark:bg-flame-400/20",
-    iconColor: "text-flame-600 dark:text-flame-300",
-  },
-};
-const FALLBACK_TONE = CATEGORY_TONE["trading-cards"]!;
+/* -------------------------------------------------------------------- */
+/*  Quick Stats — Koleksimu / Wishlist / Transaksi / Rating + Verified    */
+/* -------------------------------------------------------------------- */
 
-/** Slug-keyed icon. Same visual language as the sidebar so jumping
- *  between sidebar and home strip doesn't feel like two different
- *  apps. Icons are 22×22 strokes consistent with the lucide preset
- *  used everywhere else. */
+function QuickStats({ stats }: { stats: HomeStats }) {
+  return (
+    <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+      <StatCard
+        href="/jual"
+        label="Koleksimu"
+        value={stats.collection}
+        suffix="Item"
+        sub="Lihat koleksi"
+        accent="brand"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16.5 9.4 7.5 4.21" />
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <path d="M3.27 6.96 12 12.01l8.73-5.05" />
+            <path d="M12 22.08V12" />
+          </svg>
+        }
+      />
+      <StatCard
+        href="/wishlist"
+        label="Wishlist"
+        value={stats.wishlist}
+        suffix="Item"
+        sub="Lihat wishlist"
+        accent="rose"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        }
+      />
+      <StatCard
+        href="/pesanan"
+        label="Transaksi"
+        value={stats.orders}
+        suffix="Deal"
+        sub="Riwayat transaksi"
+        accent="emerald"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        }
+      />
+      <StatCard
+        href={`/u/${encodeURIComponent("")}`}
+        label="Rating"
+        value={stats.rating.toFixed(1)}
+        suffix=""
+        sub="Trust score"
+        accent="amber"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2 14.6 8.4 21.5 9 16.3 13.6 17.9 20.5 12 17 6.1 20.5 7.7 13.6 2.5 9 9.4 8.4Z" />
+          </svg>
+        }
+      />
+
+      {/* Verified Seller — promo card spanning 2 cols on tablet, 1 on
+          desktop's 5-col grid. Click goes to KYC settings if user
+          isn't verified, profile otherwise. */}
+      <Link
+        href={stats.verified ? "/pengaturan" : "/pengaturan/verifikasi-ktp"}
+        className="col-span-2 flex items-center gap-3 rounded-2xl border border-brand-400/30 bg-gradient-to-br from-brand-500/10 to-ultra-500/10 p-4 transition-all hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-lg sm:col-span-2 lg:col-span-1"
+      >
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/20 text-brand-600 dark:text-brand-400">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-fg">Verified Seller</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">
+            {stats.verified
+              ? "Akun kamu sudah terverifikasi untuk transaksi yang aman."
+              : "Verifikasi KTP buat dapet badge & trust ekstra."}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-brand-500">Selengkapnya →</p>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
+function StatCard({
+  href, label, value, suffix, sub, accent, icon,
+}: {
+  href: string;
+  label: string;
+  value: number | string;
+  suffix: string;
+  sub: string;
+  accent: "brand" | "rose" | "emerald" | "amber";
+  icon: React.ReactNode;
+}) {
+  const tone = {
+    brand:   "bg-brand-500/15 text-brand-600 dark:text-brand-400",
+    rose:    "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+    emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    amber:   "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  }[accent];
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-2xl border border-rule bg-panel p-4 transition-all hover:-translate-y-0.5 hover:border-brand-400/40 hover:shadow-md"
+    >
+      <div className={"grid h-11 w-11 shrink-0 place-items-center rounded-xl " + tone}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-fg-subtle">{label}</p>
+        <p className="mt-0.5 text-xl font-extrabold text-fg">
+          {value}
+          {suffix && <span className="ml-1 text-xs font-semibold text-fg-muted">{suffix}</span>}
+        </p>
+        <p className="mt-0.5 text-[11px] text-fg-muted">{sub}</p>
+      </div>
+    </Link>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/*  Section header reused across the home page                           */
+/* -------------------------------------------------------------------- */
+
+function SectionHeader({
+  title, href, ctaLabel,
+}: {
+  title: string;
+  href?: string;
+  ctaLabel?: string;
+}) {
+  return (
+    <div className="mt-10 flex items-end justify-between gap-3">
+      <h2 className="text-xl font-bold text-fg sm:text-2xl">{title}</h2>
+      {href && ctaLabel && (
+        <Link href={href} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-500 hover:text-brand-600">
+          {ctaLabel} <span aria-hidden>→</span>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/*  Categories — visual circle cards, horizontal scroll on overflow      */
+/* -------------------------------------------------------------------- */
+
+function CategoryRow({ categories }: { categories: HomeCategory[] }) {
+  return (
+    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {categories.map((c) => (
+        <Link
+          key={c.id}
+          href={`/kategori/${c.slug}`}
+          className="group flex w-28 shrink-0 snap-start flex-col items-center text-center sm:w-32"
+        >
+          <div className="relative h-24 w-24 overflow-hidden rounded-full border border-rule bg-gradient-to-br from-brand-100 via-ultra-100 to-flame-100 transition-all group-hover:-translate-y-0.5 group-hover:border-brand-400/60 group-hover:shadow-lg sm:h-28 sm:w-28 dark:from-brand-500/15 dark:via-ultra-500/15 dark:to-flame-500/15">
+            {c.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.imageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+              />
+            ) : (
+              <span className="absolute inset-0 grid place-items-center text-brand-500 dark:text-brand-400">
+                {categoryIcon(c.slug)}
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-sm font-semibold leading-tight text-fg group-hover:text-brand-500">
+            {c.name}
+          </p>
+          <p className="mt-0.5 font-mono text-[10px] text-fg-subtle">
+            {c.listingCount.toLocaleString("id-ID")} produk
+          </p>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function categoryIcon(slug: string): React.ReactNode {
-  const stroke = "currentColor";
-  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke, strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const props = { width: 38, height: 38, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (slug) {
     case "collection-cards":
     case "trading-cards":
-    case "cards":
       return (
         <svg {...props}>
           <rect x="2" y="6" width="14" height="16" rx="2"/>
@@ -263,43 +392,16 @@ function categoryIcon(slug: string): React.ReactNode {
         </svg>
       );
     case "merchandise":
-    case "merch":
       return (
         <svg {...props}>
           <path d="M20.4 7.5 16 4l-2 2-2-2-2 2-2-2-4.4 3.5L5 12h2v8h10v-8h2z"/>
         </svg>
       );
     case "toys":
-    case "figure":
       return (
         <svg {...props}>
           <path d="M12 2a4 4 0 0 1 4 4v2H8V6a4 4 0 0 1 4-4z"/>
           <path d="M5 22h14l-1.5-9h-11z"/>
-          <path d="M9 13v9M15 13v9"/>
-        </svg>
-      );
-    case "others":
-      return (
-        <svg {...props}>
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/>
-          <path d="M12 17h.01"/>
-        </svg>
-      );
-    case "blindbox":
-    case "blind-box":
-      return (
-        <svg {...props}>
-          <path d="m21 16-9 5-9-5V8l9-5 9 5z"/>
-          <path d="M3.3 8 12 13l8.7-5"/>
-          <path d="M12 13v8"/>
-        </svg>
-      );
-    case "komik":
-      return (
-        <svg {...props}>
-          <path d="M2 4a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/>
-          <path d="M22 4a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>
         </svg>
       );
     default:
@@ -314,81 +416,127 @@ function categoryIcon(slug: string): React.ReactNode {
   }
 }
 
-function Section({
-  kicker, title, href, ctaLabel, children,
-}: {
-  kicker: string;
-  title: string;
-  href: string;
-  ctaLabel: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mt-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">{kicker}</span>
-          <h2 className="mt-1 text-2xl font-bold text-fg">{title}</h2>
-        </div>
-        <Link href={href} className="text-sm font-semibold text-brand-500 transition-colors hover:text-brand-400">
-          {ctaLabel}
-        </Link>
-      </div>
-      <div className="mt-5">{children}</div>
-    </section>
-  );
-}
+/* -------------------------------------------------------------------- */
+/*  Trending strip — small horizontal cards with HOT/RARE/NEW labels    */
+/* -------------------------------------------------------------------- */
 
-function Grid({ items }: { items: ListingSummary[] }) {
+function TrendingStrip({ items }: { items: ListingSummary[] }) {
+  function badge(l: ListingSummary): { label: string; tone: string } | null {
+    if (l.boosted) return { label: "HOT", tone: "bg-flame-500 text-white" };
+    if (l.condition === "BRAND_NEW_SEALED") return { label: "RARE", tone: "bg-amber-500 text-white" };
+    const ageDays = (Date.now() - +new Date(l.createdAt)) / 86_400_000;
+    if (ageDays < 3) return { label: "NEW", tone: "bg-brand-500 text-white" };
+    return null;
+  }
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {items.map((l) => (
-        <ListingCard key={l.id} l={l} meUsername={null} />
-      ))}
+    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      {items.map((l) => {
+        const b = badge(l);
+        return (
+          <Link
+            key={l.id}
+            href={`/listing/${l.slug}`}
+            className="flex items-center gap-3 rounded-xl border border-rule bg-panel p-3 transition-all hover:-translate-y-0.5 hover:border-brand-400/50 hover:shadow-md"
+          >
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-panel-2">
+              {l.cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={l.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+              ) : (
+                <CardArt variant={pickArt(l.slug)} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-xs font-semibold text-fg">{l.title}</p>
+              <p className="mt-0.5 text-[11px] font-extrabold text-brand-600 dark:text-brand-400">
+                Rp {l.priceIdr.toLocaleString("id-ID")}
+              </p>
+              {b && (
+                <span className={"mt-1 inline-block rounded-sm px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider " + b.tone}>
+                  {b.label}
+                </span>
+              )}
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
 
-/**
- * Boost strip — featured cards in a horizontal scroller. Slightly larger
- * than the normal grid card so paid placements are visually distinct.
- */
-function BoostStrip({ items }: { items: ListingSummary[] }) {
+/* -------------------------------------------------------------------- */
+/*  Premium grid — dark-gradient cards with rare-collection labels      */
+/* -------------------------------------------------------------------- */
+
+function PremiumGrid({ items }: { items: ListingSummary[] }) {
+  const labels = ["ULTRA RARE", "LEGENDARY", "GEM MINT", "ICONIC", "PREMIUM"];
+  const tones = [
+    "from-violet-600 to-fuchsia-600",
+    "from-amber-500 to-rose-500",
+    "from-emerald-500 to-teal-500",
+    "from-rose-500 to-flame-500",
+    "from-brand-500 to-ultra-500",
+  ];
   return (
-    <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
-      {items.map((l) => (
+    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {items.map((l, i) => (
         <Link
           key={l.id}
           href={`/listing/${l.slug}`}
-          className="snap-start group relative w-64 shrink-0 overflow-hidden rounded-2xl border border-flame-400/40 bg-panel transition-all hover:-translate-y-0.5 hover:border-flame-400 hover:shadow-[0_8px_24px_-12px] hover:shadow-flame-400/40"
+          className={
+            "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br p-4 text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl " +
+            (tones[i % tones.length] ?? tones[0])
+          }
         >
-          <div className="relative aspect-[4/5] bg-panel-2">
-            {l.cover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={l.cover} alt={l.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-flame-400/20 via-brand-400/10 to-ultra-400/20" />
-            )}
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-flame-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
-              ⚡ Boosted
-            </span>
-            <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">
-              {conditionLabel(l.condition)}
-            </span>
-          </div>
-          <div className="p-3">
-            <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-fg group-hover:text-brand-500">
-              {l.title}
-            </p>
-            <p className="mt-1 text-xs text-fg-subtle">
-              {l.seller.city ?? "Lokasi belum diisi"}
-            </p>
-            <p className="mt-2 text-base font-extrabold text-fg">
+          {l.cover && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={l.cover}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay transition-transform duration-700 group-hover:scale-110"
+              loading="lazy"
+            />
+          )}
+          <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-fg shadow">
+            {labels[i % labels.length]}
+          </span>
+          <div className="relative z-10">
+            <p className="line-clamp-2 text-sm font-bold drop-shadow-md">{l.title}</p>
+            <p className="mt-1 text-base font-extrabold drop-shadow-md">
               Rp {l.priceIdr.toLocaleString("id-ID")}
             </p>
           </div>
         </Link>
       ))}
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/*  Trust / Benefit row                                                 */
+/* -------------------------------------------------------------------- */
+
+function TrustSection() {
+  const items = [
+    { title: "100% Original",   sub: "Semua produk dijamin 100% original.",         color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> },
+    { title: "Transaksi Aman",  sub: "Sistem escrow melindungi setiap transaksi.",  color: "bg-brand-500/15 text-brand-600 dark:text-brand-400",       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> },
+    { title: "Seller Terpercaya", sub: "Diverifikasi dengan rating & reputasi.",     color: "bg-amber-500/15 text-amber-600 dark:text-amber-400",       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 14.6 8.4 21.5 9 16.3 13.6 17.9 20.5 12 17 6.1 20.5 7.7 13.6 2.5 9 9.4 8.4Z"/></svg> },
+    { title: "Pengiriman Aman", sub: "Packing rapi & asuransi pengiriman.",         color: "bg-sky-500/15 text-sky-600 dark:text-sky-400",             icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg> },
+    { title: "Komunitas Aktif", sub: "Bergabung dengan ribuan kolektor Indonesia.", color: "bg-ultra-500/15 text-ultra-600 dark:text-ultra-400",       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+  ];
+  return (
+    <section className="mt-14 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {items.map((it) => (
+        <div key={it.title} className="flex items-center gap-3 rounded-2xl border border-rule bg-panel p-4">
+          <div className={"grid h-10 w-10 shrink-0 place-items-center rounded-xl " + it.color}>
+            {it.icon}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-fg">{it.title}</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">{it.sub}</p>
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }

@@ -39,6 +39,16 @@ export class OrdersController {
     return this.orders.checkout(user.id, body);
   }
 
+  /** Re-create a Snap charge for an order still in pending_payment.
+   *  Used by /pesanan's "Bayar" button to resume multi-item checkout
+   *  flows where the buyer paid the first order then bounced. */
+  @Post(":humanId/resume-pay")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(200)
+  resumePay(@CurrentUser() user: SessionUser, @Param("humanId") humanId: string) {
+    return this.orders.resumePay(user.id, humanId);
+  }
+
   @Get()
   async listMine(
     @CurrentUser() user: SessionUser,

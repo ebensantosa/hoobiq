@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@hoobiq/ui";
 import { serverApi } from "@/lib/server/api";
 import { PendingOrdersReconciler } from "@/components/pending-orders-reconciler";
+import { PayButton } from "./pay-button";
 
 export const dynamic = "force-dynamic";
 
@@ -84,9 +85,13 @@ export default async function PesananPage() {
                       <p className="mt-1 truncate font-medium text-fg">{o.listing.title}</p>
                       <p className="mt-0.5 text-xs text-fg-muted">via {o.courier}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="flex flex-col items-end gap-1.5 text-right">
                       <p className="font-bold text-fg">Rp {o.totalIdr.toLocaleString("id-ID")}</p>
-                      <span className="text-xs text-brand-400">Detail</span>
+                      {o.status === "pending_payment" ? (
+                        <PayButton humanId={o.humanId} />
+                      ) : (
+                        <span className="text-xs text-brand-400">Detail</span>
+                      )}
                     </div>
                   </div>
                 </Link>

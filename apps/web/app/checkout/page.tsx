@@ -89,6 +89,9 @@ export default async function CheckoutPage({
         cover: it.listing.cover,
         priceIdr: it.listing.priceIdr,
         qty: it.qty,
+        weightGrams: it.listing.weightGrams,
+        couriers: it.listing.couriers,
+        originSubdistrictId: it.listing.originSubdistrictId,
         seller: it.listing.seller,
       }));
 

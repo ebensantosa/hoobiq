@@ -67,7 +67,17 @@ export class CartController {
             id: true, slug: true, title: true, priceCents: true, stock: true,
             isPublished: true, moderation: true, deletedAt: true,
             imagesJson: true, condition: true,
-            seller: { select: { username: true, name: true, city: true } },
+            // V2 multi-checkout needs weight + couriers + origin to
+            // compute per-seller ongkir on the multi-item form.
+            weightGrams: true, couriersJson: true, originSubdistrictId: true,
+            seller: {
+              select: {
+                username: true, name: true, city: true,
+                // sellerId surfaces so the form can group by user id
+                // without leaking other users' details.
+                id: true,
+              },
+            },
           },
         },
       },
@@ -84,6 +94,11 @@ export class CartController {
         r.listing.isPublished &&
         r.listing.moderation === "active" &&
         r.listing.stock > 0;
+      let couriers: string[] = [];
+      try {
+        const v = JSON.parse(r.listing.couriersJson ?? "[]");
+        if (Array.isArray(v)) couriers = v.filter((s) => typeof s === "string");
+      } catch { /* ignore */ }
       return {
         id: r.id,
         qty: r.qty,
@@ -97,6 +112,9 @@ export class CartController {
           condition: r.listing.condition,
           cover,
           stock: r.listing.stock,
+          weightGrams: r.listing.weightGrams,
+          couriers,
+          originSubdistrictId: r.listing.originSubdistrictId,
           seller: r.listing.seller,
         },
       };

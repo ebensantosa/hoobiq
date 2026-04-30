@@ -13,7 +13,13 @@ export type CartItem = {
     condition: string;
     cover: string | null;
     stock: number;
-    seller: { username: string; name: string | null; city: string | null };
+    /** Per-listing shipping inputs surfaced for the V2 multi-item
+     *  checkout — buyer picks a courier per seller and the form
+     *  fetches ongkir from /shipping/cost for that group. */
+    weightGrams: number;
+    couriers: string[];
+    originSubdistrictId: number | null;
+    seller: { id: string; username: string; name: string | null; city: string | null };
   };
 };
 

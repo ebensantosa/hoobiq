@@ -112,6 +112,70 @@ export class OrdersService {
     };
   }
 
+  /**
+   * Re-create a Snap charge for an order that's still pending_payment.
+   * Lets the buyer come back to /pesanan after a multi-item checkout
+   * and finish paying any orders they haven't gotten to yet.
+   *
+   * Refuses for orders not in pending_payment so paid/shipped/cancelled
+   * rows can't accidentally re-create charges.
+   */
+  async resumePay(buyerId: string, humanId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { humanId },
+      include: { listing: true, buyer: true },
+    });
+    if (!order) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (order.buyerId !== buyerId) throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    if (order.status !== "pending_payment") {
+      throw new BadRequestException({ code: "invalid_status", message: "Pesanan ini sudah tidak menunggu pembayaran." });
+    }
+
+    const webBase = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    const charge = await this.payment.createCharge({
+      orderId: order.id,
+      humanId: order.humanId,
+      amountCents: order.totalCents,
+      method: "snap",
+      customer: {
+        email: order.buyer.email,
+        name: order.buyer.name ?? order.buyer.username,
+        phone: order.buyer.phone ?? "",
+      },
+      items: [{
+        id: order.listing.id,
+        name: order.listing.title,
+        priceCents: order.priceCents,
+        qty: order.qty,
+      }],
+      returnUrl: `${webBase}/checkout/sukses?o=${encodeURIComponent(order.humanId)}`,
+    });
+
+    // Replace the existing Payment row's tx id + status so the
+    // webhook reconciler matches the latest Snap session, not a
+    // stale one from the original checkout.
+    await this.prisma.payment.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        provider: "midtrans",
+        providerTxId: charge.providerTxId,
+        amountCents: order.totalCents,
+        statusRaw: charge.status,
+      },
+      update: {
+        providerTxId: charge.providerTxId,
+        statusRaw: charge.status,
+      },
+    });
+
+    return {
+      humanId: order.humanId,
+      totalIdr: Number(order.totalCents / CENTS_PER_RUPIAH),
+      paymentRedirectUrl: charge.redirectUrl,
+    };
+  }
+
   /** Called by the Midtrans webhook handler after signature verification. */
   async markPaid(orderId: string, providerTxId: string, rawPayload: unknown) {
     const now = new Date();

@@ -53,16 +53,21 @@ export function HeaderMobileDrawer({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true">
+          {/* Backdrop — sits behind the panel; clicking it closes the drawer. */}
           <button
             type="button"
             aria-label="Tutup menu"
             onClick={close}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 z-0 bg-black/50 backdrop-blur-sm"
           />
-          {/* Panel */}
-          <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col overflow-y-auto bg-canvas shadow-xl">
+          {/* Panel — explicit z-index above backdrop, hard solid bg
+              (bg-canvas + bg-white fallback so the panel never reads
+              as transparent if a CSS variable misses on the user's
+              theme), and a min-height that fills the viewport so a
+              short nav list doesn't leave the page bleeding through
+              the bottom. */}
+          <div className="absolute inset-y-0 left-0 z-10 flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl dark:bg-[hsl(225_24%_6%)]">
             <div className="flex items-center justify-between border-b border-rule px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
                 Menu

@@ -134,8 +134,8 @@ export default function PrivasiPage() {
               />
               <Para>
                 Permintaan dapat dikirim ke{" "}
-                <a className="text-brand-400" href="mailto:privacy@hoobiq.id">
-                  privacy@hoobiq.id
+                <a className="text-brand-400" href="mailto:privacy@hoobiq.com">
+                  privacy@hoobiq.com
                 </a>
                 . Kami akan merespons dalam maksimal 3×24 jam dan menyelesaikan permintaan
                 dalam 30 hari kalender.
@@ -172,8 +172,8 @@ export default function PrivasiPage() {
             <Para>
               Hoobiq tidak ditujukan untuk anak di bawah 13 tahun. Kalau kamu tahu ada akun
               yang dibuat oleh anak di bawah umur, kabari kami di{" "}
-              <a className="text-brand-400" href="mailto:privacy@hoobiq.id">
-                privacy@hoobiq.id
+              <a className="text-brand-400" href="mailto:privacy@hoobiq.com">
+                privacy@hoobiq.com
               </a>{" "}
               dan akan kami tindaklanjuti dalam 24 jam.
             </Para>

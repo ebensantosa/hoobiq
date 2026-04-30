@@ -95,8 +95,8 @@ try {
   // Always attempt seed. Seed script itself is idempotent (upsert).
   run("npx tsx packages/db/prisma/seed.ts");
   console.log(green("  ✓") + " seed applied");
-  console.log("    " + yellow("demo admin:")  + "  admin@hoobiq.id   / Admin123!");
-  console.log("    " + yellow("demo seller:") + " aditya@hoobiq.id / Demo1234!");
+  console.log("    " + yellow("demo admin:")  + "  admin@hoobiq.com   / Admin123!");
+  console.log("    " + yellow("demo seller:") + " aditya@hoobiq.com / Demo1234!");
 } catch (e) {
   console.error(yellow("  ! seed failed: ") + e.message);
 }

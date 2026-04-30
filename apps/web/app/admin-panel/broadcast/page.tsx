@@ -18,7 +18,7 @@ export default function AdminBroadcastPage() {
             <p className="text-base font-medium text-fg">Belum tersedia</p>
             <p className="mt-2 text-sm text-fg-muted">
               Sistem broadcast belum di-wire (butuh integrasi mailer + push provider).
-              Untuk sekarang, kontak pengguna lewat <a className="text-brand-400" href="mailto:halo@hoobiq.id">email manual</a>.
+              Untuk sekarang, kontak pengguna lewat <a className="text-brand-400" href="mailto:halo@hoobiq.com">email manual</a>.
             </p>
           </div>
         </Card>

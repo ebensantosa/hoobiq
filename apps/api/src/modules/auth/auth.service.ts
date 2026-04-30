@@ -295,7 +295,7 @@ export class AuthService {
     if (user.status !== "active") {
       throw new UnauthorizedException({
         code: "account_not_active",
-        message: "Akun kamu sedang dibatasi. Hubungi bantuan@hoobiq.id.",
+        message: "Akun kamu sedang dibatasi. Hubungi bantuan@hoobiq.com.",
       });
     }
     // Block login until the email is confirmed. Frontend reads the

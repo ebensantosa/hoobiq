@@ -121,8 +121,8 @@ export default function JourneyPage() {
             Apa yang sudah jalan, lagi dibangun, dan rencana selanjutnya. Kita
             update halaman ini setiap minggu — nggak ada janji yang nggak
             ditepati. Punya request fitur? DM admin atau email
-            <a className="ml-1 text-brand-500" href="mailto:halo@hoobiq.id">
-              halo@hoobiq.id
+            <a className="ml-1 text-brand-500" href="mailto:halo@hoobiq.com">
+              halo@hoobiq.com
             </a>.
           </p>
         </header>
@@ -163,10 +163,10 @@ export default function JourneyPage() {
               Buka komunitas
             </Link>
             <a
-              href="mailto:halo@hoobiq.id"
+              href="mailto:halo@hoobiq.com"
               className="rounded-xl border border-rule px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-brand-400/50 hover:text-fg"
             >
-              halo@hoobiq.id
+              halo@hoobiq.com
             </a>
           </div>
         </div>

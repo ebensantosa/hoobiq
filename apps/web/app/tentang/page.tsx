@@ -120,10 +120,10 @@ export default function TentangPage() {
             <>
               <Bullets
                 items={[
-                  <>Email umum: <a className="text-brand-400" href="mailto:halo@hoobiq.id">halo@hoobiq.id</a></>,
-                  <>Dukungan pengguna: <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">bantuan@hoobiq.id</a></>,
-                  <>Laporan penyalahgunaan & penipuan: <a className="text-brand-400" href="mailto:trust@hoobiq.id">trust@hoobiq.id</a></>,
-                  <>Press / kerjasama: <a className="text-brand-400" href="mailto:press@hoobiq.id">press@hoobiq.id</a></>,
+                  <>Email umum: <a className="text-brand-400" href="mailto:halo@hoobiq.com">halo@hoobiq.com</a></>,
+                  <>Dukungan pengguna: <a className="text-brand-400" href="mailto:bantuan@hoobiq.com">bantuan@hoobiq.com</a></>,
+                  <>Laporan penyalahgunaan & penipuan: <a className="text-brand-400" href="mailto:trust@hoobiq.com">trust@hoobiq.com</a></>,
+                  <>Press / kerjasama: <a className="text-brand-400" href="mailto:press@hoobiq.com">press@hoobiq.com</a></>,
                 ]}
               />
               <Para>

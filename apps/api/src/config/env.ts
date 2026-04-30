@@ -68,9 +68,9 @@ const schema = z.object({
   // EmailService is selective: only fires for milestone events
   // (paid, shipped, refunded, KTP decision, dispute resolved, password
   // changed, payout decision). Generate API key at resend.com/api-keys
-  // after verifying the sender domain (notif@hoobiq.id).
+  // after verifying the sender domain (notif@hoobiq.com).
   RESEND_API_KEY: z.string().min(8).optional(),
-  EMAIL_FROM: z.string().optional(), // "Hoobiq <notif@hoobiq.id>"
+  EMAIL_FROM: z.string().optional(), // "Hoobiq <notif@hoobiq.com>"
 
   // Sentry DSN for both apps. If unset, Sentry init is a no-op.
   SENTRY_DSN: z.string().url().optional(),

@@ -67,7 +67,7 @@ export default function LupaPasswordPage() {
       sideBullets={[
         "Kami kirim tautan reset ke email kamu.",
         "Tautan berlaku 30 menit.",
-        "Kalau tidak menerima email, cek folder spam atau kontak bantuan@hoobiq.id.",
+        "Kalau tidak menerima email, cek folder spam atau kontak bantuan@hoobiq.com.",
       ]}
     >
       <h1 className="text-3xl font-bold text-fg md:text-4xl">Reset password.</h1>
@@ -84,7 +84,7 @@ export default function LupaPasswordPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            placeholder="nama@hoobiq.id"
+            placeholder="nama@hoobiq.com"
             required
           />
         </div>

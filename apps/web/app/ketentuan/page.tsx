@@ -7,7 +7,7 @@ export default function KetentuanPage() {
     <DocPage
       eyebrow="Ketentuan Layanan"
       title="Aturan main di Hoobiq."
-      lead="Dengan mendaftar atau menggunakan Hoobiq, kamu menyetujui ketentuan berikut. Kami berusaha menulisnya sejelas mungkin — hubungi halo@hoobiq.id kalau ada yang kurang jelas."
+      lead="Dengan mendaftar atau menggunakan Hoobiq, kamu menyetujui ketentuan berikut. Kami berusaha menulisnya sejelas mungkin — hubungi halo@hoobiq.com kalau ada yang kurang jelas."
       updated="24 April 2026"
       sections={[
         {

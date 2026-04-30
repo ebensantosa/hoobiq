@@ -123,7 +123,7 @@ export default async function CheckoutSuccessPage({
 
         <p className="mt-8 text-center text-xs text-fg-subtle">
           Butuh bantuan? <Link href="/bantuan" className="text-brand-400">Pusat Bantuan</Link> atau kontak{" "}
-          <a href="mailto:bantuan@hoobiq.id" className="text-brand-400">bantuan@hoobiq.id</a>
+          <a href="mailto:bantuan@hoobiq.com" className="text-brand-400">bantuan@hoobiq.com</a>
         </p>
       </div>
     </AppShell>

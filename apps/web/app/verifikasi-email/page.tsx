@@ -47,7 +47,7 @@ export default async function VerifikasiEmailPage({
   }
 
   const status = sp.status ?? "sent";
-  const email = sp.email ?? "nama@hoobiq.id";
+  const email = sp.email ?? "nama@hoobiq.com";
 
   if (status === "expired" || status === "invalid" || status === "error") {
     const reason =

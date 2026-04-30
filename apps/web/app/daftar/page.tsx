@@ -107,7 +107,7 @@ export default function RegisterPage() {
         </Field>
 
         <Field label="Email" error={fieldErrors.email}>
-          <Input type="email" name="email" autoComplete="email" placeholder="nama@hoobiq.id" required />
+          <Input type="email" name="email" autoComplete="email" placeholder="nama@hoobiq.com" required />
         </Field>
 
         <Field label="Nomor HP" error={fieldErrors.phone}>

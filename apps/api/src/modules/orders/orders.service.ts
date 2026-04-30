@@ -722,7 +722,7 @@ export class OrdersService {
         <p style="font-size:14px;line-height:1.6;color:#0F172A">${escapeHtml(body)}</p>
         ${cta}
         <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0" />
-        <p style="font-size:12px;color:#94A3B8">Email otomatis dari Hoobiq — jangan balas ke alamat ini. Butuh bantuan? <a href="mailto:bantuan@hoobiq.id" style="color:#E7559F">bantuan@hoobiq.id</a></p>
+        <p style="font-size:12px;color:#94A3B8">Email otomatis dari Hoobiq — jangan balas ke alamat ini. Butuh bantuan? <a href="mailto:bantuan@hoobiq.com" style="color:#E7559F">bantuan@hoobiq.com</a></p>
       </div>`;
     await this.email.send(u.email, `[Hoobiq] ${title}`, html);
   }

@@ -97,20 +97,20 @@ async function main() {
   const buyerHash  = await bcrypt.hash("Buyer1234!" + PEPPER, 12);
 
   await prisma.user.upsert({
-    where: { email: "admin@hoobiq.id" },
+    where: { email: "admin@hoobiq.com" },
     update: { passwordHash: adminHash },
     create: {
-      username: "admin", email: "admin@hoobiq.id",
+      username: "admin", email: "admin@hoobiq.com",
       passwordHash: adminHash, name: "Admin Hoobiq",
       role: "admin", emailVerified: new Date(), ktpVerified: true,
     },
   });
 
   const aditya = await prisma.user.upsert({
-    where: { email: "aditya@hoobiq.id" },
+    where: { email: "aditya@hoobiq.com" },
     update: { passwordHash: sellerHash },
     create: {
-      username: "adityacollects", email: "aditya@hoobiq.id",
+      username: "adityacollects", email: "aditya@hoobiq.com",
       passwordHash: sellerHash,
       name: "Aditya Kurniawan", city: "Jakarta",
       bio: "Pokémon TCG since 2016. Focus rainbow rares & PSA 10 slabs. DM untuk trade — meet-up Jaksel atau kirim packing premium.",
@@ -121,10 +121,10 @@ async function main() {
   });
 
   const buyer = await prisma.user.upsert({
-    where: { email: "rangga@hoobiq.id" },
+    where: { email: "rangga@hoobiq.com" },
     update: { passwordHash: buyerHash },
     create: {
-      username: "ranggabuys", email: "rangga@hoobiq.id",
+      username: "ranggabuys", email: "rangga@hoobiq.com",
       passwordHash: buyerHash,
       name: "Rangga Saputra", city: "Bandung",
       role: "user", emailVerified: new Date(),
@@ -251,10 +251,10 @@ async function main() {
     email: string; username: string; name: string; city: string; province: string; postal: string;
     line: string; phone: string; trustScore: number; level: number;
   }> = [
-    { email: "intan@hoobiq.id",  username: "intanloves",   name: "Intan Pratiwi",    city: "Yogyakarta",     province: "DI Yogyakarta", postal: "55281", line: "Jl. Kaliurang KM 5 No. 21", phone: "+62 813-7788-1010", trustScore: 4.8, level: 7 },
-    { email: "dimas@hoobiq.id",  username: "dimaspulls",   name: "Dimas Aryanto",    city: "Surabaya",       province: "Jawa Timur",    postal: "60111", line: "Jl. Manyar Kertoarjo III No. 9", phone: "+62 812-9988-2020", trustScore: 4.6, level: 6 },
-    { email: "ayu@hoobiq.id",    username: "ayucollects",  name: "Ayu Lestari",      city: "Denpasar",       province: "Bali",          postal: "80113", line: "Jl. Hayam Wuruk No. 88", phone: "+62 811-4455-3030", trustScore: 4.9, level: 9 },
-    { email: "fariz@hoobiq.id",  username: "farizshelf",   name: "Fariz Maulana",    city: "Bandung",        province: "Jawa Barat",    postal: "40115", line: "Jl. Riau No. 12", phone: "+62 812-3344-4040", trustScore: 4.5, level: 4 },
+    { email: "intan@hoobiq.com",  username: "intanloves",   name: "Intan Pratiwi",    city: "Yogyakarta",     province: "DI Yogyakarta", postal: "55281", line: "Jl. Kaliurang KM 5 No. 21", phone: "+62 813-7788-1010", trustScore: 4.8, level: 7 },
+    { email: "dimas@hoobiq.com",  username: "dimaspulls",   name: "Dimas Aryanto",    city: "Surabaya",       province: "Jawa Timur",    postal: "60111", line: "Jl. Manyar Kertoarjo III No. 9", phone: "+62 812-9988-2020", trustScore: 4.6, level: 6 },
+    { email: "ayu@hoobiq.com",    username: "ayucollects",  name: "Ayu Lestari",      city: "Denpasar",       province: "Bali",          postal: "80113", line: "Jl. Hayam Wuruk No. 88", phone: "+62 811-4455-3030", trustScore: 4.9, level: 9 },
+    { email: "fariz@hoobiq.com",  username: "farizshelf",   name: "Fariz Maulana",    city: "Bandung",        province: "Jawa Barat",    postal: "40115", line: "Jl. Riau No. 12", phone: "+62 812-3344-4040", trustScore: 4.5, level: 4 },
   ];
   const extraBuyerHash = await bcrypt.hash("Buyer1234!" + PEPPER, 12);
   const extraBuyerRecords: Array<{ id: string; addressId: string }> = [];
@@ -397,13 +397,13 @@ async function main() {
   });
 
   console.log("✅ seed done — accounts:");
-  console.log("   admin@hoobiq.id    Admin123!");
-  console.log("   aditya@hoobiq.id   Demo1234!  ← seller demo (10 listings + 1 review per listing)");
-  console.log("   rangga@hoobiq.id   Buyer1234! ← buyer demo");
-  console.log("   intan@hoobiq.id    Buyer1234!");
-  console.log("   dimas@hoobiq.id    Buyer1234!");
-  console.log("   ayu@hoobiq.id      Buyer1234!");
-  console.log("   fariz@hoobiq.id    Buyer1234!");
+  console.log("   admin@hoobiq.com    Admin123!");
+  console.log("   aditya@hoobiq.com   Demo1234!  ← seller demo (10 listings + 1 review per listing)");
+  console.log("   rangga@hoobiq.com   Buyer1234! ← buyer demo");
+  console.log("   intan@hoobiq.com    Buyer1234!");
+  console.log("   dimas@hoobiq.com    Buyer1234!");
+  console.log("   ayu@hoobiq.com      Buyer1234!");
+  console.log("   fariz@hoobiq.com    Buyer1234!");
 }
 
 async function upsertCat(

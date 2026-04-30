@@ -31,8 +31,8 @@ const sections: Section[] = [
             Di halaman login, klik "Lupa password?". Kami kirim tautan reset ke
             email kamu yang masa berlakunya 30 menit. Kalau email tidak masuk,
             cek folder spam atau kontak{" "}
-            <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">
-              bantuan@hoobiq.id
+            <a className="text-brand-400" href="mailto:bantuan@hoobiq.com">
+              bantuan@hoobiq.com
             </a>
             .
           </>
@@ -130,8 +130,8 @@ const sections: Section[] = [
             dengan kondisi sesuai deskripsi. Transfer langsung ke seller tidak
             kami dukung dan kamu kehilangan semua perlindungan kalau terjadi
             masalah. Seller yang memaksa transfer langsung bisa dilaporkan ke{" "}
-            <a className="text-brand-400" href="mailto:trust@hoobiq.id">
-              trust@hoobiq.id
+            <a className="text-brand-400" href="mailto:trust@hoobiq.com">
+              trust@hoobiq.com
             </a>
             .
           </>
@@ -305,8 +305,8 @@ export default function BantuanPage() {
             </h1>
             <p className="mt-4 max-w-xl text-base text-fg-muted md:text-lg">
               Cari di bawah, atau kontak tim bantuan di{" "}
-              <a className="text-brand-400" href="mailto:bantuan@hoobiq.id">
-                bantuan@hoobiq.id
+              <a className="text-brand-400" href="mailto:bantuan@hoobiq.com">
+                bantuan@hoobiq.com
               </a>
               . Rata-rata respon &lt; 6 jam di hari kerja.
             </p>
@@ -362,9 +362,9 @@ export default function BantuanPage() {
               akun di-hack, barang mahal rusak), tulis "URGENT" di subject.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <Contact label="Bantuan umum" email="bantuan@hoobiq.id" hint="Respons < 6 jam" />
-              <Contact label="Penipuan / keamanan" email="trust@hoobiq.id" hint="Respons < 1 jam" />
-              <Contact label="Privasi & data" email="privacy@hoobiq.id" hint="Respons < 24 jam" />
+              <Contact label="Bantuan umum" email="bantuan@hoobiq.com" hint="Respons < 6 jam" />
+              <Contact label="Penipuan / keamanan" email="trust@hoobiq.com" hint="Respons < 1 jam" />
+              <Contact label="Privasi & data" email="privacy@hoobiq.com" hint="Respons < 24 jam" />
             </div>
           </div>
         </div>

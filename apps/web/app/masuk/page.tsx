@@ -76,7 +76,7 @@ function LoginPageInner() {
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
         <Field label="Email atau username">
-          <Input type="text" name="identifier" autoComplete="username" placeholder="nama@hoobiq.id" required />
+          <Input type="text" name="identifier" autoComplete="username" placeholder="nama@hoobiq.com" required />
         </Field>
 
         <div className="flex flex-col gap-2">

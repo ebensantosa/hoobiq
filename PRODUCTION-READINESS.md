@@ -37,9 +37,9 @@ MIDTRANS_CLIENT_KEY=Mid-client-...
 MIDTRANS_SIGNATURE_KEY=<dashboard>
 
 # Email (Gmail App Password — myaccount.google.com → Security → App passwords)
-SMTP_USER=notif@hoobiq.id
+SMTP_USER=notif@hoobiq.com
 SMTP_PASS=xxxx-xxxx-xxxx-xxxx
-EMAIL_FROM=Hoobiq <notif@hoobiq.id>
+EMAIL_FROM=Hoobiq <notif@hoobiq.com>
 
 # Web base for return URLs + email CTAs
 PUBLIC_API_BASE=https://api.hoobiq.com

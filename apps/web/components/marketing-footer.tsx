@@ -50,8 +50,8 @@ export function MarketingFooter() {
             { href: "/ketentuan",    label: "Ketentuan Layanan" },
             { href: "/privasi",      label: "Kebijakan Privasi" },
             { href: "/bantuan",      label: "Pusat Bantuan" },
-            { href: "mailto:halo@hoobiq.id", label: "halo@hoobiq.id" },
-            { href: "mailto:trust@hoobiq.id", label: "Lapor penipuan" },
+            { href: "mailto:halo@hoobiq.com", label: "halo@hoobiq.com" },
+            { href: "mailto:trust@hoobiq.com", label: "Lapor penipuan" },
           ]} />
         </div>
 
@@ -72,7 +72,7 @@ export function MarketingFooter() {
             <Link href="/ketentuan" className="hover:text-fg">Ketentuan</Link>
             <Link href="/privasi"   className="hover:text-fg">Privasi</Link>
             <Link href="/bantuan"   className="hover:text-fg">Bantuan</Link>
-            <a href="https://status.hoobiq.id" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-fg">
+            <a href="https://status.hoobiq.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-fg">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
               Sistem normal
             </a>
@@ -102,7 +102,7 @@ function Column({ title, links }: { title: string; links: { href: string; label:
 
 function SocialRow() {
   const socials = [
-    { href: "https://instagram.com/hoobiq.id", label: "Instagram", path: "M7 2C4.24 2 2 4.24 2 7v10c0 2.76 2.24 5 5 5h10c2.76 0 5-2.24 5-5V7c0-2.76-2.24-5-5-5H7zm0 2h10c1.66 0 3 1.34 3 3v10c0 1.66-1.34 3-3 3H7c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3zm10 1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" },
+    { href: "https://instagram.com/hoobiq.com", label: "Instagram", path: "M7 2C4.24 2 2 4.24 2 7v10c0 2.76 2.24 5 5 5h10c2.76 0 5-2.24 5-5V7c0-2.76-2.24-5-5-5H7zm0 2h10c1.66 0 3 1.34 3 3v10c0 1.66-1.34 3-3 3H7c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3zm10 1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" },
     { href: "https://twitter.com/hoobiqid",    label: "Twitter / X",  path: "M18.244 3H21l-6.52 7.45L22 21h-6.84l-4.81-6.28L4.8 21H2l7.04-8.04L2 3h6.97l4.34 5.74L18.244 3zm-2.39 16.5h1.86L8.27 4.4H6.27l9.586 15.1z" },
     { href: "https://discord.gg/hoobiq",       label: "Discord",      path: "M20.32 4.78A18.5 18.5 0 0 0 15.91 3.4l-.2.4a16.6 16.6 0 0 0-4.66-.27c-.13-.23-.31-.55-.46-.82A18.5 18.5 0 0 0 6.18 4.1c-2.94 4.4-3.74 8.7-3.34 12.94a18.7 18.7 0 0 0 5.7 2.88c.46-.62.87-1.28 1.22-1.97-.67-.25-1.31-.56-1.92-.93.16-.12.32-.24.47-.37 3.7 1.7 7.7 1.7 11.36 0 .15.13.31.25.47.37-.61.37-1.25.68-1.92.93.35.7.76 1.36 1.22 1.97a18.7 18.7 0 0 0 5.7-2.88c.5-4.95-.81-9.21-3.84-12.16zM9.5 14.62c-1.13 0-2.05-1.04-2.05-2.32 0-1.27.9-2.32 2.05-2.32s2.07 1.05 2.05 2.32c0 1.28-.9 2.32-2.05 2.32zm5.55 0c-1.13 0-2.05-1.04-2.05-2.32 0-1.27.9-2.32 2.05-2.32s2.07 1.05 2.05 2.32c0 1.28-.9 2.32-2.05 2.32z" },
     { href: "https://tiktok.com/@hoobiq",      label: "TikTok",       path: "M19.6 7.4a6.5 6.5 0 0 1-3.8-1.2v8.5a5.6 5.6 0 1 1-5.6-5.6v3a2.6 2.6 0 1 0 2.6 2.6V2h3a4.6 4.6 0 0 0 3.8 4.4v1z" },

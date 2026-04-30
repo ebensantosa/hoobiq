@@ -9,7 +9,7 @@ import { env } from "../../config/env";
  * `important` flag and the explicit calls in users/auth/payouts.
  *
  * Setup:
- *   1. Sign up at resend.com → verify the sender domain (e.g. hoobiq.id).
+ *   1. Sign up at resend.com → verify the sender domain (e.g. hoobiq.com).
  *   2. Generate API key at resend.com/api-keys.
  *   3. Set RESEND_API_KEY + EMAIL_FROM in apps/api/.env, then `pm2 reload`.
  *
@@ -36,7 +36,7 @@ export class EmailService {
     }
     try {
       const result = await c.emails.send({
-        from: env.EMAIL_FROM ?? "Hoobiq <notif@hoobiq.id>",
+        from: env.EMAIL_FROM ?? "Hoobiq <notif@hoobiq.com>",
         to,
         subject,
         html,

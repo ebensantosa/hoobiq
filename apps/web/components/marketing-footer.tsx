@@ -8,11 +8,14 @@ import Link from "next/link";
 export function MarketingFooter() {
   return (
     <footer className="border-t border-rule bg-panel/40">
-      <div className="mx-auto max-w-[1280px] px-6 py-14 md:px-10 md:py-16">
-        {/* Top: brand blurb + columns */}
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div className="mx-auto max-w-[1280px] px-4 py-12 sm:px-6 md:py-16 lg:px-10">
+        {/* Top: brand blurb + columns. Mobile reads as a 2-col grid
+            for the three link columns with the brand description
+            spanning both rows above (col-span-2). Desktop drops back
+            to the 4-col layout (brand + 3 columns side by side). */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand & description */}
-          <div className="max-w-sm">
+          <div className="col-span-2 max-w-sm md:col-span-1">
             <p className="text-sm leading-relaxed text-fg-muted">
               Hoobiq adalah marketplace dan komunitas kolektor hobi Indonesia.
               Beli &amp; jual <strong className="text-fg">trading cards</strong>,{" "}

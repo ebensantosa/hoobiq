@@ -9,10 +9,13 @@ import { getSiteSettings } from "@/lib/site-settings";
 export async function AppFooter() {
   const settings = await getSiteSettings();
   return (
-    <footer className="mt-16 border-t border-rule bg-panel/30">
-      <div className="mx-auto max-w-[1280px] px-6 py-10 md:px-10">
-        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
+    <footer className="mt-8 border-t border-rule bg-panel/30 md:mt-12">
+      <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 md:py-10 lg:px-10">
+        {/* Mobile reads as a 2-col grid for the link columns with the
+            brand description spanning both rows above (col-span-2).
+            Desktop drops back to the 4-col layout. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
             <p className="text-sm font-bold text-fg">{settings.brandName}</p>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-fg-muted">
               Marketplace & komunitas kolektor hobi Indonesia. Trading cards, action figure, blind box, merch, komik — pembayaran aman lewat {settings.brandName} Pay.

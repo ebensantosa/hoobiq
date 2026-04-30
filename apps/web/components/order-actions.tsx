@@ -2,7 +2,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@hoobiq/ui";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
+import { useActionDialog } from "./action-dialog";
 
 type ActiveCancel = {
   id: string;
@@ -56,8 +57,22 @@ function trackingUrl(code: string, tracking: string): string | null {
 
 export function OrderActions({ order, isBuyer }: { order: OrderForActions; isBuyer: boolean }) {
   const router = useRouter();
+  const dialog = useActionDialog();
   const [pending, setPending] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
+
+  /** POST helper that surfaces error inside the dialog (returning the
+   *  message string keeps the dialog open with an inline error). Used
+   *  by every modal-driven action below. */
+  async function callDialog(path: string, body: unknown, success: string): Promise<string | void> {
+    try {
+      await api(path, { method: "POST", body });
+      setToast(success);
+      router.refresh();
+    } catch (e) {
+      return e instanceof ApiError ? e.message : "Gagal — coba lagi.";
+    }
+  }
 
   React.useEffect(() => {
     if (!toast) return;
@@ -87,103 +102,208 @@ export function OrderActions({ order, isBuyer }: { order: OrderForActions; isBuy
   // ----------------------- buyer: confirm receipt
   const canConfirm = isBuyer && (order.status === "shipped" || order.status === "delivered" || order.status === "paid");
   const confirmReceipt = () => {
-    if (!window.confirm("Konfirmasi barang sudah diterima? Dana akan dirilis ke seller.")) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/confirm-receipt`, undefined, "Pesanan selesai. Dana dirilis ke seller.");
+    dialog.open({
+      title: "Konfirmasi barang diterima?",
+      description: "Setelah dikonfirmasi, dana akan dirilis ke seller. Aksi ini tidak bisa dibatalkan.",
+      confirmLabel: "Ya, konfirmasi",
+      onConfirm: () => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/confirm-receipt`, undefined,
+        "Pesanan selesai. Dana dirilis ke seller.",
+      ),
+    });
   };
 
   // ----------------------- seller: input resi
   const canShip = isSeller && order.status === "paid" && !cancel;
   const shipOrder = () => {
-    const tn = window.prompt("Masukkan nomor resi kurir:");
-    if (!tn || tn.trim().length < 4) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/ship`, { trackingNumber: tn.trim() }, "Resi tersimpan. Pesanan dikirim.");
+    dialog.open({
+      title: "Input resi pengiriman",
+      description: "Masukkan nomor resi setelah paket dikirim. Buyer akan otomatis dapat tracking.",
+      fields: [
+        { key: "tracking", label: "Nomor resi", placeholder: "JNE / J&T / SiCepat", minLength: 4 },
+      ],
+      confirmLabel: "Simpan resi",
+      onConfirm: (v) => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/ship`,
+        { trackingNumber: v.tracking.trim() },
+        "Resi tersimpan. Pesanan dikirim.",
+      ),
+    });
   };
 
   // ----------------------- buyer: cancel request
   const canRequestCancel =
     isBuyer && !cancel && ["pending_payment", "paid"].includes(order.status);
   const requestCancel = () => {
-    const reason = window.prompt("Alasan pembatalan (min 5 karakter):");
-    if (!reason || reason.trim().length < 5) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/cancel-request`, { reason: reason.trim() }, "Permintaan pembatalan dikirim ke seller.");
+    dialog.open({
+      title: "Request batalkan pesanan",
+      description: "Tulis alasan supaya seller bisa menilai. Dana akan direfund kalau seller setuju.",
+      fields: [
+        { key: "reason", label: "Alasan pembatalan", type: "textarea", placeholder: "Salah pilih, alamat berubah, dll.", minLength: 5 },
+      ],
+      tone: "danger",
+      confirmLabel: "Kirim request",
+      onConfirm: (v) => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/cancel-request`,
+        { reason: v.reason.trim() },
+        "Permintaan pembatalan dikirim ke seller.",
+      ),
+    });
   };
 
   // ----------------------- seller: respond cancel
   const canRespondCancel = isSeller && cancel?.status === "pending";
   const acceptCancel = () => {
-    if (!window.confirm("Setuju pembatalan? Dana akan direfund ke buyer.")) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/cancel-respond`, { decision: "accept" }, "Pembatalan disetujui.");
+    dialog.open({
+      title: "Setuju batalkan pesanan?",
+      description: "Dana akan otomatis direfund ke buyer.",
+      confirmLabel: "Ya, batalkan",
+      tone: "danger",
+      onConfirm: () => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/cancel-respond`,
+        { decision: "accept" },
+        "Pembatalan disetujui.",
+      ),
+    });
   };
   const rejectCancel = () => {
-    const note = window.prompt("Alasan penolakan (akan ditampilkan ke buyer):");
-    if (!note || note.trim().length < 3) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/cancel-respond`, { decision: "reject", rejectNote: note.trim() }, "Pembatalan ditolak.");
+    dialog.open({
+      title: "Tolak request pembatalan",
+      description: "Alasan akan ditampilkan ke buyer.",
+      fields: [
+        { key: "note", label: "Alasan tolak", type: "textarea", minLength: 3 },
+      ],
+      confirmLabel: "Tolak",
+      onConfirm: (v) => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/cancel-respond`,
+        { decision: "reject", rejectNote: v.note.trim() },
+        "Pembatalan ditolak.",
+      ),
+    });
   };
 
   // ----------------------- buyer: return request
   const canRequestReturn =
     isBuyer && !ret && ["delivered", "shipped"].includes(order.status);
   const requestReturn = () => {
-    const reason = window.prompt("Alasan retur (damaged | not_as_described | wrong_item | other):", "damaged");
-    if (!reason) return;
-    const reasons = ["damaged", "not_as_described", "wrong_item", "other"];
-    if (!reasons.includes(reason)) { setToast("Alasan tidak valid."); return; }
-    const desc = window.prompt("Deskripsi masalah (min 10 karakter):");
-    if (!desc || desc.trim().length < 10) return;
-    const evidence = window.prompt("URL bukti foto/video (pisah koma, min 1):");
-    if (!evidence) return;
-    const evidenceList = evidence.split(",").map((s) => s.trim()).filter(Boolean);
-    if (evidenceList.length === 0) { setToast("Bukti wajib diisi."); return; }
-    call(`/orders/${encodeURIComponent(order.humanId)}/return-request`, {
-      reason, description: desc.trim(), evidence: evidenceList,
-    }, "Retur diajukan. Menunggu respon seller (max 48 jam).");
+    dialog.open({
+      title: "Ajukan retur barang",
+      description: "Sertakan bukti foto / video supaya proses retur bisa cepat.",
+      fields: [
+        { key: "reason", label: "Alasan", type: "select", defaultValue: "damaged",
+          options: [
+            { value: "damaged",         label: "Barang rusak" },
+            { value: "not_as_described", label: "Tidak sesuai deskripsi" },
+            { value: "wrong_item",       label: "Salah kirim barang" },
+            { value: "other",            label: "Lainnya" },
+          ] },
+        { key: "description", label: "Deskripsi masalah", type: "textarea", minLength: 10 },
+        { key: "evidence",    label: "URL bukti (pisah koma)", placeholder: "https://...", minLength: 1, hint: "Min 1 link foto/video." },
+      ],
+      tone: "danger",
+      confirmLabel: "Ajukan retur",
+      onConfirm: (v) => {
+        const list = v.evidence.split(",").map((s) => s.trim()).filter(Boolean);
+        if (list.length === 0) return "Bukti wajib diisi.";
+        return callDialog(
+          `/orders/${encodeURIComponent(order.humanId)}/return-request`,
+          { reason: v.reason, description: v.description.trim(), evidence: list },
+          "Retur diajukan. Menunggu respon seller (max 48 jam).",
+        );
+      },
+    });
   };
 
   // ----------------------- seller: respond return
   const canRespondReturn = isSeller && ret?.status === "requested";
   const approveReturn = () => {
-    if (!window.confirm("Setuju retur? Buyer akan diminta kirim balik.")) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/return-respond`, { decision: "approve" }, "Retur disetujui.");
+    dialog.open({
+      title: "Setuju retur barang?",
+      description: "Buyer akan diminta kirim balik. Refund diproses setelah barang diterima kembali.",
+      confirmLabel: "Setujui retur",
+      onConfirm: () => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/return-respond`,
+        { decision: "approve" },
+        "Retur disetujui.",
+      ),
+    });
   };
   const rejectReturn = () => {
-    const note = window.prompt("Alasan tolak retur (akan masuk dispute admin):");
-    if (!note || note.trim().length < 3) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/return-respond`, { decision: "reject", rejectNote: note.trim() }, "Retur ditolak — masuk review admin.");
+    dialog.open({
+      title: "Tolak retur",
+      description: "Penolakan akan masuk ke review admin (dispute).",
+      fields: [
+        { key: "note", label: "Alasan tolak", type: "textarea", minLength: 3 },
+      ],
+      tone: "danger",
+      confirmLabel: "Tolak retur",
+      onConfirm: (v) => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/return-respond`,
+        { decision: "reject", rejectNote: v.note.trim() },
+        "Retur ditolak — masuk review admin.",
+      ),
+    });
   };
 
   // ----------------------- buyer: ship back
   const canShipBack = isBuyer && ret?.status === "approved";
   const shipBack = () => {
-    const courier = window.prompt("Kurir balik (jne-reg | jnt | sicepat | gosend):", "jne-reg");
-    const couriers = ["jne-reg", "jnt", "sicepat", "gosend"];
-    if (!courier || !couriers.includes(courier)) return;
-    const tn = window.prompt("Resi balik:");
-    if (!tn || tn.trim().length < 4) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/return-ship-back`, {
-      trackingNumber: tn.trim(), courierCode: courier,
-    }, "Resi balik tersimpan.");
+    dialog.open({
+      title: "Input resi balik",
+      fields: [
+        { key: "courier", label: "Kurir balik", type: "select", defaultValue: "jne-reg",
+          options: [
+            { value: "jne-reg",  label: "JNE Reguler" },
+            { value: "jnt",      label: "J&T" },
+            { value: "sicepat",  label: "SiCepat" },
+            { value: "gosend",   label: "GoSend" },
+          ] },
+        { key: "tracking", label: "Resi balik", minLength: 4 },
+      ],
+      confirmLabel: "Simpan",
+      onConfirm: (v) => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/return-ship-back`,
+        { trackingNumber: v.tracking.trim(), courierCode: v.courier },
+        "Resi balik tersimpan.",
+      ),
+    });
   };
 
   // ----------------------- seller: confirm return
   const canConfirmReturn = isSeller && ret?.status === "shipped_back";
   const confirmReturn = () => {
-    if (!window.confirm("Konfirmasi barang retur sudah diterima? Refund akan diproses.")) return;
-    call(`/orders/${encodeURIComponent(order.humanId)}/return-confirm`, undefined, "Retur selesai, refund diproses.");
+    dialog.open({
+      title: "Konfirmasi retur diterima?",
+      description: "Refund akan otomatis diproses ke buyer.",
+      confirmLabel: "Ya, konfirmasi",
+      onConfirm: () => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/return-confirm`, undefined,
+        "Retur selesai, refund diproses.",
+      ),
+    });
   };
 
   // ----------------------- buyer: open dispute (manual escalation)
   const canOpenDispute =
     isBuyer && !order.dispute && ["paid", "shipped", "delivered", "returning"].includes(order.status);
   const openDispute = () => {
-    const reason = window.prompt("Ringkasan masalah (min 5 karakter):");
-    if (!reason || reason.trim().length < 5) return;
-    const desc = window.prompt("Deskripsi detail (min 10 karakter):");
-    if (!desc || desc.trim().length < 10) return;
-    const evidence = window.prompt("URL bukti (pisah koma, opsional):", "");
-    const evidenceList = (evidence ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-    call(`/orders/${encodeURIComponent(order.humanId)}/dispute`, {
-      kind: "other", reason: reason.trim(), description: desc.trim(), evidence: evidenceList,
-    }, "Dispute dibuka. Admin akan mereview.");
+    dialog.open({
+      title: "Buka dispute admin",
+      description: "Kasus akan di-review tim Hoobiq dalam 24 jam. Sertakan bukti supaya keputusan cepat.",
+      fields: [
+        { key: "reason",      label: "Ringkasan masalah", placeholder: "1 kalimat", minLength: 5 },
+        { key: "description", label: "Deskripsi detail", type: "textarea", minLength: 10 },
+        { key: "evidence",    label: "URL bukti (opsional, pisah koma)" },
+      ],
+      tone: "danger",
+      confirmLabel: "Buka dispute",
+      onConfirm: (v) => {
+        const evidenceList = v.evidence.split(",").map((s) => s.trim()).filter(Boolean);
+        return callDialog(`/orders/${encodeURIComponent(order.humanId)}/dispute`, {
+          kind: "other", reason: v.reason.trim(), description: v.description.trim(), evidence: evidenceList,
+        }, "Dispute dibuka. Admin akan mereview.");
+      },
+    });
   };
 
   return (

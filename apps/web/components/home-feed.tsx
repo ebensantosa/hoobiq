@@ -353,37 +353,50 @@ function SectionHeader({
 /* -------------------------------------------------------------------- */
 
 function CategoryRow({ categories }: { categories: HomeCategory[] }) {
+  // Tone palette per primary slug — gives each card a distinct
+  // pastel background when the admin hasn't uploaded an image yet.
+  const tones: Record<string, string> = {
+    "collection-cards": "from-emerald-200 to-emerald-100 dark:from-emerald-400/25 dark:to-emerald-500/10",
+    "trading-cards":    "from-rose-200 to-rose-100 dark:from-rose-400/25 dark:to-rose-500/10",
+    "merchandise":      "from-amber-200 to-amber-100 dark:from-amber-400/25 dark:to-amber-500/10",
+    "toys":             "from-orange-200 to-orange-100 dark:from-orange-400/25 dark:to-orange-500/10",
+    "others":           "from-sky-200 to-sky-100 dark:from-sky-400/25 dark:to-sky-500/10",
+  };
   return (
-    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {categories.map((c) => (
-        <Link
-          key={c.id}
-          href={`/kategori/${c.slug}`}
-          className="group flex w-28 shrink-0 snap-start flex-col items-center text-center sm:w-32"
-        >
-          <div className="relative h-24 w-24 overflow-hidden rounded-full border border-rule bg-gradient-to-br from-brand-100 via-ultra-100 to-flame-100 transition-all group-hover:-translate-y-0.5 group-hover:border-brand-400/60 group-hover:shadow-lg sm:h-28 sm:w-28 dark:from-brand-500/15 dark:via-ultra-500/15 dark:to-flame-500/15">
+    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {categories.map((c) => {
+        const tone = tones[c.slug] ?? "from-brand-200 to-brand-100 dark:from-brand-400/25 dark:to-brand-500/10";
+        return (
+          <Link
+            key={c.id}
+            href={`/kategori/${c.slug}`}
+            className="group relative flex h-28 w-32 shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl border border-rule transition-all hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-md sm:h-32 sm:w-36"
+          >
             {c.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={c.imageUrl}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={c.imageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
+              </>
             ) : (
-              <span className="absolute inset-0 grid place-items-center text-brand-500 dark:text-brand-400">
-                {categoryIcon(c.slug)}
-              </span>
+              <span className={"absolute inset-0 bg-gradient-to-br " + tone} />
             )}
-          </div>
-          <p className="mt-3 text-sm font-semibold leading-tight text-fg group-hover:text-brand-500">
-            {c.name}
-          </p>
-          <p className="mt-0.5 font-mono text-[10px] text-fg-subtle">
-            {c.listingCount.toLocaleString("id-ID")} produk
-          </p>
-        </Link>
-      ))}
+            <p
+              className={
+                "relative z-10 px-3 pb-3 text-xs font-bold leading-tight " +
+                (c.imageUrl ? "text-white drop-shadow-sm" : "text-fg")
+              }
+            >
+              {c.name}
+            </p>
+          </Link>
+        );
+      })}
     </div>
   );
 }

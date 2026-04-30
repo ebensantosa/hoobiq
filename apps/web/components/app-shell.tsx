@@ -1,6 +1,7 @@
 import { TopNav } from "./top-nav";
 import { MobileNav } from "./mobile-nav";
 import { AppFooter } from "./app-footer";
+import { ActionDialogProvider } from "./action-dialog";
 import { getSessionUser } from "@/lib/server/session";
 
 /**
@@ -28,6 +29,7 @@ export async function AppShell({
   void withSidebar;
   const user = await getSessionUser();
   return (
+    <ActionDialogProvider>
     <div className="flex min-h-screen flex-col">
       <TopNav active={active} />
       {/* Header height: 56px on mobile (h-14) and 64px on sm+ (h-16).
@@ -50,5 +52,6 @@ export async function AppShell({
       {withFooter && <AppFooter />}
       {user && <MobileNav username={user.username} />}
     </div>
+    </ActionDialogProvider>
   );
 }

@@ -149,9 +149,10 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
           buyers can flick through categories with one thumb on mobile,
           and admin-uploaded hero images get room to breathe on desktop.
           Each card is a fixed pixel width so widths stay consistent
-          regardless of category name length. */}
+          regardless of category name length. Stays inside the page
+          gutter so left/right edges line up with the heading row. */}
       <div
-        className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {categories.map((c) => {
           const tone = CATEGORY_TONE[c.slug] ?? FALLBACK_TONE;

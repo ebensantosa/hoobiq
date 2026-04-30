@@ -32,9 +32,16 @@ export class WebhooksController {
   @Public()
   @Post("midtrans")
   @HttpCode(200) // Midtrans retries on non-2xx — always return 200 once we've logged
-  async midtrans(@Body() payload: Record<string, unknown>, @Headers("x-signature") signature: string) {
+  async midtrans(@Body() payload: Record<string, unknown>) {
     const started = Date.now();
-    const ok = this.payment.verifyWebhookSignature(payload, signature ?? "");
+    // Midtrans posts the SHA-512 signature in the JSON body as
+    // `signature_key`, not as a header — see
+    // https://docs.midtrans.com/reference/notification-webhooks. Earlier
+    // we read @Headers("x-signature") which Midtrans never sends, so
+    // every notification failed the signature check and orders never
+    // moved past pending_payment.
+    const signature = String(payload.signature_key ?? "");
+    const ok = this.payment.verifyWebhookSignature(payload, signature);
     await this.prisma.webhookLog.create({
       data: {
         source: "midtrans",

@@ -363,7 +363,7 @@ function CategoryRow({ categories }: { categories: HomeCategory[] }) {
     "others":           "from-sky-200 to-sky-100 dark:from-sky-400/25 dark:to-sky-500/10",
   };
   return (
-    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {categories.map((c) => {
         const tone = tones[c.slug] ?? "from-brand-200 to-brand-100 dark:from-brand-400/25 dark:to-brand-500/10";
         return (

@@ -713,7 +713,7 @@ export class OrdersService {
     const name = u.name ?? u.username;
     const humanId = typeof data.humanId === "string" ? data.humanId : null;
     const cta = humanId
-      ? `<p style="margin:24px 0"><a href="${escapeHtml((env.PUBLIC_WEB_BASE ?? "https://hoobiq.com").replace(/\/$/, ""))}/pesanan/${encodeURIComponent(humanId)}" style="display:inline-block;background:#E7559F;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Lihat detail pesanan</a></p>`
+      ? `<p style="margin:24px 0"><a href="${escapeHtml((env.PUBLIC_WEB_BASE ?? "https://hoobiq.com").replace(/\/$/, ""))}/pesanan/${encodeURIComponent(humanId)}" style="display:inline-block;background:#EC4899;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Lihat detail pesanan</a></p>`
       : "";
     const html = `
       <div style="font-family:'Nunito',Arial,sans-serif;color:#0F172A;max-width:560px;margin:0 auto;padding:24px">
@@ -722,7 +722,7 @@ export class OrdersService {
         <p style="font-size:14px;line-height:1.6;color:#0F172A">${escapeHtml(body)}</p>
         ${cta}
         <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0" />
-        <p style="font-size:12px;color:#94A3B8">Email otomatis dari Hoobiq — jangan balas ke alamat ini. Butuh bantuan? <a href="mailto:bantuan@hoobiq.com" style="color:#E7559F">bantuan@hoobiq.com</a></p>
+        <p style="font-size:12px;color:#94A3B8">Email otomatis dari Hoobiq — jangan balas ke alamat ini. Butuh bantuan? <a href="mailto:bantuan@hoobiq.com" style="color:#EC4899">bantuan@hoobiq.com</a></p>
       </div>`;
     await this.email.send(u.email, `[Hoobiq] ${title}`, html);
   }

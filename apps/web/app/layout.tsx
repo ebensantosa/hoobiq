@@ -20,7 +20,7 @@ const sans = Nunito({
 // themeColor moved to its own `viewport` export — Next.js 15 split this out
 // of `metadata` and now warns (but still works) when it's left in metadata.
 export const viewport: Viewport = {
-  themeColor: "#E7559F",
+  themeColor: "#EC4899",
 };
 
 export const metadata: Metadata = {

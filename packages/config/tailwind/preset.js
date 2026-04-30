@@ -35,36 +35,37 @@ module.exports = {
           900: "#0B0C13",
           950: "#07080D",
         },
-        // Hoobiq brand palette (per brand guidelines: collect · connect · trade)
+        // Hoobiq brand palette — sampled from logo gradient
+        // (purple → magenta → orange) for vivid contrast.
         brand: {
-          50:  "#FCE7F3",
-          100: "#FBCFE6",
-          200: "#F69EC9",
-          300: "#F074AC",
-          400: "#E7559F", // primary pink
-          500: "#C13F84",
-          600: "#962E68",
-          700: "#6B1F49",
+          50:  "#FFE7F1",
+          100: "#FFCEE3",
+          200: "#FF9DC7",
+          300: "#FB6AAB",
+          400: "#EC4899", // primary magenta-pink (logo middle)
+          500: "#D31E7C",
+          600: "#A8155F",
+          700: "#760D43",
         },
         flame: {
-          50:  "#FFF4E6",
-          100: "#FFE2B8",
-          200: "#FDC788",
-          300: "#FCB766",
-          400: "#FAA74A", // warm orange
-          500: "#D78934",
-          600: "#A4651F",
-          700: "#6E430F",
+          50:  "#FFF1E6",
+          100: "#FFDDBF",
+          200: "#FFB783",
+          300: "#FF8F4A",
+          400: "#FF6B1A", // vivid orange (logo right tip)
+          500: "#E04E00",
+          600: "#A83A00",
+          700: "#732800",
         },
         ultra: {
-          50:  "#ECEAF5",
-          100: "#D5D1E8",
-          200: "#ACA4D3",
-          300: "#8979BD",
-          400: "#6B61AB", // deep purple
-          500: "#564E89",
-          600: "#423B69",
-          700: "#2D2848",
+          50:  "#F5EBFE",
+          100: "#E9D5FD",
+          200: "#D2A8FB",
+          300: "#BC7BF9",
+          400: "#A855F7", // vivid purple (logo left tip)
+          500: "#8B3DD9",
+          600: "#6A28AC",
+          700: "#491A78",
         },
         sky: {
           50:  "#EEF3FA",
@@ -115,16 +116,16 @@ module.exports = {
       },
       boxShadow: {
         gallery: "0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 48px -24px rgba(0,0,0,0.6)",
-        "gallery-light": "0 1px 0 rgba(0,0,0,0.02) inset, 0 12px 32px -16px rgba(231,85,159,0.14)",
-        glow: "0 0 0 1px rgba(231,85,159,0.35), 0 0 36px -6px rgba(231,85,159,0.45)",
-        "glow-brand": "0 10px 40px -10px rgba(231,85,159,0.55), 0 0 0 1px rgba(231,85,159,0.25)",
+        "gallery-light": "0 1px 0 rgba(0,0,0,0.02) inset, 0 12px 32px -16px rgba(236,72,153,0.18)",
+        glow: "0 0 0 1px rgba(236,72,153,0.4), 0 0 36px -6px rgba(236,72,153,0.5)",
+        "glow-brand": "0 10px 40px -10px rgba(236,72,153,0.6), 0 0 0 1px rgba(236,72,153,0.3)",
       },
       backgroundImage: {
-        // Hoobiq signature gradient — purple → pink → orange, mirrors logo.
+        // Hoobiq signature gradient — purple → magenta → orange (mirrors logo).
         "brand-sheen":
-          "linear-gradient(135deg, #6B61AB 0%, #E7559F 55%, #FAA74A 100%)",
+          "linear-gradient(135deg, #A855F7 0%, #EC4899 55%, #FF6B1A 100%)",
         "brand-soft":
-          "linear-gradient(135deg, rgba(107,97,171,0.18) 0%, rgba(231,85,159,0.18) 55%, rgba(250,167,74,0.18) 100%)",
+          "linear-gradient(135deg, rgba(168,85,247,0.18) 0%, rgba(236,72,153,0.18) 55%, rgba(255,107,26,0.18) 100%)",
       },
     },
   },

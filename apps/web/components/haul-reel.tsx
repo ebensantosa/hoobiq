@@ -98,7 +98,7 @@ function ReelThumb({ item, onOpen }: { item: HaulItem; onOpen: () => void }) {
       {/* Animated gradient ring — uses padding trick so inner avatar stays a perfect circle */}
       <span
         className=" relative grid h-[68px] w-[68px] place-items-center rounded-full p-[3px]
-          bg-[conic-gradient(from_var(--ring-angle,0deg),#E7559F_0%,#FAA74A_25%,#6B61AB_55%,#E7559F_100%)]
+          bg-[conic-gradient(from_var(--ring-angle,0deg),#EC4899_0%,#FF6B1A_25%,#A855F7_55%,#EC4899_100%)]
           transition-transform duration-200 group-hover:scale-105 group-active:scale-95
           shadow-[0_4px_16px_-4px_rgba(231,85,159,0.55)]
           [animation:reel-ring_4s_linear_infinite]"

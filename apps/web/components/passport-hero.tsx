@@ -100,7 +100,7 @@ export function PassportHero({
               <span
                 aria-hidden
                 className=" absolute -inset-1 rounded-full
-                  bg-[conic-gradient(from_180deg_at_50%_50%,#E7559F,#FAA74A,#7F77DD,#E7559F)]
+                  bg-[conic-gradient(from_180deg_at_50%_50%,#EC4899,#FF6B1A,#7F77DD,#EC4899)]
                   opacity-90 blur-[1px]"
               />
               <div

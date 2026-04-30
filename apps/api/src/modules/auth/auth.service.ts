@@ -45,11 +45,11 @@ export class AuthService {
         </p>
         <div style="margin: 24px 0; padding: 24px; background: #faf6fb; border: 1px solid #efd9e7; border-radius: 12px; text-align: center;">
           <p style="font-size: 11px; color: #6b7280; margin: 0 0 8px; letter-spacing: 0.18em; text-transform: uppercase;">Kode verifikasi</p>
-          <p style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 32px; font-weight: 800; letter-spacing: 0.32em; color: #e7559f; margin: 0;">${code}</p>
+          <p style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 32px; font-weight: 800; letter-spacing: 0.32em; color: #EC4899; margin: 0;">${code}</p>
         </div>
         <p style="font-size: 14px; line-height: 1.6; margin: 16px 0 0;">Atau klik tombol berikut — kami isi kodenya otomatis:</p>
         <p style="margin: 12px 0;">
-          <a href="${link}" style="display: inline-block; background: #e7559f; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
+          <a href="${link}" style="display: inline-block; background: #EC4899; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
             Verifikasi email
           </a>
         </p>
@@ -183,13 +183,13 @@ export class AuthService {
           Halo ${escapeHtml(name)}, kami terima permintaan reset password untuk akun-mu. Klik tombol di bawah untuk bikin password baru:
         </p>
         <p style="margin: 24px 0;">
-          <a href="${link}" style="display: inline-block; background: #e7559f; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
+          <a href="${link}" style="display: inline-block; background: #EC4899; color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;">
             Reset password
           </a>
         </p>
         <p style="font-size: 13px; color: #6b7280; line-height: 1.6; margin: 16px 0 0;">
           Atau copy-paste link ini: <br/>
-          <a href="${link}" style="color: #e7559f; word-break: break-all;">${link}</a>
+          <a href="${link}" style="color: #EC4899; word-break: break-all;">${link}</a>
         </p>
         <p style="font-size: 12px; color: #9ca3af; margin: 32px 0 0;">
           Link berlaku 30 menit. Kalau bukan kamu yang minta reset, abaikan email ini — password kamu tetap aman.

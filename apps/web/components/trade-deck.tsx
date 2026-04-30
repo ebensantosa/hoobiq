@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 
-const ACCENT = "#E7559F"; // Meet Match pink — wishlist-aligned, was Trade purple
+const ACCENT = "#EC4899"; // Meet Match pink — wishlist-aligned, was Trade purple
 
 export type ListingMini = {
   id: string;

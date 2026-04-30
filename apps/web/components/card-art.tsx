@@ -43,8 +43,8 @@ function FlameArt({ className }: { className?: string }) {
       <defs>
         <linearGradient id="art-flame-bg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%"   stopColor="#FFE2B8"/>
-          <stop offset="55%"  stopColor="#FAA74A"/>
-          <stop offset="100%" stopColor="#E7559F"/>
+          <stop offset="55%"  stopColor="#FF6B1A"/>
+          <stop offset="100%" stopColor="#EC4899"/>
         </linearGradient>
         <radialGradient id="art-flame-glow" cx="50%" cy="60%" r="50%">
           <stop offset="0%"  stopColor="#fff" stopOpacity="0.6"/>
@@ -54,7 +54,7 @@ function FlameArt({ className }: { className?: string }) {
       <rect width="160" height="120" fill="url(#art-flame-bg)"/>
       <rect width="160" height="120" fill="url(#art-flame-glow)"/>
       <path d="M80 18c-8 14-22 22-22 38a22 22 0 0 0 44 0c0-12-9-20-13-30-2-4-4-6-9-8z" fill="#fff" fillOpacity="0.9"/>
-      <path d="M80 38c-4 8-10 12-10 22a10 10 0 0 0 20 0c0-7-4-12-6-17-1-2-2-4-4-5z" fill="#E7559F"/>
+      <path d="M80 38c-4 8-10 12-10 22a10 10 0 0 0 20 0c0-7-4-12-6-17-1-2-2-4-4-5z" fill="#EC4899"/>
       <g opacity="0.35">
         <line x1="-20" y1="100" x2="180" y2="0"   stroke="#fff" strokeWidth="2"/>
         <line x1="-20" y1="120" x2="180" y2="20"  stroke="#fff" strokeWidth="1"/>
@@ -73,7 +73,7 @@ function ThunderArt({ className }: { className?: string }) {
       <defs>
         <linearGradient id="art-thunder-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#2D2848"/>
-          <stop offset="60%"  stopColor="#6B61AB"/>
+          <stop offset="60%"  stopColor="#A855F7"/>
           <stop offset="100%" stopColor="#ACA4D3"/>
         </linearGradient>
       </defs>
@@ -98,15 +98,15 @@ function OceanArt({ className }: { className?: string }) {
       <defs>
         <linearGradient id="art-ocean-bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#FFE2B8"/>
-          <stop offset="55%"  stopColor="#FAA74A"/>
+          <stop offset="55%"  stopColor="#FF6B1A"/>
           <stop offset="100%" stopColor="#D78934"/>
         </linearGradient>
       </defs>
       <rect width="160" height="120" fill="url(#art-ocean-bg)"/>
       <circle cx="80" cy="46" r="22" fill="#FFF1B8" opacity="0.85"/>
       <path d="M40 70 q40 -22 80 0 v6 q-40 -16 -80 0 z" fill="#FFF"/>
-      <ellipse cx="80" cy="62" rx="20" ry="9" fill="#E7559F"/>
-      <rect x="60" y="62" width="40" height="3" fill="#E7559F" opacity="0.7"/>
+      <ellipse cx="80" cy="62" rx="20" ry="9" fill="#EC4899"/>
+      <rect x="60" y="62" width="40" height="3" fill="#EC4899" opacity="0.7"/>
       <path d="M0 88 q20 -8 40 0 t40 0 t40 0 t40 0 v32 H0 z"  fill="#fff" opacity="0.55"/>
       <path d="M0 100 q20 -6 40 0 t40 0 t40 0 t40 0 v20 H0 z" fill="#fff" opacity="0.85"/>
       <Sparkle x={32} y={26} small/>
@@ -121,8 +121,8 @@ function BubbleArt({ className }: { className?: string }) {
       <defs>
         <linearGradient id="art-bubble-bg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%"   stopColor="#FBCFE6"/>
-          <stop offset="60%"  stopColor="#E7559F"/>
-          <stop offset="100%" stopColor="#6B61AB"/>
+          <stop offset="60%"  stopColor="#EC4899"/>
+          <stop offset="100%" stopColor="#A855F7"/>
         </linearGradient>
       </defs>
       <rect width="160" height="120" fill="url(#art-bubble-bg)"/>
@@ -134,8 +134,8 @@ function BubbleArt({ className }: { className?: string }) {
       <circle cx="69" cy="75" r="2.5" fill="#2D2848"/>
       <circle cx="93" cy="75" r="2.5" fill="#2D2848"/>
       <path d="M68 88 Q80 96 92 88" stroke="#2D2848" strokeWidth="2" fill="none" strokeLinecap="round"/>
-      <circle cx="60" cy="84" r="3" fill="#E7559F" opacity="0.5"/>
-      <circle cx="100" cy="84" r="3" fill="#E7559F" opacity="0.5"/>
+      <circle cx="60" cy="84" r="3" fill="#EC4899" opacity="0.5"/>
+      <circle cx="100" cy="84" r="3" fill="#EC4899" opacity="0.5"/>
       <circle cx="22" cy="32" r="6"   fill="#fff" opacity="0.6"/>
       <circle cx="140" cy="44" r="4"  fill="#fff" opacity="0.7"/>
       <circle cx="135" cy="22" r="2.5" fill="#fff" opacity="0.9"/>
@@ -150,13 +150,13 @@ function NeonArt({ className }: { className?: string }) {
       <defs>
         <linearGradient id="art-neon-bg" x1="0" y1="1" x2="1" y2="0">
           <stop offset="0%"   stopColor="#0B0C13"/>
-          <stop offset="60%"  stopColor="#6B61AB"/>
-          <stop offset="100%" stopColor="#E7559F"/>
+          <stop offset="60%"  stopColor="#A855F7"/>
+          <stop offset="100%" stopColor="#EC4899"/>
         </linearGradient>
       </defs>
       <rect width="160" height="120" fill="url(#art-neon-bg)"/>
       {/* horizon grid */}
-      <g stroke="#FAA74A" strokeOpacity="0.55" strokeWidth="1" fill="none">
+      <g stroke="#FF6B1A" strokeOpacity="0.55" strokeWidth="1" fill="none">
         <line x1="0"   y1="80" x2="160" y2="80"/>
         <line x1="0"   y1="92" x2="160" y2="92"/>
         <line x1="0"   y1="106" x2="160" y2="106"/>
@@ -166,7 +166,7 @@ function NeonArt({ className }: { className?: string }) {
         <line x1="80"  y1="68" x2="200"  y2="120"/>
       </g>
       {/* sun disc */}
-      <circle cx="80" cy="56" r="22" fill="#FAA74A"/>
+      <circle cx="80" cy="56" r="22" fill="#FF6B1A"/>
       <rect x="58" y="60" width="44" height="2" fill="#0B0C13" opacity="0.7"/>
       <rect x="60" y="66" width="40" height="2" fill="#0B0C13" opacity="0.6"/>
       <rect x="62" y="72" width="36" height="2" fill="#0B0C13" opacity="0.5"/>
@@ -213,7 +213,7 @@ function Blossom({ cx, cy, small }: { cx: number; cy: number; small?: boolean })
       <circle cx={cx + r} cy={cy}     r={r}/>
       <circle cx={cx}     cy={cy + r} r={r}/>
       <circle cx={cx - r} cy={cy}     r={r}/>
-      <circle cx={cx}     cy={cy}     r={r * 0.8} fill="#E7559F" opacity="0.7"/>
+      <circle cx={cx}     cy={cy}     r={r * 0.8} fill="#EC4899" opacity="0.7"/>
     </g>
   );
 }

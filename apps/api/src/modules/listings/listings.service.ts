@@ -54,11 +54,26 @@ export class ListingsService {
         categoryIds = merged;
       }
 
+      // Search query — matches across title AND seller (username, name,
+      // city) so the same nav search bar finds "pikachu", "@adityacollects",
+      // "Aditya Kurniawan", or "Jakarta" without the buyer having to know
+      // which field they're hitting. Case-insensitive contains is good
+      // enough for the current row counts; revisit with full-text/Postgres
+      // tsvector when the catalog scales past ~100k.
+      const q = input.q?.trim();
       const where = {
         deletedAt: null,
         isPublished: true,
         moderation: "active",
-        ...(input.q && { title: { contains: input.q, mode: "insensitive" as const } }),
+        ...(q && {
+          OR: [
+            { title:                  { contains: q, mode: "insensitive" as const } },
+            { seller: { username:     { contains: q, mode: "insensitive" as const } } },
+            { seller: { name:         { contains: q, mode: "insensitive" as const } } },
+            { seller: { city:         { contains: q, mode: "insensitive" as const } } },
+            { description:            { contains: q, mode: "insensitive" as const } },
+          ],
+        }),
         ...(categoryIds && { categoryId: { in: categoryIds } }),
         ...(input.condition && { condition: input.condition }),
         ...(input.minPrice !== undefined && { priceCents: { gte: BigInt(input.minPrice) * CENTS_PER_RUPIAH } }),
@@ -138,11 +153,19 @@ export class ListingsService {
           return { histogram: { buckets: [], minIdr: 0, maxIdr: 0, total: 0 }, cities: [] };
         }
       }
+      const fq = input.q?.trim();
       const where = {
         deletedAt: null,
         isPublished: true,
         moderation: "active",
-        ...(input.q && { title: { contains: input.q, mode: "insensitive" as const } }),
+        ...(fq && {
+          OR: [
+            { title:                  { contains: fq, mode: "insensitive" as const } },
+            { seller: { username:     { contains: fq, mode: "insensitive" as const } } },
+            { seller: { name:         { contains: fq, mode: "insensitive" as const } } },
+            { seller: { city:         { contains: fq, mode: "insensitive" as const } } },
+          ],
+        }),
         ...(categoryIds && { categoryId: { in: categoryIds } }),
       } as const;
 

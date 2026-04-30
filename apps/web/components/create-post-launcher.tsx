@@ -33,9 +33,9 @@ export function CreatePostLauncher() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Buat post atau jual"
-        className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-flame-500 text-white shadow-[0_8px_20px_-6px_rgba(231,85,159,0.6)] transition-transform hover:scale-105"
+        className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-flame-500 text-white shadow-[0_10px_24px_-8px_rgba(231,85,159,0.7)] transition-transform hover:scale-105"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>

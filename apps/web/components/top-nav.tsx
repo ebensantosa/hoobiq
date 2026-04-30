@@ -77,12 +77,17 @@ export async function TopNav({ active: _active }: { active?: string }) {
           right edges below. Pages should NOT add their own
           mx-auto max-w-* — they'd produce visible double-centering. */}
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-10">
-        {/* Mobile: hamburger first so the logo stays optically centred
-            with the rest of the icons. */}
-        <HeaderMobileDrawer
-          categories={menuCategories}
-          user={user ? { username: user.username, name: user.name ?? null } : null}
-        />
+        {/* Hamburger — desktop-tablet only. Mobile (sm-) gets a
+            simpler header because the bottom tab bar already covers
+            primary navigation, so a duplicate kategori menu in the
+            header would just be noise. Kategori still reachable via
+            /kategori from search results / footer. */}
+        <div className="hidden sm:flex lg:hidden">
+          <HeaderMobileDrawer
+            categories={menuCategories}
+            user={user ? { username: user.username, name: user.name ?? null } : null}
+          />
+        </div>
 
         <Link
           href="/"
@@ -92,8 +97,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
           <BrandLogo size="responsive" />
         </Link>
 
-        {/* Desktop nav cluster — categories + primary destinations.
-            Hidden on mobile (mobile drawer covers this). */}
+        {/* Desktop nav cluster — categories + primary destinations. */}
         <nav className="ml-2 hidden items-center gap-0.5 lg:flex">
           <HeaderCategoriesMenu categories={menuCategories} />
           <NavPill href="/marketplace">Marketplace</NavPill>
@@ -101,45 +105,45 @@ export async function TopNav({ active: _active }: { active?: string }) {
           <NavPill href="/trades">Meet Match</NavPill>
         </nav>
 
-        {/* Search — the centerpiece of a marketplace header. Takes
-            the remaining space between the nav cluster and the
-            account cluster. Hidden on small mobile (replaced by an
-            icon-only button that scrolls to /marketplace search). */}
-        <form action="/marketplace" className="ml-auto hidden h-10 flex-1 max-w-xl md:flex">
-          <label className="group flex h-full w-full items-center gap-2.5 rounded-full border border-rule bg-panel px-4 text-sm transition-colors focus-within:border-brand-400/70 focus-within:bg-canvas focus-within:ring-2 focus-within:ring-brand-400/20">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-subtle">
+        {/* Search bar — visible at every breakpoint. On mobile it
+            takes the remaining width between the logo and the
+            account cluster; on desktop it caps at max-w-xl so the
+            row stays balanced. Real <form> so Enter submits → q
+            param goes to /marketplace which now searches title,
+            seller username, name, and city in one query. */}
+        <form
+          action="/marketplace"
+          className="ml-auto flex h-10 min-w-0 flex-1 max-w-xl"
+          role="search"
+        >
+          <label className="group flex h-full w-full items-center gap-2 rounded-full border border-rule bg-panel px-3 text-sm transition-colors focus-within:border-brand-400/70 focus-within:bg-canvas focus-within:ring-2 focus-within:ring-brand-400/20 sm:px-4 sm:gap-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-fg-subtle">
               <circle cx="11" cy="11" r="8"/>
               <path d="m21 21-4.3-4.3"/>
             </svg>
             <input
               name="q"
-              placeholder={t("nav.search.placeholder")}
-              className="flex-1 bg-transparent text-fg placeholder:text-fg-subtle focus:outline-none"
+              type="search"
+              autoComplete="off"
+              placeholder="Cari produk, toko, atau kota…"
+              aria-label="Cari produk, toko, atau kota"
+              className="min-w-0 flex-1 bg-transparent text-fg placeholder:text-fg-subtle focus:outline-none"
             />
             <kbd className="hidden rounded border border-rule bg-canvas px-1.5 py-0.5 font-mono text-[10px] text-fg-muted lg:inline">↵</kbd>
           </label>
         </form>
-
-        {/* Mobile-only inline search → routes to marketplace with
-            focus on the page-level search input. Keeps the most
-            important affordance one tap away. */}
-        <Link
-          href="/marketplace"
-          aria-label="Cari"
-          className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-panel hover:text-fg md:hidden"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.3-4.3"/>
-          </svg>
-        </Link>
 
         {/* Action cluster — buyer-first per the redesign spec. The
             "Jual" CTA was removed from this row; selling now lives
             inside UserMenu (Mulai Jualan / Dashboard Seller) so the
             header stays focused on search + browse + cart. */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <ThemeToggle />
+          {/* Theme toggle — desktop-tablet only. Phone width is too
+              tight; the toggle is also reachable from the avatar
+              dropdown if the buyer needs it. */}
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
           {user ? (
             <>
               {/* Wishlist + DM hidden on mobile — both already

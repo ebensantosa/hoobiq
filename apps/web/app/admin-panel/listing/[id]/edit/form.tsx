@@ -3,8 +3,30 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Card, Input, Label } from "@hoobiq/ui";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
 import { uploadImage } from "@/lib/api/uploads";
+
+/** Server-side Zod issue shape — mirrors apps/api ZodPipe response. */
+type ValidationDetail = { path: string; message: string };
+
+/** Map zod field paths to the human label used in the form, so the
+ *  inline error doesn't read like a JSON path. */
+const FIELD_LABEL: Record<string, string> = {
+  title: "Judul",
+  description: "Deskripsi",
+  priceIdr: "Harga",
+  categoryId: "Kategori",
+  condition: "Kondisi",
+  stock: "Stok",
+  weightGrams: "Berat",
+  tradeable: "Tradeable",
+  moderation: "Status moderasi",
+  isPublished: "Status publish",
+  images: "Foto",
+  sellerRef: "Pindahkan ke seller",
+};
+
+type UserHit = { id: string; username: string; email: string; name: string | null };
 
 export type AdminListingDetail = {
   id: string;
@@ -60,8 +82,45 @@ export function ListingEditForm({
   });
   const [saving, setSaving] = React.useState(false);
   const [err, setErr]       = React.useState<string | null>(null);
+  /** Field-level errors from the server (populated when ZodPipe rejects
+   *  the body). Keyed by the zod `path` so each field can show its own
+   *  message inline instead of dumping the whole list at the bottom. */
+  const [fieldErrs, setFieldErrs] = React.useState<Record<string, string>>({});
   const [ok, setOk]         = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
+
+  // ---- Seller typeahead ------------------------------------------------
+  // Hits /admin/users?q=<input> after the user has typed ≥ 3 chars,
+  // debounced to keep the request volume reasonable. The dropdown
+  // surfaces username + name + email so the admin can disambiguate
+  // between near-identical handles before committing the transfer.
+  const [sellerHits, setSellerHits] = React.useState<UserHit[]>([]);
+  const [sellerOpen, setSellerOpen] = React.useState(false);
+  const [sellerLoading, setSellerLoading] = React.useState(false);
+  React.useEffect(() => {
+    const raw = state.sellerRef.trim().replace(/^@+/, "");
+    if (raw.length < 3) {
+      setSellerHits([]);
+      setSellerLoading(false);
+      return;
+    }
+    setSellerLoading(true);
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await api<{ items: UserHit[] }>(
+          `/admin/users?q=${encodeURIComponent(raw)}`,
+          { signal: ctrl.signal },
+        );
+        setSellerHits(res.items.slice(0, 8));
+      } catch {
+        // Silently swallow — typeahead failures shouldn't block save.
+      } finally {
+        setSellerLoading(false);
+      }
+    }, 200);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [state.sellerRef]);
 
   function patch<K extends keyof typeof state>(key: K, value: (typeof state)[K]) {
     setState((s) => ({ ...s, [key]: value }));
@@ -97,7 +156,7 @@ export function ListingEditForm({
   }
 
   async function save() {
-    setSaving(true); setErr(null); setOk(false);
+    setSaving(true); setErr(null); setFieldErrs({}); setOk(false);
     try {
       const body: Record<string, unknown> = {
         title: state.title.trim(),
@@ -117,7 +176,28 @@ export function ListingEditForm({
       setOk(true);
       router.refresh();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal menyimpan");
+      // Surface zod field-level details when present so the admin can
+      // see exactly which field tripped validation rather than the
+      // generic "Input tidak valid" the server's envelope returns.
+      if (e instanceof ApiError && Array.isArray(e.details)) {
+        const map: Record<string, string> = {};
+        const summary: string[] = [];
+        for (const raw of e.details as ValidationDetail[]) {
+          if (!raw || typeof raw.message !== "string") continue;
+          const path = String(raw.path ?? "");
+          const label = FIELD_LABEL[path] ?? path ?? "Input";
+          map[path] = raw.message;
+          summary.push(`${label}: ${raw.message}`);
+        }
+        setFieldErrs(map);
+        setErr(summary.length ? summary.join(" · ") : e.message);
+      } else if (e instanceof ApiError) {
+        // Non-validation errors (seller_not_found, not_found, …). Use
+        // the server's human message so the admin knows what to retry.
+        setErr(e.message);
+      } else {
+        setErr(e instanceof Error ? e.message : "Gagal menyimpan");
+      }
     } finally {
       setSaving(false);
     }
@@ -291,11 +371,49 @@ export function ListingEditForm({
               <p className="font-mono text-fg-muted">@{initial.seller.username} · {initial.seller.email}</p>
             </div>
             <Field label="Pindahkan ke seller (id / username / email)">
-              <Input
-                value={state.sellerRef}
-                onChange={(e) => patch("sellerRef", e.target.value)}
-                placeholder="@username atau email@..."
-              />
+              <div className="relative">
+                <Input
+                  value={state.sellerRef}
+                  onChange={(e) => patch("sellerRef", e.target.value)}
+                  onFocus={() => setSellerOpen(true)}
+                  // Delay close so a click on a suggestion still
+                  // registers before the input loses focus.
+                  onBlur={() => setTimeout(() => setSellerOpen(false), 120)}
+                  placeholder="@username atau email@..."
+                />
+                {sellerOpen
+                  && state.sellerRef.trim().replace(/^@+/, "").length >= 3
+                  && (sellerLoading || sellerHits.length > 0) && (
+                  <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-rule bg-canvas shadow-lg">
+                    {sellerLoading && sellerHits.length === 0 && (
+                      <li className="px-3 py-2 text-xs text-fg-subtle">Mencari…</li>
+                    )}
+                    {sellerHits.map((u) => (
+                      <li key={u.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            patch("sellerRef", u.username);
+                            setSellerOpen(false);
+                          }}
+                          className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-xs transition-colors hover:bg-panel"
+                        >
+                          <span className="font-semibold text-fg">
+                            {u.name?.trim() || u.username}
+                          </span>
+                          <span className="font-mono text-[11px] text-fg-muted">
+                            @{u.username} · {u.email}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {fieldErrs.sellerRef && (
+                <p className="mt-1 text-[11px] text-flame-600">{fieldErrs.sellerRef}</p>
+              )}
             </Field>
             <p className="text-[11px] text-fg-subtle">
               Kosongin kalau tidak ingin pindah owner. Order historis tetap merujuk ke buyer/seller saat
@@ -305,7 +423,25 @@ export function ListingEditForm({
         </Card>
 
         <div className="flex flex-col gap-2">
-          {err && <p className="text-sm text-flame-600">{err}</p>}
+          {err && (
+            <div className="rounded-lg border border-flame-400/40 bg-flame-400/10 p-3 text-sm text-flame-600">
+              {Object.keys(fieldErrs).length > 0 ? (
+                <>
+                  <p className="font-semibold">Tidak bisa simpan — perbaiki dulu:</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs">
+                    {Object.entries(fieldErrs).map(([path, msg]) => (
+                      <li key={path}>
+                        <span className="font-semibold">{FIELD_LABEL[path] ?? path}:</span>{" "}
+                        {msg}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p>{err}</p>
+              )}
+            </div>
+          )}
           {ok  && <p className="text-sm text-emerald-500">Tersimpan.</p>}
           <div className="flex gap-2">
             <Link

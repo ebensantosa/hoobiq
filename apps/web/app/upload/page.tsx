@@ -16,7 +16,11 @@ export default async function UploadPage() {
   const tree = await serverApi<Node[]>("/categories", { revalidate: 60 });
   return (
     <AppShell active="Marketplace">
-      <div className="mx-auto max-w-5xl px-6 pb-12 lg:px-10">
+      {/* Match the topbar gutter (px-4 sm:px-6 lg:px-10 within the
+          shared 1440 frame) so the heading sits flush under the logo
+          instead of the wider center-and-clamp max-w-5xl band, which
+          produced an off-axis indent on wide viewports. */}
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <header className="border-b border-rule pb-8">
           <h1 className="text-3xl font-bold text-fg md:text-4xl">Pasang listing baru</h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted md:text-base">

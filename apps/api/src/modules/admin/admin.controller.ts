@@ -359,7 +359,10 @@ export class AdminController {
     // admin doesn't have to copy the user id from another tab.
     let nextSellerId: string | undefined;
     if (input.sellerRef && input.sellerRef.trim()) {
-      const ref = input.sellerRef.trim();
+      // Accept either `@username`, `username`, an email, or a raw user id.
+      // Stripping the optional leading `@` here means the admin can paste
+      // straight from a user mention without having to clean it up.
+      const ref = input.sellerRef.trim().replace(/^@+/, "");
       const target = await this.prisma.user.findFirst({
         where: {
           deletedAt: null,

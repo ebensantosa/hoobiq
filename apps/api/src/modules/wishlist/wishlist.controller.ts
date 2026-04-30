@@ -1,7 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Post } from "@nestjs/common";
 import type { SessionUser } from "@hoobiq/types";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+
+/** Per-user daily cap on new wishlist additions. Anti-spam guard so a
+ *  hijacked session can't bulk-pile a buyer's wishlist with thousands
+ *  of rows. 50/day is generous for a real collector — the previous
+ *  ceiling of 25 felt restrictive when buyers were prepping bid lists.
+ */
+const WISHLIST_DAILY_CAP = 50;
 
 @Controller("wishlist")
 export class WishlistController {
@@ -40,13 +47,34 @@ export class WishlistController {
     };
   }
 
-  /** POST /wishlist — add a listing. Idempotent via unique(userId, listingId). */
+  /** POST /wishlist — add a listing. Idempotent via unique(userId, listingId).
+   *  Capped at WISHLIST_DAILY_CAP (50) new rows per rolling 24h. */
   @Post()
   @HttpCode(201)
   async add(
     @CurrentUser() user: SessionUser,
     @Body() body: { listingId: string }
   ) {
+    // Re-add of an existing wishlist row doesn't count against the cap
+    // (upsert is a no-op for the dupe). New rows do — count those in
+    // the last 24h and refuse beyond the cap.
+    const dupe = await this.prisma.wishlistItem.findUnique({
+      where: { userId_listingId: { userId: user.id, listingId: body.listingId } },
+      select: { id: true },
+    });
+    if (!dupe) {
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const recent = await this.prisma.wishlistItem.count({
+        where: { userId: user.id, createdAt: { gte: since } },
+      });
+      if (recent >= WISHLIST_DAILY_CAP) {
+        throw new BadRequestException({
+          code: "wishlist_daily_cap",
+          message: `Sehari maksimal ${WISHLIST_DAILY_CAP} item baru ke wishlist. Coba lagi besok.`,
+        });
+      }
+    }
+
     const item = await this.prisma.wishlistItem.upsert({
       where: { userId_listingId: { userId: user.id, listingId: body.listingId } },
       update: {},

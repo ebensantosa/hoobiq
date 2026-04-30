@@ -179,12 +179,24 @@ export class OrdersService {
   /** Called by the Midtrans webhook handler after signature verification. */
   async markPaid(orderId: string, providerTxId: string, rawPayload: unknown) {
     const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.payment.update({
+    // Atomic: payment row, order row, AND listing inventory all flip
+    // in one transaction. Decrement listing.stock by the order's qty;
+    // if that brings stock to ≤0 the listing auto-unpublishes so it
+    // disappears from the marketplace immediately. Refund paths re-add
+    // the qty (see addBackStockOnRefund) but don't auto-republish —
+    // seller decides whether the item is still for sale.
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, listingId: true, qty: true },
+    });
+    if (!order) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { orderId },
         data: { statusRaw: "paid", paidAt: now, payloadJson: JSON.stringify(rawPayload ?? {}), providerTxId },
-      }),
-      this.prisma.order.update({
+      });
+      await tx.order.update({
         where: { id: orderId },
         data: {
           status: "paid",
@@ -192,13 +204,44 @@ export class OrdersService {
           // 7 hari belum kirim → auto cancel + refund
           shipmentDeadlineAt: new Date(now.getTime() + TIMERS.shipmentDeadline),
         },
-      }),
-    ]);
+      });
+      const listing = await tx.listing.update({
+        where: { id: order.listingId },
+        data: { stock: { decrement: order.qty } },
+        select: { stock: true, isPublished: true },
+      });
+      if (listing.stock <= 0 && listing.isPublished) {
+        await tx.listing.update({
+          where: { id: order.listingId },
+          data: { isPublished: false },
+        });
+      }
+    });
+
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
       await this.notify(o.buyerId, "order_paid", "Pembayaran diterima", "Pesanan kamu masuk ke seller.", { humanId: o.humanId }, { important: true });
       await this.notify(o.sellerId, "order_paid", "Pesanan baru — sudah dibayar", "Segera kirim dalam 7 hari.", { humanId: o.humanId }, { important: true });
     }
+  }
+
+  /** Add the order's qty back to its listing.stock when a refund
+   *  fires (cancel-after-paid, return-confirm, manual refund). Does
+   *  NOT auto-republish — seller might have moved on; they can
+   *  re-publish manually from /jual/<slug>/edit if they want to keep
+   *  selling. Best-effort: silently no-ops when the listing was
+   *  hard-deleted or the order didn't actually decrement stock
+   *  (pending_payment cancellations). */
+  private async addBackStockOnRefund(orderId: string) {
+    const o = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, listingId: true, qty: true, paidAt: true },
+    });
+    if (!o || !o.paidAt) return;  // Never paid → never decremented.
+    await this.prisma.listing.update({
+      where: { id: o.listingId },
+      data: { stock: { increment: o.qty } },
+    }).catch(() => undefined);
   }
 
   // ----------------------------------------------------------------- ship
@@ -335,6 +378,10 @@ export class OrdersService {
         },
       }),
     ]);
+    // Stock back to the listing if the cancel was after payment (the
+    // markPaid path already decremented). Pre-payment cancels never
+    // decremented so the helper is a no-op for them.
+    await this.addBackStockOnRefund(orderId);
     // Fire the actual refund at the payment provider. Failure here is
     // logged but doesn't roll back the cancel — ops still has the
     // refundedAt timestamp + provider tx id to manually reconcile if
@@ -490,6 +537,9 @@ export class OrdersService {
         data: { status: "refunded", refundedAt: now },
       }),
     ]);
+    // Stock back to the listing — same idempotent helper the cancel
+    // path uses. Won't auto-republish (seller decides).
+    await this.addBackStockOnRefund(rr.orderId);
     await this.tryRefund(rr.orderId, "return");
   }
 
@@ -528,6 +578,7 @@ export class OrdersService {
         shipmentDeadlineAt: null,
       },
     });
+    await this.addBackStockOnRefund(orderId);
     await this.tryRefund(orderId, "auto_cancel");
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
@@ -611,6 +662,9 @@ export class OrdersService {
     await this.notify(d.buyerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null }, { important: true });
     await this.notify(d.sellerId, "dispute_resolved", "Keputusan dispute", labelDecision(input.decision), { humanId: null }, { important: true });
     if (input.decision !== "release_seller") {
+      // Buyer wins the dispute → stock back to the listing + fire the
+      // refund. Helper is a no-op if the order was never paid.
+      await this.addBackStockOnRefund(d.orderId);
       await this.tryRefund(d.orderId, "dispute");
     }
     return { ok: true, decision: input.decision };

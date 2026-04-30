@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ListingCard } from "@/components/listing-card";
 import { Stat } from "@hoobiq/ui";
@@ -75,21 +75,15 @@ export default async function CategoryPage({
   const hasChildren = subcategories.length > 0;
   const breadcrumb = ["Kategori", ...ancestors.map((a) => a.name), node.name];
 
-  // Spec navigation flow:
-  //   /kategori (kotak L1) → /kategori/<L1> (kotak L2) → /marketplace?cat=<L2>
-  //
-  // Only the level-1 page renders a picker. Levels 2 and 3 jump straight
-  // to the marketplace pre-filtered by their slug — buyers refine deeper
-  // (anime title, etc) using the marketplace's checkbox filter, not by
-  // drilling further through this page. This avoids the "infinite picker"
-  // feeling when the L3 sub-sub list is just a flat list of titles.
-  if (node.level >= 2) {
-    const params = new URLSearchParams();
-    params.set("cat", slug);
-    if (sort !== "newest") params.set("sort", sort);
-    if (condition) params.set("condition", condition);
-    redirect(`/marketplace?${params.toString()}`);
-  }
+  // Spec navigation: drill-down through every level that has
+  // children, fall through to the listing grid only when we reach a
+  // leaf category. So:
+  //   /kategori          (L1 picker — primary buckets)
+  //   /kategori/<L1>     (L2 picker — sub-categories)
+  //   /kategori/<L2>     (L3 picker — series / sets, when present)
+  //   /kategori/<leaf>   (listing grid)
+  // No redirect — the buyer always lands on a real picker until
+  // there's nothing left to refine.
 
   if (hasChildren) {
     return (
@@ -102,7 +96,9 @@ export default async function CategoryPage({
             <div className="max-w-2xl">
               <h1 className="text-4xl font-bold text-fg md:text-5xl">{node.name}.</h1>
               <p className="mt-4 max-w-[56ch] text-fg-muted">
-                Pilih sub-kategori untuk lihat listing yang lebih spesifik.
+                {node.level === 1
+                  ? "Pilih sub-kategori untuk lihat listing yang lebih spesifik."
+                  : "Pilih series / set untuk lihat listing yang lebih spesifik. Atau langsung lihat semua di marketplace."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8">

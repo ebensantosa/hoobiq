@@ -42,6 +42,15 @@ export async function TopNav({ active: _active }: { active?: string }) {
   ]);
   const t = resolveCopy(settings.copy);
 
+  // "Is this user a seller?" — UserMenu uses this to switch the bottom
+  // CTA between "Mulai Jualan" (no listings yet) and "Dashboard Seller"
+  // (already has at least one). Cheap probe via the existing /listings/mine
+  // endpoint; null result for guests is fine since the menu is hidden.
+  const sellerProbe = user
+    ? await serverApi<{ items: unknown[] }>("/listings/mine").catch(() => null)
+    : null;
+  const isSeller = !!sellerProbe && sellerProbe.items.length > 0;
+
   // Build the trimmed menu shape: 5 canonical primary categories,
   // each with their direct sub-categories. Limit to 12 children to
   // keep the panel reasonable when an admin adds many sub-cats.
@@ -61,7 +70,13 @@ export async function TopNav({ active: _active }: { active?: string }) {
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/90 backdrop-blur supports-[backdrop-filter]:bg-canvas/80">
-      <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-6">
+      {/* Inner container is the canonical 1280px content frame and
+          uses the same horizontal padding most public pages do
+          (px-4 sm:px-6 lg:px-10), so the header's logo / search /
+          icons line up exactly with the page content's left and
+          right edges below. Pages should NOT add their own
+          mx-auto max-w-* — they'd produce visible double-centering. */}
+      <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6 lg:px-10">
         {/* Mobile: hamburger first so the logo stays optically centred
             with the rest of the icons. */}
         <HeaderMobileDrawer
@@ -119,25 +134,14 @@ export async function TopNav({ active: _active }: { active?: string }) {
           </svg>
         </Link>
 
+        {/* Action cluster — buyer-first per the redesign spec. The
+            "Jual" CTA was removed from this row; selling now lives
+            inside UserMenu (Mulai Jualan / Dashboard Seller) so the
+            header stays focused on search + browse + cart. */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          {user && (
-            <Link
-              href="/upload"
-              className="hidden h-9 items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-600 hover:shadow-md sm:inline-flex"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Jual
-            </Link>
-          )}
           <ThemeToggle />
           {user ? (
             <>
-              {/* Wishlist — a marketplace-essential surface that used
-                  to live in the sidebar. Heart icon mirrors the in-card
-                  WishlistButton so users connect them. */}
               <IconButton href="/wishlist" label="Wishlist">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -150,7 +154,7 @@ export async function TopNav({ active: _active }: { active?: string }) {
               </IconButton>
               <CartNavIcon />
               <NotificationsBell />
-              <UserMenu user={user} />
+              <UserMenu user={user} isSeller={isSeller} />
             </>
           ) : (
             <>

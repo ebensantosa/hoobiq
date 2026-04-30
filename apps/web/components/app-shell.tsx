@@ -38,7 +38,13 @@ export async function AppShell({
           listings (marketplace grid) and narrow forms (checkout) can
           each pick the right gutter. `pb-20 lg:pb-0` reserves space
           for the mobile bottom nav. */}
-      <div className="mx-auto flex w-full max-w-[1440px]">
+      {/* 1280px is the canonical content frame across the public site;
+          TopNav uses the same value so the header's left/right edges
+          line up with the page content. Pages should NOT add their
+          own `mx-auto max-w-*` wrappers — they'd produce visible
+          double-centering inside this frame. Use only horizontal
+          padding (px-4 sm:px-6 lg:px-8) inside pages. */}
+      <div className="mx-auto flex w-full max-w-[1280px]">
         <main className="min-w-0 flex-1 pt-4 pb-20 sm:pt-6 lg:pb-0">{children}</main>
       </div>
       {withFooter && <AppFooter />}

@@ -38,7 +38,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   return (
     <AppShell active="Marketplace">
-      <div className="mx-auto max-w-[1200px] px-6 pb-12 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-subtle">
           <Link href="/marketplace" className="hover:text-fg">Marketplace</Link>

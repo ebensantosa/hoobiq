@@ -9,11 +9,25 @@ import { Spinner } from "@/components/spinner";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
+/** Per-character validation for the username field as the user types.
+ *  Returns a message describing what's wrong (or "" when valid).
+ *  Same shape the server enforces — keeps the inline hint useful. */
+function usernameHint(raw: string): { ok: boolean; msg: string } {
+  if (raw.length === 0) return { ok: false, msg: "3–20 karakter, huruf/angka/underscore." };
+  if (raw.startsWith("@")) return { ok: false, msg: "Username ditulis tanpa @ di depan." };
+  if (raw.length < 3) return { ok: false, msg: `Kurang ${3 - raw.length} karakter lagi.` };
+  if (raw.length > 20) return { ok: false, msg: "Maksimal 20 karakter." };
+  if (!/^[a-zA-Z0-9_]+$/.test(raw)) return { ok: false, msg: "Hanya huruf, angka, dan underscore." };
+  return { ok: true, msg: "Username terlihat oke." };
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [err, setErr] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
+  const [username, setUsername] = useState("");
+  const usernameCheck = usernameHint(username);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,8 +84,27 @@ export default function RegisterPage() {
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
         <Field label="Username" error={fieldErrors.username}>
-          <Input type="text" name="username" autoComplete="username" placeholder="@kamu_keren" required />
-          <p className="text-[11px] text-fg-subtle">3–20 karakter, huruf/angka/underscore.</p>
+          <Input
+            type="text"
+            name="username"
+            autoComplete="username"
+            placeholder="kamu_keren"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+          <p
+            className={
+              "text-[11px] " +
+              (username.length === 0
+                ? "text-fg-subtle"
+                : usernameCheck.ok
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-flame-600 dark:text-flame-400")
+            }
+          >
+            {usernameCheck.msg}
+          </p>
         </Field>
 
         <Field label="Email" error={fieldErrors.email}>

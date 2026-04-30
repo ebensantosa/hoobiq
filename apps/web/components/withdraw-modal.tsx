@@ -187,6 +187,27 @@ export function WithdrawModal({
 
 export function WithdrawTrigger({ availableIdr, ktpVerified }: { availableIdr: number; ktpVerified: boolean }) {
   const [open, setOpen] = React.useState(false);
+
+  // KTP-not-verified path: send the user to /pengaturan/verifikasi-ktp
+  // directly instead of opening a modal that just tells them they
+  // can't. Avoids a one-click dead-end and surfaces the actual
+  // resolution (submit KTP). Backend payouts.controller.ts already
+  // rejects non-verified withdraws — this is just UX gating.
+  if (!ktpVerified) {
+    return (
+      <a
+        href="/pengaturan/verifikasi-ktp"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-amber-400 bg-amber-50 px-5 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:bg-amber-400/10 dark:text-amber-300 dark:hover:bg-amber-400/15"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Verifikasi KTP dulu
+      </a>
+    );
+  }
+
   return (
     <>
       <button

@@ -408,10 +408,15 @@ model OrderMessage {
   /// Null when this row is a system-generated event (paid, shipped,
   /// cancel-requested, etc.). User messages always carry the sender.
   senderId        String?  @map("sender_id")
-  /// "user" — typed by buyer or seller.
+  /// "user"  — typed by buyer or seller.
   /// "system" — auto-generated event from orders.service status changes.
+  /// "admin"  — posted by an admin/ops user (intervention, clarification).
   kind            String   @default("user")
   body            String
+  /// Image attachment URLs (R2 / local /uploads/evidence). Empty array
+  /// when the message is text-only. JSON-encoded array of strings —
+  /// matches the imagesJson pattern used elsewhere in the schema.
+  imagesJson      String   @default("[]") @map("images_json")
   /// Per-side read receipts. Each side stamps its own column when it
   /// opens the thread or scrolls to a new message.
   readByBuyerAt   DateTime? @map("read_by_buyer_at")

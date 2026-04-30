@@ -1,17 +1,36 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { Avatar, Badge, Button, Card } from "@hoobiq/ui";
+import { OrderChat } from "@/components/order-chat";
+import { serverApi } from "@/lib/server/api";
 
 export const metadata = { title: "Detail dispute · Admin Hoobiq", robots: { index: false } };
 
-const timeline = [
+type ChatThread = React.ComponentProps<typeof OrderChat>["initial"];
+
+type DisputeDetail = {
+  id: string;
+  order: { humanId: string };
+};
+
+const DEMO_TIMELINE = [
   { actor: "@nendohunt", role: "buyer",  body: "Halo admin, figure yang saya beli sampai dengan kotak penyok dan box figure peyang. Foto terlampir. Saya minta refund penuh.", when: "25 Apr · 14:30" },
-  { actor: "@sellerX",    role: "seller", body: "Saya packing pakai double box dan bubble wrap tebal. Foto packing sebelum kirim juga terlampir. Kemungkinan rusak di kurir.", when: "25 Apr · 16:12" },
-  { actor: "@nendohunt",  role: "buyer",  body: "Video unboxing utuh dari saat nerima paket. Bisa dicek dari kurir atau seller salah packing.", when: "25 Apr · 18:02" },
+  { actor: "@sellerX",   role: "seller", body: "Saya packing pakai double box dan bubble wrap tebal. Foto packing sebelum kirim juga terlampir. Kemungkinan rusak di kurir.", when: "25 Apr · 16:12" },
+  { actor: "@nendohunt", role: "buyer",  body: "Video unboxing utuh dari saat nerima paket. Bisa dicek dari kurir atau seller salah packing.", when: "25 Apr · 18:02" },
 ];
 
 export default async function AdminDisputeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Fetch real dispute + its escrow chat. The hardcoded mock timeline
+  // below stays as a fallback for older dispute rows that don't have
+  // a backing order in the new schema.
+  const dispute = await serverApi<DisputeDetail>(`/admin/disputes/${encodeURIComponent(id)}`)
+    .catch(() => null);
+  const chat = dispute
+    ? await serverApi<ChatThread>(`/orders/${encodeURIComponent(dispute.order.humanId)}/messages`)
+        .catch(() => null)
+    : null;
+
   return (
     <AdminShell active="Dispute">
       <div className="px-8 py-8">
@@ -41,26 +60,41 @@ export default async function AdminDisputeDetailPage({ params }: { params: Promi
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
           {/* Timeline & decision */}
           <section className="flex flex-col gap-6">
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-fg">Kronologi</h2>
-                <ul className="mt-5 space-y-5">
-                  {timeline.map((t, i) => (
-                    <li key={i} className="flex gap-4">
-                      <Avatar letter={t.actor[1]} size="sm" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <b className="text-fg">{t.actor}</b>{" "}
-                          <Badge tone="ghost" size="xs">{t.role}</Badge>{" "}
-                          <span className="text-xs text-fg-subtle">· {t.when}</span>
-                        </p>
-                        <p className="mt-1 text-sm leading-relaxed text-fg-muted">{t.body}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Card>
+            {/* Real escrow chat thread — admin can read everything
+                (system events + buyer/seller messages) and post
+                moderator notes that go to both parties. Fallback to
+                the static demo timeline only when no chat thread is
+                resolvable (e.g. dispute id doesn't exist on new schema). */}
+            {chat && dispute ? (
+              <OrderChat
+                humanId={dispute.order.humanId}
+                initial={chat}
+              />
+            ) : (
+              <Card>
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-fg">Kronologi (demo)</h2>
+                  <p className="mt-1 text-xs text-fg-subtle">
+                    Tidak ada thread chat untuk dispute ini — menampilkan contoh.
+                  </p>
+                  <ul className="mt-5 space-y-5">
+                    {DEMO_TIMELINE.map((t, i) => (
+                      <li key={i} className="flex gap-4">
+                        <Avatar letter={t.actor[1]} size="sm" />
+                        <div className="flex-1">
+                          <p className="text-sm">
+                            <b className="text-fg">{t.actor}</b>{" "}
+                            <Badge tone="ghost" size="xs">{t.role}</Badge>{" "}
+                            <span className="text-xs text-fg-subtle">· {t.when}</span>
+                          </p>
+                          <p className="mt-1 text-sm leading-relaxed text-fg-muted">{t.body}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            )}
 
             <Card>
               <div className="p-6">

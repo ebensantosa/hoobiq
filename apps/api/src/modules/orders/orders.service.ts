@@ -806,16 +806,56 @@ export class OrdersService {
     }).catch(() => undefined);
   }
 
-  /** Buyer + seller can read; everyone else gets 403. Returns messages
-   *  oldest-first so the UI can append-render straight from the array. */
+  /** Admin posts a message in the order chat — useful for dispute
+   *  intervention / clarifications. Notifies BOTH buyer + seller so
+   *  neither side misses the moderator note. */
+  async postAdminMessage(adminId: string, humanId: string, body: string) {
+    const o = await this.prisma.order.findUnique({
+      where: { humanId },
+      select: { id: true, buyerId: true, sellerId: true },
+    });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    const trimmed = body.trim();
+    if (trimmed.length === 0) {
+      throw new BadRequestException({ code: "empty", message: "Pesan kosong." });
+    }
+    const m = await this.prisma.orderMessage.create({
+      data: {
+        orderId: o.id,
+        senderId: adminId,
+        kind: "admin",
+        body: trimmed,
+      },
+    });
+    await this.notify(o.buyerId,  "order_message_admin", "Pesan dari admin", trimmed.slice(0, 80), { humanId }, { important: true });
+    await this.notify(o.sellerId, "order_message_admin", "Pesan dari admin", trimmed.slice(0, 80), { humanId }, { important: true });
+    return { id: m.id, createdAt: m.createdAt.toISOString() };
+  }
+
+  /** Buyer + seller can read. Admin/ops/superadmin also allowed for
+   *  the dispute moderator view. Everyone else gets 403. Returns
+   *  messages oldest-first so the UI can append-render straight. */
   async listMessages(userId: string, humanId: string) {
     const o = await this.prisma.order.findUnique({
       where: { humanId },
       select: { id: true, buyerId: true, sellerId: true },
     });
     if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
-    if (o.buyerId !== userId && o.sellerId !== userId) {
-      throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    let role: "buyer" | "seller" | "admin";
+    if (o.buyerId === userId) {
+      role = "buyer";
+    } else if (o.sellerId === userId) {
+      role = "seller";
+    } else {
+      // Admin / ops / superadmin allowed in to support the dispute view.
+      const u = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (!u || (u.role !== "admin" && u.role !== "superadmin" && u.role !== "ops")) {
+        throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+      }
+      role = "admin";
     }
     const rows = await this.prisma.orderMessage.findMany({
       where: { orderId: o.id },
@@ -823,7 +863,6 @@ export class OrdersService {
       take: 500,
       include: { sender: { select: { id: true, username: true, name: true, avatarUrl: true } } },
     });
-    const role = o.buyerId === userId ? "buyer" as const : "seller" as const;
     return {
       role,
       buyerId: o.buyerId,
@@ -832,6 +871,7 @@ export class OrdersService {
         id: m.id,
         kind: m.kind,
         body: m.body,
+        images: parseImagesJson(m.imagesJson),
         senderId: m.senderId,
         sender: m.sender ? {
           id: m.sender.id,
@@ -846,9 +886,10 @@ export class OrdersService {
     };
   }
 
-  /** Buyer or seller posts a text message. Notifies the other party
-   *  (in-app only — too chatty for email). */
-  async postMessage(userId: string, humanId: string, body: string) {
+  /** Buyer or seller posts a text message + optional image attachments
+   *  (max 4). Notifies the other party (in-app only — too chatty for
+   *  email). At least one of body/images must be present. */
+  async postMessage(userId: string, humanId: string, body: string, images: string[] = []) {
     const o = await this.prisma.order.findUnique({
       where: { humanId },
       select: { id: true, buyerId: true, sellerId: true, status: true },
@@ -857,7 +898,9 @@ export class OrdersService {
     if (o.buyerId !== userId && o.sellerId !== userId) {
       throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
     }
-    if (body.trim().length === 0) {
+    const cleanBody = body.trim();
+    const cleanImages = (images ?? []).filter((s) => typeof s === "string" && s.length > 0).slice(0, 4);
+    if (cleanBody.length === 0 && cleanImages.length === 0) {
       throw new BadRequestException({ code: "empty", message: "Pesan kosong." });
     }
     const isBuyer = o.buyerId === userId;
@@ -867,17 +910,19 @@ export class OrdersService {
         orderId: o.id,
         senderId: userId,
         kind: "user",
-        body: body.trim(),
+        body: cleanBody,
+        imagesJson: JSON.stringify(cleanImages),
         // Stamp the sender's own side as read on insert so the unread
         // counter on their UI doesn't bump from their own message.
         ...(isBuyer ? { readByBuyerAt: new Date() } : { readBySellerAt: new Date() }),
       },
     });
+    const preview = cleanBody || (cleanImages.length > 0 ? `[${cleanImages.length} gambar]` : "");
     await this.notify(
       otherId,
       "order_message",
       "Pesan baru di pesanan",
-      body.trim().slice(0, 80),
+      preview.slice(0, 80),
       { humanId },
       { important: false },
     );
@@ -917,6 +962,17 @@ function labelDecision(d: DisputeDecideInput["decision"]) {
     case "refund_buyer_no_return":   return "Refund ke buyer, barang tidak dikirim balik.";
     case "refund_buyer_with_return": return "Refund ke buyer, barang dikirim balik ke seller.";
     case "release_seller":           return "Dana tetap ke seller, retur ditolak.";
+  }
+}
+
+/** Best-effort parse for json-array image columns. Bad data → []. */
+function parseImagesJson(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
+  } catch {
+    return [];
   }
 }
 

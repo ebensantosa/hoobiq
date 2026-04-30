@@ -300,15 +300,34 @@ export class OrdersController {
   postMessage(
     @CurrentUser() user: SessionUser,
     @Param("humanId") humanId: string,
-    @Body(new ZodPipe(z.object({ body: z.string().trim().min(1).max(2000) }))) body: { body: string }
+    @Body(new ZodPipe(z.object({
+      body: z.string().trim().max(2000).default(""),
+      images: z.array(z.string().min(1).max(1000)).max(4).optional(),
+    }))) body: { body: string; images?: string[] }
   ) {
-    return this.orders.postMessage(user.id, humanId, body.body);
+    return this.orders.postMessage(user.id, humanId, body.body, body.images ?? []);
   }
 
   @Post(":humanId/messages/read")
   @HttpCode(200)
   markRead(@CurrentUser() user: SessionUser, @Param("humanId") humanId: string) {
     return this.orders.markMessagesRead(user.id, humanId);
+  }
+
+  /** Admin posts to the order chat (intervention / clarification on
+   *  a dispute). Inline role check — admin / superadmin / ops only. */
+  @Post(":humanId/admin-messages")
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @HttpCode(201)
+  postAdminMessage(
+    @CurrentUser() user: SessionUser,
+    @Param("humanId") humanId: string,
+    @Body(new ZodPipe(z.object({ body: z.string().trim().min(1).max(2000) }))) body: { body: string }
+  ) {
+    if (user.role !== "admin" && user.role !== "superadmin" && user.role !== "ops") {
+      throw new ForbiddenException({ code: "forbidden", message: "Khusus admin." });
+    }
+    return this.orders.postAdminMessage(user.id, humanId, body.body);
   }
 }
 

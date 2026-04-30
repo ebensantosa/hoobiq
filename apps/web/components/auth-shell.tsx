@@ -19,8 +19,8 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-between px-4 sm:h-16 sm:px-6 md:px-10">
-        <Link href="/" aria-label="Hoobiq" className="flex shrink-0 items-center self-center -ml-1 sm:ml-0">
+      <header className="absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-between px-6 sm:h-16 md:px-10">
+        <Link href="/" aria-label="Hoobiq" className="flex shrink-0 items-center self-center">
           <Logo size="sm" />
         </Link>
         <ThemeToggle />

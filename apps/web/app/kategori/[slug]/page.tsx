@@ -98,7 +98,7 @@ export default async function CategoryPage({
               <p className="mt-4 max-w-[56ch] text-fg-muted">
                 {node.level === 1
                   ? "Jelajahi sub-kategori dan temukan koleksi yang kamu cari."
-                  : "Jelajahi series / set dan temukan koleksi yang kamu cari."}
+                  : "Jelajahi series/set dan temukan koleksi yang kamu cari."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8">

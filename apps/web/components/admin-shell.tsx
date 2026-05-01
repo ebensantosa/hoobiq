@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Avatar } from "@hoobiq/ui";
 import { ThemeToggle } from "./theme-toggle";
 import { BrandLogo } from "./brand-logo";
-import { ActionDialogProvider } from "./action-dialog";
 import { getSessionUser } from "@/lib/server/session";
 import { getSiteSettings } from "@/lib/site-settings";
 import { serverApi } from "@/lib/server/api";
@@ -89,7 +88,6 @@ export async function AdminShell({
   };
 
   return (
-    <ActionDialogProvider>
     <div className="min-h-screen bg-canvas">
       <AdminTopBar user={user} brandName={settings.brandName} />
       <div className="flex min-h-[calc(100vh-4rem)]">
@@ -97,7 +95,6 @@ export async function AdminShell({
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
-    </ActionDialogProvider>
   );
 }
 

@@ -90,20 +90,22 @@ export function FeedComposer({
   }
 
   function submit() {
-    if (previews.length === 0) {
-      toast.error("Belum ada foto", "Pilih minimal 1 foto dulu.");
+    const body = caption.trim();
+    if (previews.length === 0 && body.length === 0) {
+      toast.error("Tulis sesuatu dulu", "Pilih foto atau ketik status dulu, ya.");
       return;
     }
     start(async () => {
       try {
-        const ordered = [previews[coverIdx]!, ...previews.filter((_, i) => i !== coverIdx)];
-        const finalUrls = await uploadImages(ordered);
+        const finalUrls = previews.length > 0
+          ? await uploadImages([previews[coverIdx]!, ...previews.filter((_, i) => i !== coverIdx)])
+          : [];
         await api<{ id: string }>("/posts", {
           method: "POST",
-          body: { body: caption.trim(), images: finalUrls },
+          body: { body, images: finalUrls },
         });
         reset();
-        toast.success("Post terkirim", "Foto kamu sudah masuk feed.");
+        toast.success("Post terkirim", previews.length > 0 ? "Foto kamu sudah masuk feed." : "Status kamu sudah masuk feed.");
         router.refresh();
       } catch (e) {
         const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal kirim post.";
@@ -143,10 +145,7 @@ export function FeedComposer({
       </header>
 
       {isEmpty ? (
-        // Whole label is the picker — no JS click; native file dialog
-        // opens on click/tap and on keyboard space/enter.
-        <label
-          htmlFor={inputId}
+        <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
@@ -154,25 +153,41 @@ export function FeedComposer({
             setDragOver(false);
             void ingest(e.dataTransfer.files);
           }}
-          className={
-            "flex cursor-pointer flex-col items-center justify-center gap-3 px-6 py-12 transition-colors " +
-            (dragOver
-              ? "bg-brand-400/10"
-              : "bg-panel-2/30 hover:bg-panel-2/60")
-          }
+          className={"flex flex-col gap-3 p-4 " + (dragOver ? "bg-brand-400/5" : "")}
         >
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-400/15 text-brand-500">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="9" cy="9" r="2"/>
-              <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>
-            </svg>
-          </span>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-fg">Pilih foto atau tarik ke sini</p>
-            <p className="mt-1 text-[11px] text-fg-subtle">PNG · JPG · WebP · maks 5 MB · sampai 8 foto</p>
+          <textarea
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            maxLength={MAX_CAPTION}
+            rows={3}
+            placeholder="Tulis status, cerita, atau pull rate kamu… (opsional kalau pasang foto)"
+            className="w-full resize-none rounded-lg bg-transparent px-1 text-sm leading-relaxed text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-0"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label
+              htmlFor={inputId}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-rule px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="9" cy="9" r="2"/>
+                <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>
+              </svg>
+              Tambah foto
+            </label>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] tabular-nums text-fg-subtle">
+                {caption.length} / {MAX_CAPTION}
+              </span>
+              <Button type="button" variant="primary" size="sm" onClick={submit} disabled={pending}>
+                {pending ? "Mengirim…" : "Post"}
+              </Button>
+            </div>
           </div>
-        </label>
+          <p className="text-[10px] text-fg-subtle">
+            PNG · JPG · WebP · maks 5 MB · sampai 8 foto. Kosongin foto kalau cuma mau nge-status.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col">
           <div className="relative aspect-square w-full bg-canvas">

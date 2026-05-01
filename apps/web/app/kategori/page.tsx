@@ -13,6 +13,7 @@ type Node = {
   name: string;
   level: number;
   listingCount: number;
+  imageUrl: string | null;
   children: Node[];
 };
 
@@ -141,8 +142,20 @@ export default async function CategoryIndexPage() {
                     m.ring
                   }
                 >
-                  <div className={`flex aspect-[16/9] items-end bg-gradient-to-br ${m.tint} p-5`}>
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/80 text-fg shadow-sm backdrop-blur">
+                  <div className={`relative flex aspect-[16/9] items-end overflow-hidden bg-gradient-to-br ${m.tint} p-5`}>
+                    {c.imageUrl && (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={c.imageUrl}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent" />
+                      </>
+                    )}
+                    <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/85 text-fg shadow-sm backdrop-blur">
                       {m.icon}
                     </span>
                   </div>

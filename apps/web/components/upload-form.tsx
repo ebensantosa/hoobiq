@@ -460,7 +460,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         </Field>
       </Section>
 
-      <Section title="Pre-order" subtitle="Aktifkan kalau barang belum ready dan butuh waktu kirim. Buyer baru bisa minta cancel setelah deadline lewat.">
+      <Section title="Pre-order" subtitle="Aktifkan jika barang membutuhkan waktu sebelum dikirim.">
         <label className="flex cursor-pointer items-center gap-3">
           <input
             type="checkbox"
@@ -473,7 +473,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         </label>
         {isPreorder && (
           <div className="mt-4 grid gap-3 rounded-xl border border-rule bg-panel-2/40 p-4">
-            <Field label="Janji kirim (hari)" hint="2–30 hari. Hoobiq otomatis kasih buffer 30 hari, jadi deadline buyer cancel = janji + 30 hari.">
+            <Field label="Janji kirim (hari)" hint="Pre-order 2–30 hari.">
               <Input
                 type="number"
                 min={2}
@@ -482,16 +482,10 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
                 onChange={(e) => setPreorderShipDays(e.target.value)}
               />
             </Field>
-            {(() => {
-              const d = Math.min(30, Math.max(2, Number(preorderShipDays) || 15));
-              return (
-                <p className="text-[11px] leading-relaxed text-fg-subtle">
-                  Buyer tidak bisa cancel sebelum {d + 30} hari sejak pembayaran. Setelah itu buyer
-                  bisa ajukan cancel — kamu boleh acc atau biarin auto-cancel 24 jam. Kamu juga bisa
-                  minta perpanjangan max 30 hari sekali, dengan alasan yang jelas.
-                </p>
-              );
-            })()}
+            <p className="text-[11px] leading-relaxed text-fg-subtle">
+              Pastikan estimasi sesuai dan pesanan dikirim tidak melebihi jangka
+              waktu untuk menghindari pembatalan pemesanan.
+            </p>
           </div>
         )}
       </Section>

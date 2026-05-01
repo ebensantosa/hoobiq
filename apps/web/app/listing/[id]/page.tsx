@@ -7,6 +7,7 @@ import { ListingCard } from "@/components/listing-card";
 import { ListingReviews } from "@/components/listing-reviews";
 import { BoostTrigger } from "@/components/boost-trigger";
 import { WishlistButton } from "@/components/wishlist-button";
+import { ShareButton } from "@/components/share-button";
 import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
@@ -193,6 +194,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     Beli sekarang
                   </Link>
                   {me && <WishlistButton listingId={listing.id} />}
+                  <ShareButton
+                    url={`/listing/${listing.slug}`}
+                    title={listing.title}
+                    size="sm"
+                    className="self-stretch"
+                  />
                 </>
               )}
             </div>

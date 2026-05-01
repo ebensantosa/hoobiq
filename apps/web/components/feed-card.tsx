@@ -76,6 +76,26 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
     return post.body ? post.body.slice(0, 120) : `Postingan @${post.author.username}`;
   }
 
+  function shareToDM() {
+    dialog.open({
+      title: "Kirim post ke DM",
+      description: "Ketik username Hoobiq tujuan (tanpa @). Link akan dikirim ke chat.",
+      fields: [{ key: "u", label: "Username", placeholder: "kolektor_keren" }],
+      confirmLabel: "Kirim",
+      onConfirm: async (v) => {
+        const username = String(v.u ?? "").trim().replace(/^@/, "");
+        if (username.length < 3) return "Username minimal 3 karakter.";
+        try {
+          const conv = await api<{ id: string }>("/dm", { method: "POST", body: { withUsername: username } });
+          await api(`/dm/${encodeURIComponent(conv.id)}/messages`, { method: "POST", body: { body: `${shareText()}\n${postUrl()}` } });
+          setToast(`Terkirim ke @${username}`);
+        } catch (e) {
+          return e instanceof Error ? e.message : "Gagal kirim.";
+        }
+      },
+    });
+  }
+
   function shareTo(target: "wa" | "x" | "fb" | "tg" | "ig" | "discord") {
     const url = postUrl();
     const text = shareText();
@@ -417,8 +437,16 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
               </div>
               <button
                 type="button"
+                onClick={() => { setShareOpen(false); shareToDM(); }}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-600"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Kirim ke DM Hoobiq
+              </button>
+              <button
+                type="button"
                 onClick={() => { copyLink(); setShareOpen(false); }}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-rule px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg"
+                className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-lg border border-rule px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 Salin tautan

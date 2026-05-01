@@ -41,10 +41,18 @@ export function CategoryRequestForm({
   const [desc, setDesc] = React.useState("");
   const [pending, start] = React.useTransition();
 
-  // Flatten only level-1 and level-2 (max depth at 3 means level-3 can't
-  // become a parent).
+  // Induk kategori dropdown surfaces level-1 (5 canonical buckets only) +
+  // level-2 nested under them. Legacy level-1 rows (Action Figure, Blind
+  // Box, dup Trading Cards/Merchandise) are filtered out so the picker
+  // reads as a clean taxonomy. Listings linked to legacy parents stay
+  // unaffected — only the new-request form is restricted.
+  const PRIMARY_SLUGS = new Set(["collection-cards", "trading-cards", "merchandise", "toys", "others"]);
+  const ORDER = ["collection-cards", "trading-cards", "merchandise", "toys", "others"];
   const parents = React.useMemo(() => {
     const out: { id: string; label: string; level: number }[] = [];
+    const roots = tree
+      .filter((n) => PRIMARY_SLUGS.has(n.slug))
+      .sort((a, b) => ORDER.indexOf(a.slug) - ORDER.indexOf(b.slug));
     const walk = (nodes: Node[], parents: string[]) => {
       for (const n of nodes) {
         if (n.level <= 2) {
@@ -53,7 +61,7 @@ export function CategoryRequestForm({
         if (n.children?.length) walk(n.children, [...parents, n.name]);
       }
     };
-    walk(tree, []);
+    walk(roots, []);
     return out;
   }, [tree]);
 

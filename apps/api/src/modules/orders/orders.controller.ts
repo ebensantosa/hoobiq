@@ -237,6 +237,30 @@ export class OrdersController {
     return this.orders.respondCancelRequest(user.id, humanId, body);
   }
 
+  /** Buyer pulls back the cancel request they just submitted. */
+  @Post(":humanId/cancel-withdraw")
+  @HttpCode(200)
+  withdrawCancel(
+    @CurrentUser() user: SessionUser,
+    @Param("humanId") humanId: string,
+  ) {
+    return this.orders.withdrawCancelRequest(user.id, humanId);
+  }
+
+  /** Seller requests a one-shot extension on a pre-order shipping window. */
+  @Post(":humanId/preorder-extend")
+  @HttpCode(200)
+  extendPreorder(
+    @CurrentUser() user: SessionUser,
+    @Param("humanId") humanId: string,
+    @Body() body: { extraDays?: number; reason?: string },
+  ) {
+    return this.orders.requestPreorderExtension(user.id, humanId, {
+      extraDays: Number(body?.extraDays ?? 0),
+      reason: String(body?.reason ?? ""),
+    });
+  }
+
   // -------------------------------------- return ----------------------
   @Post(":humanId/return-request")
   @Throttle({ default: { ttl: 60_000, limit: 3 } })

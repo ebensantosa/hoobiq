@@ -255,6 +255,21 @@ model Listing {
   condition    String
   imagesJson   String    @default("[]") @map("images_json")
   weightGrams  Int       @default(500) @map("weight_grams")
+  // Optional package dimensions in centimetres. Surfaced on the listing
+  // detail page when any of the three is set; couriers (JNE/JNT) charge
+  // by volumetric weight on bulky-light items so admins / buyers want
+  // to see the dimensions up front to spot mispriced ongkir.
+  lengthCm     Int?      @map("length_cm")
+  widthCm      Int?      @map("width_cm")
+  heightCm     Int?      @map("height_cm")
+  // Pre-order flag + seller-promised ship window in days (2–30). When
+  // true, buyer pays now but the ship-by deadline becomes
+  // paid_at + (preorderShipDays + 30) — sellers get a 30-day buffer
+  // because PO has lots of legitimate disadvantages (manufacturer delay,
+  // customs, redline). Cancel rules diverge: buyer can't cancel before
+  // the deadline; once past it, buyer cancel always wins (24h auto).
+  isPreorder       Boolean @default(false) @map("is_preorder")
+  preorderShipDays Int?    @map("preorder_ship_days")
   // Spec-block fields surfaced on the listing detail page. All optional:
   // not every category has a brand (toys yes, used komik usually no), and
   // varian/garansi only make sense for some items. Empty string treated
@@ -401,6 +416,15 @@ model Order {
   refundedAt         DateTime? @map("refunded_at")
   shipmentDeadlineAt DateTime? @map("shipment_deadline_at")
   autoReleaseAt      DateTime? @map("auto_release_at")
+  // Pre-order specific. shipByAt is the deadline before which the buyer
+  // CANNOT request cancel (paid_at + (preorderShipDays + 30 day buffer)).
+  // Sellers can request one extension of up to 30 extra days with a
+  // written reason — preorderExtraDays + preorderExtraReason carry the
+  // approved extension; preorderExtensionAt records when it was granted.
+  shipByAt              DateTime? @map("ship_by_at")
+  preorderExtraDays     Int?      @map("preorder_extra_days")
+  preorderExtraReason   String?   @map("preorder_extra_reason")
+  preorderExtensionAt   DateTime? @map("preorder_extension_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 

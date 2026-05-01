@@ -62,6 +62,11 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   originSubdistrictId: z.number().int().nullable().optional(),
   tradeable: z.boolean().default(false).optional(),
   showOnFeed: z.boolean().optional(),
+  lengthCm: z.number().int().positive().max(500).nullable().optional(),
+  widthCm:  z.number().int().positive().max(500).nullable().optional(),
+  heightCm: z.number().int().positive().max(500).nullable().optional(),
+  isPreorder: z.boolean().optional(),
+  preorderShipDays: z.number().int().min(2).max(30).nullable().optional(),
   category: z.object({
     id: z.string(),
     slug: z.string(),
@@ -159,6 +164,16 @@ export const CreateListingInput = z.object({
   // Untick keeps the listing on marketplace but invisible from the
   // seller's profile feed (showcase-only).
   showOnFeed: z.boolean().default(true),
+  // Optional package dimensions (cm). Per-axis positive integer; left
+  // null when the seller doesn't measure (most cards/sleeved items).
+  lengthCm: z.number().int().positive().max(500).nullable().optional(),
+  widthCm:  z.number().int().positive().max(500).nullable().optional(),
+  heightCm: z.number().int().positive().max(500).nullable().optional(),
+  // Pre-order toggle + ship window. preorderShipDays is the days the
+  // seller commits to ship within (2-30). Server adds the 30-day buffer
+  // when computing the buyer-cancel deadline.
+  isPreorder: z.boolean().default(false),
+  preorderShipDays: z.number().int().min(2).max(30).nullable().optional(),
   // When the seller typed a brand-new sub-category or series in the
   // creatable picker, this carries the proposed name. The server
   // creates a CategoryRequest, links the listing to it, and parks

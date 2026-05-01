@@ -187,9 +187,20 @@ export class OrdersService {
     // seller decides whether the item is still for sale.
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, listingId: true, qty: true },
+      select: {
+        id: true, listingId: true, qty: true,
+        listing: { select: { isPreorder: true, preorderShipDays: true } },
+      },
     });
     if (!order) return;
+
+    // Pre-order orders skip the regular 7-day ship deadline. The buyer
+    // can't cancel before shipByAt (= paid + (shipDays + 30 buffer));
+    // after that, buyer cancel always wins via the normal cancel flow.
+    const isPreorder = !!order.listing?.isPreorder && !!order.listing?.preorderShipDays;
+    const shipByAt = isPreorder
+      ? new Date(now.getTime() + (order.listing!.preorderShipDays! + 30) * 86_400_000)
+      : null;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
@@ -201,8 +212,11 @@ export class OrdersService {
         data: {
           status: "paid",
           paidAt: now,
-          // 7 hari belum kirim → auto cancel + refund
-          shipmentDeadlineAt: new Date(now.getTime() + TIMERS.shipmentDeadline),
+          // Reguler: 7 hari belum kirim → auto cancel + refund.
+          // Pre-order: pakai shipByAt (cancel-window) sebagai patokan;
+          // shipmentDeadline biasa di-skip karena seller punya buffer panjang.
+          shipmentDeadlineAt: isPreorder ? null : new Date(now.getTime() + TIMERS.shipmentDeadline),
+          shipByAt,
         },
       });
       const listing = await tx.listing.update({
@@ -314,6 +328,20 @@ export class OrdersService {
     if (!["pending_payment", "paid"].includes(o.status)) {
       throw new BadRequestException({ code: "invalid_status", message: "Pesanan tidak bisa dibatalkan pada status ini." });
     }
+    // Pre-order: buyer tidak boleh cancel sebelum shipByAt lewat. Aturan
+    // ini melindungi seller PO yang punya delay legit; setelah shipByAt
+    // lewat, buyer mutlak menang via flow normal di bawah.
+    if (o.shipByAt && o.status === "paid") {
+      const now = Date.now();
+      const deadline = o.shipByAt.getTime();
+      if (now < deadline) {
+        const daysLeft = Math.ceil((deadline - now) / 86_400_000);
+        throw new BadRequestException({
+          code: "preorder_window",
+          message: `Pre-order — buyer baru bisa minta cancel setelah ${daysLeft} hari lagi (lewat tanggal janji kirim seller + 30 hari buffer).`,
+        });
+      }
+    }
     const existing = await this.prisma.cancelRequest.findFirst({
       where: { orderId: o.id, status: "pending" },
     });
@@ -324,12 +352,78 @@ export class OrdersService {
     const cr = await this.prisma.cancelRequest.create({
       data: {
         orderId: o.id, buyerId, reason: input.reason,
-        expiresAt: new Date(Date.now() + TIMERS.cancelResponse),
+        // Pre-order sudah lewat deadline → buyer mutlak menang. Seller
+        // cuma punya 24 jam untuk acc; kalau gak dia auto-cancel.
+        // Reguler tetap pakai TIMERS.cancelResponse seperti biasa.
+        expiresAt: o.shipByAt && o.shipByAt.getTime() < Date.now()
+          ? new Date(Date.now() + 24 * 3600 * 1000)
+          : new Date(Date.now() + TIMERS.cancelResponse),
       },
     });
     await this.notify(o.sellerId, "cancel_requested", "Pembeli minta pembatalan", input.reason, { humanId });
     await this.logSystemMessage(o.id, `❎ Buyer ajukan pembatalan: "${input.reason}"`);
     return { ok: true, cancelRequestId: cr.id, expiresAt: cr.expiresAt.toISOString() };
+  }
+
+  /** Buyer pulls back their cancel request before seller responds.
+   *  Only works while the request is still pending — once seller has
+   *  accepted/rejected (or scheduler has auto-accepted past expiry),
+   *  this is a no-op error. */
+  async withdrawCancelRequest(buyerId: string, humanId: string) {
+    const o = await this.prisma.order.findUnique({ where: { humanId } });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (o.buyerId !== buyerId) throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    const cr = await this.prisma.cancelRequest.findFirst({
+      where: { orderId: o.id, status: "pending" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!cr) throw new NotFoundException({ code: "not_found", message: "Tidak ada request pembatalan aktif." });
+    await this.prisma.cancelRequest.update({
+      where: { id: cr.id },
+      data: { status: "withdrawn", respondedAt: new Date() },
+    });
+    await this.notify(o.sellerId, "cancel_withdrawn", "Buyer batalkan request cancel", "Pesanan jalan terus.", { humanId });
+    await this.logSystemMessage(o.id, "↩️ Buyer batalkan request pembatalan — pesanan lanjut.");
+    return { ok: true };
+  }
+
+  /** Seller asks for an extension on a pre-order shipping window. Max
+   *  one grant per order, +1 to +30 days, with a written reason that's
+   *  pinned to the order chat so buyer can read it. Updates shipByAt
+   *  in place — once approved (auto-accept here for V1; admin gate
+   *  comes later) the buyer's cancel window slides accordingly. */
+  async requestPreorderExtension(
+    sellerId: string,
+    humanId: string,
+    input: { extraDays: number; reason: string },
+  ) {
+    const o = await this.prisma.order.findUnique({ where: { humanId } });
+    if (!o) throw new NotFoundException({ code: "not_found", message: "Pesanan tidak ditemukan." });
+    if (o.sellerId !== sellerId) throw new ForbiddenException({ code: "forbidden", message: "Bukan pesanan kamu." });
+    if (!o.shipByAt) {
+      throw new BadRequestException({ code: "not_preorder", message: "Hanya berlaku untuk pesanan pre-order." });
+    }
+    if (o.preorderExtraDays != null) {
+      throw new BadRequestException({ code: "extension_used", message: "Sudah pernah pakai perpanjangan untuk pesanan ini." });
+    }
+    const days = Math.min(30, Math.max(1, Math.round(input.extraDays)));
+    const reason = (input.reason ?? "").trim();
+    if (reason.length < 10) {
+      throw new BadRequestException({ code: "reason_too_short", message: "Alasan perpanjangan min 10 karakter." });
+    }
+    const newShipBy = new Date(o.shipByAt.getTime() + days * 86_400_000);
+    await this.prisma.order.update({
+      where: { id: o.id },
+      data: {
+        shipByAt: newShipBy,
+        preorderExtraDays: days,
+        preorderExtraReason: reason,
+        preorderExtensionAt: new Date(),
+      },
+    });
+    await this.notify(o.buyerId, "preorder_extended", "Seller minta perpanjangan PO", `+${days} hari. Alasan: ${reason}`, { humanId }, { important: true });
+    await this.logSystemMessage(o.id, `⏳ Seller perpanjang PO +${days} hari. Alasan: "${reason}"`);
+    return { ok: true, shipByAt: newShipBy.toISOString() };
   }
 
   async respondCancelRequest(sellerId: string, humanId: string, input: CancelRespondInput) {

@@ -48,6 +48,11 @@ export type UploadFormExisting = {
   origin?: Destination | null;
   tradeable?: boolean;
   showOnFeed?: boolean;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  isPreorder?: boolean;
+  preorderShipDays?: number | null;
 };
 
 type FormState = {
@@ -141,6 +146,17 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   // and feed kept separate (showcase-only feed). Edits keep the existing
   // value when present.
   const [showOnFeed, setShowOnFeed] = React.useState<boolean>(existing?.showOnFeed ?? true);
+  // Optional package dimensions — strings so empty input round-trips
+  // cleanly. Sent as `null` when blank so the API treats them as
+  // "not measured" rather than zero.
+  const [lengthCm, setLengthCm] = React.useState<string>(existing?.lengthCm != null ? String(existing.lengthCm) : "");
+  const [widthCm,  setWidthCm]  = React.useState<string>(existing?.widthCm  != null ? String(existing.widthCm)  : "");
+  const [heightCm, setHeightCm] = React.useState<string>(existing?.heightCm != null ? String(existing.heightCm) : "");
+  // Pre-order toggle. Default OFF — most listings ship right away.
+  const [isPreorder, setIsPreorder] = React.useState<boolean>(existing?.isPreorder ?? false);
+  const [preorderShipDays, setPreorderShipDays] = React.useState<string>(
+    existing?.preorderShipDays != null ? String(existing.preorderShipDays) : "15",
+  );
   /** Set when the seller picks "Buat baru" in the sub-kategori or
    *  series/set combobox. Submit handler bundles this into the
    *  pendingCategory payload; categoryId stays at the parent. */
@@ -228,6 +244,13 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           originSubdistrictId: origin?.id ?? null,
           tradeable,
           showOnFeed,
+          lengthCm: lengthCm.trim() === "" ? null : Math.max(1, Math.round(Number(lengthCm))) || null,
+          widthCm:  widthCm.trim()  === "" ? null : Math.max(1, Math.round(Number(widthCm)))  || null,
+          heightCm: heightCm.trim() === "" ? null : Math.max(1, Math.round(Number(heightCm))) || null,
+          isPreorder,
+          preorderShipDays: isPreorder
+            ? Math.min(30, Math.max(2, Math.round(Number(preorderShipDays) || 15)))
+            : null,
         };
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
@@ -345,6 +368,18 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           </Field>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Panjang (cm) — opsional" hint="Sisi terpanjang paket.">
+            <Input type="number" min={1} max={500} value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} placeholder="—" />
+          </Field>
+          <Field label="Lebar (cm) — opsional">
+            <Input type="number" min={1} max={500} value={widthCm} onChange={(e) => setWidthCm(e.target.value)} placeholder="—" />
+          </Field>
+          <Field label="Tinggi (cm) — opsional">
+            <Input type="number" min={1} max={500} value={heightCm} onChange={(e) => setHeightCm(e.target.value)} placeholder="—" />
+          </Field>
+        </div>
+
         <div>
           <Label>Kondisi</Label>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -423,6 +458,42 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         <Field label="Ekspedisi yang didukung" hint="Centang yang biasa kamu pakai. Minimal 1.">
           <CourierPicker value={couriers} onChange={setCouriers} />
         </Field>
+      </Section>
+
+      <Section title="Pre-order" subtitle="Aktifkan kalau barang belum ready dan butuh waktu kirim. Buyer baru bisa minta cancel setelah deadline lewat.">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isPreorder}
+            onChange={(e) => setIsPreorder(e.target.checked)}
+            className="peer sr-only"
+          />
+          <span className="relative inline-block h-6 w-11 rounded-full bg-panel-2 transition-colors peer-checked:bg-brand-400 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+          <span className="text-sm text-fg">{isPreorder ? "Listing pre-order" : "Ready stock"}</span>
+        </label>
+        {isPreorder && (
+          <div className="mt-4 grid gap-3 rounded-xl border border-rule bg-panel-2/40 p-4">
+            <Field label="Janji kirim (hari)" hint="2–30 hari. Hoobiq otomatis kasih buffer 30 hari, jadi deadline buyer cancel = janji + 30 hari.">
+              <Input
+                type="number"
+                min={2}
+                max={30}
+                value={preorderShipDays}
+                onChange={(e) => setPreorderShipDays(e.target.value)}
+              />
+            </Field>
+            {(() => {
+              const d = Math.min(30, Math.max(2, Number(preorderShipDays) || 15));
+              return (
+                <p className="text-[11px] leading-relaxed text-fg-subtle">
+                  Buyer tidak bisa cancel sebelum {d + 30} hari sejak pembayaran. Setelah itu buyer
+                  bisa ajukan cancel — kamu boleh acc atau biarin auto-cancel 24 jam. Kamu juga bisa
+                  minta perpanjangan max 30 hari sekali, dengan alasan yang jelas.
+                </p>
+              );
+            })()}
+          </div>
+        )}
       </Section>
 
       <Section title="Visibilitas" subtitle="Atur di mana listing ini tampil — pisahin marketplace dan feed kalau profil mau cuma buat showcase.">

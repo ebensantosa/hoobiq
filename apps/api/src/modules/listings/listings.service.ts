@@ -364,6 +364,11 @@ export class ListingsService {
         // Default trade-on per spec — sellers opt out, not in.
         tradeable: input.tradeable ?? true,
         showOnFeed: input.showOnFeed ?? true,
+        lengthCm: input.lengthCm ?? null,
+        widthCm:  input.widthCm  ?? null,
+        heightCm: input.heightCm ?? null,
+        isPreorder: input.isPreorder ?? false,
+        preorderShipDays: input.isPreorder ? (input.preorderShipDays ?? null) : null,
         isPublished: initialPublished,
         moderation: initialModeration,
       },
@@ -518,6 +523,8 @@ function toDetail(l: Row & {
   brand?: string | null; variant?: string | null; warranty?: string | null;
   couriersJson?: string; originSubdistrictId?: number | null; tradeable?: boolean;
   showOnFeed?: boolean;
+  lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null;
+  isPreorder?: boolean; preorderShipDays?: number | null;
   category: { id: string; slug: string; name: string };
 }) {
   let couriers: string[] = [];
@@ -537,6 +544,11 @@ function toDetail(l: Row & {
     originSubdistrictId: l.originSubdistrictId ?? null,
     tradeable: l.tradeable ?? false,
     showOnFeed: l.showOnFeed ?? true,
+    lengthCm: l.lengthCm ?? null,
+    widthCm:  l.widthCm  ?? null,
+    heightCm: l.heightCm ?? null,
+    isPreorder: l.isPreorder ?? false,
+    preorderShipDays: l.preorderShipDays ?? null,
     category: l.category,
   };
 }

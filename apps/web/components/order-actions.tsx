@@ -151,6 +151,21 @@ export function OrderActions({ order, isBuyer }: { order: OrderForActions; isBuy
     });
   };
 
+  // ----------------------- buyer: withdraw cancel
+  const canWithdrawCancel = isBuyer && cancel?.status === "pending";
+  const withdrawCancel = () => {
+    dialog.open({
+      title: "Batalkan request cancel?",
+      description: "Pesanan akan lanjut seperti biasa. Kamu masih bisa request cancel lagi nanti kalau perlu.",
+      confirmLabel: "Ya, lanjutkan pesanan",
+      onConfirm: () => callDialog(
+        `/orders/${encodeURIComponent(order.humanId)}/cancel-withdraw`,
+        {},
+        "Request cancel dibatalkan — pesanan lanjut.",
+      ),
+    });
+  };
+
   // ----------------------- seller: respond cancel
   const canRespondCancel = isSeller && cancel?.status === "pending";
   const acceptCancel = () => {
@@ -344,6 +359,12 @@ export function OrderActions({ order, isBuyer }: { order: OrderForActions; isBuy
             Tolak batal
           </Button>
         </>
+      )}
+
+      {canWithdrawCancel && (
+        <Button variant="ghost" size="sm" onClick={withdrawCancel} disabled={pending}>
+          Batalkan cancel
+        </Button>
       )}
 
       {canRequestReturn && (

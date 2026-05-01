@@ -363,6 +363,7 @@ export class ListingsService {
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
         // Default trade-on per spec — sellers opt out, not in.
         tradeable: input.tradeable ?? true,
+        showOnFeed: input.showOnFeed ?? true,
         isPublished: initialPublished,
         moderation: initialModeration,
       },
@@ -516,6 +517,7 @@ function toDetail(l: Row & {
   description: string; stock: number; weightGrams: number;
   brand?: string | null; variant?: string | null; warranty?: string | null;
   couriersJson?: string; originSubdistrictId?: number | null; tradeable?: boolean;
+  showOnFeed?: boolean;
   category: { id: string; slug: string; name: string };
 }) {
   let couriers: string[] = [];
@@ -534,6 +536,7 @@ function toDetail(l: Row & {
     couriers,
     originSubdistrictId: l.originSubdistrictId ?? null,
     tradeable: l.tradeable ?? false,
+    showOnFeed: l.showOnFeed ?? true,
     category: l.category,
   };
 }

@@ -284,6 +284,12 @@ model Listing {
   originSubdistrictId Int? @map("origin_subdistrict_id")
   boostedUntil DateTime? @map("boosted_until")
   views        Int       @default(0)
+  // Seller controls whether this listing also appears on their public
+  // profile feed (Pamer/koleksi tab). Some sellers want marketplace +
+  // feed kept separate so a heavy listing schedule doesn't spam their
+  // showcase. Defaults to true (most sellers want exposure); the form
+  // surfaces a checkbox at upload time.
+  showOnFeed   Boolean   @default(true) @map("show_on_feed")
   isPublished  Boolean   @default(false) @map("is_published")
   moderation   String    @default("pending")
   createdAt    DateTime  @default(now()) @map("created_at")

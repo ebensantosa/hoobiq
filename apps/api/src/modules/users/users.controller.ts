@@ -473,6 +473,10 @@ export class UsersController {
         deletedAt: null,
         isPublished: true,
         moderation: "active",
+        // Honour the per-listing "show on profile feed" toggle. Listings
+        // with showOnFeed=false stay on marketplace but disappear from
+        // the seller's public collection grid.
+        showOnFeed: true,
         ...(categoryIds && { categoryId: { in: categoryIds } }),
       },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],

@@ -47,6 +47,7 @@ export type UploadFormExisting = {
   couriers?: string[];
   origin?: Destination | null;
   tradeable?: boolean;
+  showOnFeed?: boolean;
 };
 
 type FormState = {
@@ -135,6 +136,11 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
   // Default ON — collectors expect listings to be at least theoretically
   // tradeable. Sellers untick to opt out per item.
   const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? true);
+  // Default ON — most sellers want their listing to surface on their
+  // public profile feed too (free reach). Untick if you want marketplace
+  // and feed kept separate (showcase-only feed). Edits keep the existing
+  // value when present.
+  const [showOnFeed, setShowOnFeed] = React.useState<boolean>(existing?.showOnFeed ?? true);
   /** Set when the seller picks "Buat baru" in the sub-kategori or
    *  series/set combobox. Submit handler bundles this into the
    *  pendingCategory payload; categoryId stays at the parent. */
@@ -221,6 +227,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           couriers:    couriers as CreateListingPayload["couriers"],
           originSubdistrictId: origin?.id ?? null,
           tradeable,
+          showOnFeed,
         };
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
@@ -418,7 +425,7 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
         </Field>
       </Section>
 
-      <Section title="Trade" subtitle="Tampilkan listing ini di /trades supaya bisa ditukar dengan barang user lain.">
+      <Section title="Visibilitas" subtitle="Atur di mana listing ini tampil — pisahin marketplace dan feed kalau profil mau cuma buat showcase.">
         <label className="flex cursor-pointer items-center gap-3">
           <input
             type="checkbox"
@@ -428,6 +435,16 @@ export function UploadForm({ tree, existing }: { tree: Node[]; existing?: Upload
           />
           <span className="relative inline-block h-6 w-11 rounded-full bg-panel-2 transition-colors peer-checked:bg-brand-400 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
           <span className="text-sm text-fg">{tradeable ? "Tersedia untuk trade" : "Hanya untuk dijual"}</span>
+        </label>
+        <label className="mt-3 flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={showOnFeed}
+            onChange={(e) => setShowOnFeed(e.target.checked)}
+            className="peer sr-only"
+          />
+          <span className="relative inline-block h-6 w-11 rounded-full bg-panel-2 transition-colors peer-checked:bg-brand-400 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+          <span className="text-sm text-fg">{showOnFeed ? "Tampilkan di feed profil" : "Sembunyikan dari feed profil (marketplace only)"}</span>
         </label>
       </Section>
 

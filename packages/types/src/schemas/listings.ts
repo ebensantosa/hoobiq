@@ -61,6 +61,7 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   couriers: z.array(z.string()).default([]),
   originSubdistrictId: z.number().int().nullable().optional(),
   tradeable: z.boolean().default(false).optional(),
+  showOnFeed: z.boolean().optional(),
   category: z.object({
     id: z.string(),
     slug: z.string(),
@@ -154,6 +155,10 @@ export const CreateListingInput = z.object({
   // and the per-item opt-out is surfaced as a checkbox in the upload form
   // for sellers who explicitly don't want trade offers on a piece.
   tradeable: z.boolean().default(true),
+  // Default ON — most sellers want their listing on profile feed too.
+  // Untick keeps the listing on marketplace but invisible from the
+  // seller's profile feed (showcase-only).
+  showOnFeed: z.boolean().default(true),
   // When the seller typed a brand-new sub-category or series in the
   // creatable picker, this carries the proposed name. The server
   // creates a CategoryRequest, links the listing to it, and parks

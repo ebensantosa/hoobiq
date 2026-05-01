@@ -16,12 +16,16 @@ export function MarketingFooter() {
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand & description */}
           <div className="col-span-2 max-w-sm md:col-span-1">
-            <p className="text-sm leading-relaxed text-fg-muted">
-              Hoobiq adalah marketplace dan komunitas kolektor hobi Indonesia.
-              Beli &amp; jual <strong className="text-fg">trading cards</strong>,{" "}
-              <strong className="text-fg">action figure</strong>,{" "}
-              <strong className="text-fg">blind box</strong>, merchandise, dan
-              komik dengan pembayaran aman lewat Hoobiq Pay.
+            <p className="text-base font-bold text-fg">
+              Hoobiq <span className="font-medium text-fg-muted">— Collect · Connect · Trade</span>
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+              Marketplace &amp; komunitas kolektor Indonesia. Mulai bagikan koleksi dan
+              jual-beli dalam satu platform —{" "}
+              <strong className="text-fg">Trading Card</strong>,{" "}
+              <strong className="text-fg">Collection Card</strong>,{" "}
+              <strong className="text-fg">Merchandise</strong>, dan{" "}
+              <strong className="text-fg">Toys</strong>.
             </p>
             <SocialRow />
           </div>

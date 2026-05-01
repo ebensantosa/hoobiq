@@ -97,8 +97,8 @@ export default async function CategoryPage({
               <h1 className="text-4xl font-bold text-fg md:text-5xl">{node.name}.</h1>
               <p className="mt-4 max-w-[56ch] text-fg-muted">
                 {node.level === 1
-                  ? "Pilih sub-kategori untuk lihat listing yang lebih spesifik."
-                  : "Pilih series / set untuk lihat listing yang lebih spesifik. Atau langsung lihat semua di marketplace."}
+                  ? "Jelajahi sub-kategori dan temukan koleksi yang kamu cari."
+                  : "Jelajahi series / set dan temukan koleksi yang kamu cari."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8">

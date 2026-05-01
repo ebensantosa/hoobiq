@@ -26,7 +26,7 @@ export default async function MeetMatchPage({
   const all = data?.items ?? [];
   const items = to ? all.filter((c) => c.owner.username === to) : all;
   const used = data?.used ?? 0;
-  const cap  = data?.cap ?? 25;
+  const cap  = data?.cap ?? 50;
 
   return (
     <AppShell active="Meet Match">

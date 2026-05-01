@@ -3,7 +3,7 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
 const CENTS_PER_RUPIAH = 100n;
 /** Per-spec daily swipe budget for the discovery deck (Meet Match). */
-const DAILY_SWIPE_CAP = 25;
+const DAILY_SWIPE_CAP = 50;
 
 export type ListingMini = {
   id: string;

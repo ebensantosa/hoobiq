@@ -26,12 +26,13 @@ export function UserMenu({
   user: SessionUser;
   isSeller?: boolean;
 }) {
+  // Profile dropdown is for account-y links only — Feeds, Meet Match,
+  // Marketplace, Kategori already live in the topbar so duplicating
+  // them here would just add noise.
   const links = [
     { href: `/u/${user.username}`, label: "Profil" },
     { href: "/pesanan",   label: "Pesanan saya" },
     { href: "/wishlist",  label: "Wishlist" },
-    { href: "/feeds",     label: "Feeds" },
-    { href: "/trades",    label: "Meet Match" },
     { href: "/saldo",     label: "Hoobiq Pay" },
     { href: "/pengaturan", label: "Pengaturan" },
   ];

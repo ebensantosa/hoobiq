@@ -113,9 +113,7 @@ export default async function CategoryIndexPage() {
           <div>
             <h1 className="text-3xl font-bold text-fg md:text-4xl">Kategori</h1>
             <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-              Pilih kategori untuk lihat listing aktif. Tiap kategori punya
-              sub-seri sampai 3 level (misalnya Trading Cards, Pokémon, Crown
-              Zenith).
+              Jelajahi kategori dan temukan koleksi yang kamu cari.
             </p>
           </div>
           <Link

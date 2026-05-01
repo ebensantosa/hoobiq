@@ -84,31 +84,29 @@ export default function TentangPage() {
           body: (
             <>
               <Para>
-                Hoobiq didirikan oleh dua founder — keduanya kolektor aktif yang merawat
-                koleksinya sendiri:
+                Hoobiq dibangun oleh dua founder, yang bukan cuma membangun platform,
+                tapi juga hidup di dunia kolektor itu sendiri.
               </Para>
               <Bullets
                 items={[
-                  <><b className="text-fg">Cendria Vanessa</b> — Co-Founder.</>,
-                  <><b className="text-fg">Ebentera Santosa</b> — Co-Founder.</>,
+                  <><b className="text-fg">Cendria Vanessa</b> — Founder.</>,
+                  <><b className="text-fg">Ebentera Santosa</b> — Founder.</>,
                 ]}
               />
               <Para>
-                Tim kami bekerja dari Jakarta dan Yogyakarta, dan sebagian besar keputusan
-                produk diambil bareng admin kategori (kolektor yang kami rekrut dari
-                komunitas).
+                Kami memulai Hoobiq dari keresahan yang sama: tidak adanya satu tempat
+                yang benar-benar terasa “rumah” untuk para kolektor. Hoobiq memiliki
+                tujuan untuk menjadi tempat untuk berbagi dan bertransaksi dalam satu
+                ruang yang hidup.
               </Para>
               <Para>
-                Posisi kami terhadap data pengguna, ekstraksi nilai dari komunitas, dan
-                desain yang manipulatif sudah ditulis lengkap di{" "}
-                <a className="text-brand-400" href="/privasi">
-                  Kebijakan Privasi
-                </a>{" "}
-                dan{" "}
-                <a className="text-brand-400" href="/ketentuan">
-                  Ketentuan Layanan
-                </a>
-                .
+                Hoobiq dikembangkan dari Jakarta dan Yogyakarta, dengan banyak
+                keputusan produk yang kami bentuk bersama komunitas.
+              </Para>
+              <Para>
+                Bagi kami, Hoobiq bukan sekadar marketplace. Ini adalah ruang yang
+                dibangun bersama, untuk mereka yang peduli dengan koleksi, cerita, dan
+                passion di balik setiap barang koleksi.
               </Para>
             </>
           ),

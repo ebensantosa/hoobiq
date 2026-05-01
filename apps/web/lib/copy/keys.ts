@@ -17,8 +17,8 @@
  */
 export const COPY_KEYS = {
   // Marketplace landing
-  "marketplace.hero.title":     "Belanja koleksi",
-  "marketplace.hero.subtitle":  "Verified sellers, mint condition, pembayaran aman lewat Hoobiq Pay.",
+  "marketplace.hero.title":     "Temukan Koleksi Favoritmu",
+  "marketplace.hero.subtitle":  "Barang rare, kondisi terbaik, dan seller terpercaya — semua di satu tempat.",
 
   // Home / feeds
   "home.hero.title":            "Marketplace kolektor Indonesia",

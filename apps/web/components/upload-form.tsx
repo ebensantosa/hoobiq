@@ -541,7 +541,19 @@ function CategoryPicker({
     setL1(initial.l1); setL2(initial.l2); setL3(initial.l3);
   }, [initial.l1, initial.l2, initial.l3]);
 
-  const l1Nodes = tree;
+  // Top-level picker is restricted to the 5 canonical buckets so legacy
+  // level-1 rows (Action Figure, Blind Box, Merchandise dup) don't pollute
+  // the dropdown. Listings created under those rows still resolve correctly
+  // because byId/initial uses the full tree, so editing an old listing
+  // shows its real ancestor chain even if the parent isn't pickable anymore.
+  const PRIMARY_SLUGS = new Set(["collection-cards", "trading-cards", "merchandise", "toys", "others"]);
+  const ORDER = ["collection-cards", "trading-cards", "merchandise", "toys", "others"];
+  const l1Nodes = React.useMemo(
+    () => tree
+      .filter((n) => PRIMARY_SLUGS.has(n.slug))
+      .sort((a, b) => ORDER.indexOf(a.slug) - ORDER.indexOf(b.slug)),
+    [tree],
+  );
   const l2Nodes = React.useMemo(
     () => l1Nodes.find((n) => n.id === l1)?.children ?? [],
     [l1Nodes, l1],

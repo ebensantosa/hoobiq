@@ -13,15 +13,23 @@ type Node = {
   children?: Node[];
 };
 
+const PRIMARY_SLUGS = ["collection-cards", "trading-cards", "merchandise", "toys", "others"] as const;
+
 /**
- * Form for proposing a new sub-category. Picks a parent (level-1 or
- * level-2 only — admin caps depth at 3), names the new entry,
- * optionally suggests a slug, and submits. Sits under
- * /pengaturan/kategori-baru as a standalone page; can also be embedded
- * inline (e.g. inside the upload form) via the `inline` prop.
+ * Three-step picker:
  *
- * After a successful submit it shows a toast confirmation. The user
- * can then continue working without leaving the page.
+ *   Induk Kategori   → must be one of the 5 canonical level-1 buckets.
+ *   Sub Kategori     → existing level-2 under that induk, OR a brand-new
+ *                      name the user types in (creatable).
+ *   Series / Set     → free-text name of the actual thing the user wants.
+ *
+ * What gets sent to the server:
+ *   - If sub is existing  → request is a NEW level-3 series/set under it.
+ *     payload: { parentId: <subId>, name: <series>, slugHint, description }
+ *   - If sub is new       → request is a NEW level-2 sub. The series name
+ *     becomes the description ("first series: <name>") so the admin sees
+ *     context and can either create just the sub or both. Once approved,
+ *     the user can come back and request the series under the sub.
  */
 export function CategoryRequestForm({
   tree,
@@ -35,54 +43,91 @@ export function CategoryRequestForm({
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [parentId, setParentId] = React.useState("");
-  const [name, setName] = React.useState("");
+  const [indukId, setIndukId] = React.useState("");
+  // Sub picker has special values: ""  → not chosen, "__new__" → user wants
+  // to create a brand-new sub, otherwise a real category id.
+  const [subValue, setSubValue] = React.useState("");
+  const [newSubName, setNewSubName] = React.useState("");
+  const [seriesName, setSeriesName] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [desc, setDesc] = React.useState("");
   const [pending, start] = React.useTransition();
 
-  // Induk kategori dropdown surfaces level-1 (5 canonical buckets only) +
-  // level-2 nested under them. Legacy level-1 rows (Action Figure, Blind
-  // Box, dup Trading Cards/Merchandise) are filtered out so the picker
-  // reads as a clean taxonomy. Listings linked to legacy parents stay
-  // unaffected — only the new-request form is restricted.
-  const PRIMARY_SLUGS = new Set(["collection-cards", "trading-cards", "merchandise", "toys", "others"]);
-  const ORDER = ["collection-cards", "trading-cards", "merchandise", "toys", "others"];
-  const parents = React.useMemo(() => {
-    const out: { id: string; label: string; level: number }[] = [];
-    const roots = tree
-      .filter((n) => PRIMARY_SLUGS.has(n.slug))
-      .sort((a, b) => ORDER.indexOf(a.slug) - ORDER.indexOf(b.slug));
-    const walk = (nodes: Node[], parents: string[]) => {
-      for (const n of nodes) {
-        if (n.level <= 2) {
-          out.push({ id: n.id, label: [...parents, n.name].join(" › "), level: n.level });
-        }
-        if (n.children?.length) walk(n.children, [...parents, n.name]);
-      }
-    };
-    walk(roots, []);
-    return out;
+  // Surface only canonical level-1 buckets in the induk picker. Sort
+  // canonical-first so the dropdown reads in the marketing order.
+  const indukOptions = React.useMemo(() => {
+    const order = new Map(PRIMARY_SLUGS.map((s, i) => [s, i]));
+    return tree
+      .filter((n) => order.has(n.slug as typeof PRIMARY_SLUGS[number]))
+      .sort((a, b) => (order.get(a.slug as typeof PRIMARY_SLUGS[number])! - order.get(b.slug as typeof PRIMARY_SLUGS[number])!))
+      .map((n) => ({ id: n.id, name: n.name, slug: n.slug }));
   }, [tree]);
 
+  // Existing sub-categories under the chosen induk.
+  const subOptions = React.useMemo(() => {
+    if (!indukId) return [];
+    const induk = tree.find((n) => n.id === indukId);
+    if (!induk?.children) return [];
+    return induk.children
+      .filter((c) => c.level === 2)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ id: c.id, name: c.name }));
+  }, [indukId, tree]);
+
+  const isCreatingNewSub = subValue === "__new__";
+  // Reset the sub picker when induk changes so a stale id from a different
+  // bucket doesn't leak through.
+  React.useEffect(() => {
+    setSubValue("");
+    setNewSubName("");
+  }, [indukId]);
+
   function submit() {
-    if (!parentId || name.trim().length < 2) {
-      toast.error("Form belum lengkap", "Pilih induk kategori dan isi nama (min 2 karakter).");
+    if (!indukId) {
+      toast.error("Induk belum dipilih", "Pilih salah satu dari 5 kategori utama.");
       return;
     }
+    if (!subValue) {
+      toast.error("Sub kategori belum dipilih", "Pilih sub yang ada atau buat baru.");
+      return;
+    }
+    if (isCreatingNewSub && newSubName.trim().length < 2) {
+      toast.error("Nama sub baru kosong", "Minimal 2 karakter.");
+      return;
+    }
+    if (seriesName.trim().length < 2) {
+      toast.error("Nama series/set kosong", "Tulis series/anime/brand yang ingin diajukan.");
+      return;
+    }
+
+    // Two distinct request shapes — see the doc-comment at the top.
+    const parentId = isCreatingNewSub ? indukId : subValue;
+    const name = isCreatingNewSub ? newSubName.trim() : seriesName.trim();
+    const description = isCreatingNewSub
+      ? [
+          `Series/Set pertama yang ingin di-list: ${seriesName.trim()}.`,
+          desc.trim(),
+        ].filter(Boolean).join("\n\n")
+      : desc.trim();
+
     start(async () => {
       try {
         await api<{ id: string }>("/categories/requests", {
           method: "POST",
           body: {
             parentId,
-            name: name.trim(),
+            name,
             slugHint: slug.trim() || undefined,
-            description: desc.trim() || undefined,
+            description: description || undefined,
           },
         });
-        toast.success("Request terkirim", "Tim Hoobiq akan review dalam 1×2 hari.");
-        setName(""); setSlug(""); setDesc(""); setParentId("");
+        toast.success("Request terkirim", "Tim Hoobiq akan review dalam 1–2 hari.");
+        setIndukId("");
+        setSubValue("");
+        setNewSubName("");
+        setSeriesName("");
+        setSlug("");
+        setDesc("");
         onDone?.();
         router.refresh();
       } catch (e) {
@@ -96,42 +141,81 @@ export function CategoryRequestForm({
     ? ({ children }) => <div className="rounded-xl border border-rule bg-panel-2/40 p-4">{children}</div>
     : ({ children }) => <Card><div className="space-y-4 p-6">{children}</div></Card>;
 
+  const selectClass = "h-11 rounded-md border border-rule bg-panel px-3 text-sm text-fg focus:border-brand-400 focus:outline-none";
+
   return (
     <Wrapper>
       {!inline && (
         <div>
           <h2 className="text-lg font-bold text-fg">Request kategori baru</h2>
           <p className="mt-1 text-xs text-fg-muted">
-            Belum ada series/anime/brand yang kamu cari? Ajukan sub-kategori
-            baru — admin review 1–2 hari, kalau di-approve langsung muncul untuk
-            semua kolektor.
+            Belum ada sub-kategori atau series/anime/brand yang kamu cari? Ajukan
+            di sini — admin review 1–2 hari, kalau di-approve langsung muncul
+            untuk semua kolektor.
           </p>
         </div>
       )}
 
-      <div className="grid gap-3">
+      <div className="grid gap-4">
         <div className="flex flex-col gap-1.5">
           <Label>Induk kategori</Label>
           <select
-            value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
-            className="h-11 rounded-md border border-rule bg-panel px-3 text-sm text-fg focus:border-brand-400 focus:outline-none"
+            value={indukId}
+            onChange={(e) => setIndukId(e.target.value)}
+            className={selectClass}
           >
-            <option value="">— Pilih kategori induk —</option>
-            {parents.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
+            <option value="">— Pilih kategori utama —</option>
+            {indukOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          <p className="text-[11px] text-fg-subtle">5 kategori utama Hoobiq.</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>Nama sub-kategori</Label>
+          <Label>Sub kategori</Label>
+          <select
+            value={subValue}
+            onChange={(e) => setSubValue(e.target.value)}
+            disabled={!indukId}
+            className={selectClass + (indukId ? "" : " opacity-60")}
+          >
+            <option value="">{indukId ? "— Pilih sub kategori —" : "Pilih induk dulu"}</option>
+            {subOptions.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+            {indukId && (
+              <option value="__new__">+ Buat sub kategori baru</option>
+            )}
+          </select>
+
+          {isCreatingNewSub && (
+            <div className="mt-2 flex flex-col gap-1.5 rounded-lg border border-brand-400/30 bg-brand-400/5 p-3">
+              <Label>Nama sub kategori baru</Label>
+              <Input
+                value={newSubName}
+                onChange={(e) => setNewSubName(e.target.value)}
+                maxLength={80}
+                placeholder="Contoh: K-Pop Photocard"
+              />
+              <p className="text-[10px] text-fg-subtle">
+                Admin akan buat sub baru ini di bawah induk. Series/set di bawah akan dipakai sebagai contoh awal.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>Series / Set</Label>
           <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={seriesName}
+            onChange={(e) => setSeriesName(e.target.value)}
             maxLength={80}
-            placeholder="Contoh: Hatsune Miku, Crocs, JoJo's Bizarre Adventure"
+            placeholder="Contoh: Hatsune Miku, JoJo's Bizarre Adventure, Stray Kids - 5★ Star"
           />
+          <p className="text-[11px] text-fg-subtle">
+            Series/anime/brand spesifik yang mau kamu list barangnya.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">

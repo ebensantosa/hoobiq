@@ -43,6 +43,54 @@ const ReportPost = z.object({
 export class PostsController {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Suggested kolektor untuk follow — top engagement 30 hari terakhir
+   *  yang belum di-follow oleh viewer. Sengaja di-declare di atas
+   *  @Get(":id") biar router-nya nge-match path yang lebih spesifik
+   *  duluan. */
+  @Get("suggested-collectors")
+  async suggestedCollectors(@CurrentUser() user: SessionUser) {
+    const since = new Date(Date.now() - 30 * 86_400_000);
+    // Activity score: jumlah post 30 hari × 1 + total likes × 1. Bukan
+    // ranking eksak — cuma seed kolektor aktif. ORDER manual di JS biar
+    // gak perlu raw SQL.
+    const [postsAgg, follows] = await Promise.all([
+      this.prisma.post.groupBy({
+        by: ["authorId"],
+        where: { createdAt: { gte: since }, deletedAt: null, moderation: { in: ["pending", "active"] } },
+        _count: { _all: true },
+        _sum: { likesCount: true },
+      }),
+      this.prisma.userFollow.findMany({
+        where: { followerId: user.id },
+        select: { followedId: true },
+      }),
+    ]);
+    const blocked = new Set([user.id, ...follows.map((f) => f.followedId)]);
+    const ranked = postsAgg
+      .filter((a) => !blocked.has(a.authorId))
+      .map((a) => ({
+        authorId: a.authorId,
+        score: (a._count._all ?? 0) + (a._sum.likesCount ?? 0),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map((a) => a.authorId);
+
+    if (ranked.length === 0) return { items: [] };
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ranked }, status: "active" },
+      select: { username: true, name: true, avatarUrl: true, level: true, id: true },
+    });
+    // Preserve ranking order from `ranked`.
+    const byId = new Map(users.map((u) => [u.id, u]));
+    const items = ranked
+      .map((id) => byId.get(id))
+      .filter((u): u is NonNullable<typeof u> => !!u)
+      .map(({ id: _id, ...rest }) => rest);
+    return { items };
+  }
+
   @Public()
   @Get()
   async list(

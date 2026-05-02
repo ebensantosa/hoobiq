@@ -369,6 +369,7 @@ export class AuthService {
             id: true, username: true, email: true, name: true,
             avatarUrl: true, role: true, level: true, exp: true,
             trustScore: true, status: true, deletedAt: true,
+            isPremium: true, premiumUntil: true,
           },
         },
       },
@@ -401,7 +402,12 @@ function toSessionUser(u: {
   id: string; username: string; email: string; name: string | null;
   avatarUrl: string | null; role: string; level: number; exp: number;
   trustScore: unknown;
+  isPremium?: boolean; premiumUntil?: Date | null;
 }): SessionUser {
+  // Premium is "active" when both flag and the until date are in the
+  // future. Cache TTL on session resolve is 60s so a freshly expired
+  // membership can take up to a minute to drop the badge — acceptable.
+  const premiumActive = !!u.isPremium && !!u.premiumUntil && u.premiumUntil.getTime() > Date.now();
   return {
     id: u.id,
     username: u.username,
@@ -412,5 +418,6 @@ function toSessionUser(u: {
     level: u.level,
     exp: u.exp,
     trustScore: Number(u.trustScore),
+    isPremium: premiumActive,
   };
 }

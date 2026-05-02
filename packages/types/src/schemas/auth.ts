@@ -52,5 +52,8 @@ export const SessionUserSchema = z.object({
   level: z.number(),
   exp: z.number(),
   trustScore: z.number(),
+  // Premium membership flag — resolved on session attach so UI can
+  // render the badge without an extra fetch on every page.
+  isPremium: z.boolean().default(false),
 });
 export type SessionUser = z.infer<typeof SessionUserSchema>;

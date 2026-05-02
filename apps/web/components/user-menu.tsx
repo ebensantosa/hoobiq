@@ -6,6 +6,7 @@ import { Avatar } from "@hoobiq/ui";
 import { ThemeToggle } from "./theme-toggle";
 import { useActionDialog } from "./action-dialog";
 import { authApi } from "@/lib/api/auth";
+import { TierBadge, tierForLevel } from "./tier-badge";
 import type { SessionUser } from "@hoobiq/types";
 
 /**
@@ -97,11 +98,34 @@ export function UserMenu({
           // z-50 — must sit above the header (z-40).
           className="absolute right-0 mt-3 w-64 overflow-hidden rounded-2xl border border-rule bg-panel shadow-xl ring-1 ring-black/5 z-50 origin-top-right animate-menu-pop"
         >
-          <div className="border-b border-rule px-4 py-3">
+          <div
+            className={
+              user.isPremium
+                ? "relative overflow-hidden border-b border-rule bg-gradient-to-br from-brand-500/12 via-flame-500/8 to-ultra-500/12 px-4 py-3"
+                : "border-b border-rule px-4 py-3"
+            }
+          >
             <p className="truncate text-sm font-semibold text-fg">
               {user.name?.trim() || `@${user.username}`}
             </p>
             <p className="mt-0.5 truncate text-xs text-fg-subtle">{user.email}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <TierBadge tier={tierForLevel(user.level)} level={user.level} premium={user.isPremium} size="sm" />
+              {user.isPremium ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-brand-500 to-flame-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white shadow-sm">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.39 5.6L20 8.4l-4.5 3.9L17 18l-5-3-5 3 1.5-5.7L4 8.4l5.6-.8z"/></svg>
+                  Premium
+                </span>
+              ) : (
+                <Link
+                  href="/premium"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-1 rounded-full border border-brand-400/40 bg-brand-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-brand-600 transition-colors hover:bg-brand-400/20 dark:text-brand-400"
+                >
+                  Upgrade Premium
+                </Link>
+              )}
+            </div>
           </div>
 
           <ul className="py-1 text-sm">

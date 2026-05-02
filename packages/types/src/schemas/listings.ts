@@ -43,6 +43,8 @@ export const ListingSummarySchema = z.object({
     username: z.string(),
     city: z.string().nullable(),
     trustScore: z.number(),
+    level: z.number().default(1),
+    isPremium: z.boolean().default(false),
   }),
   createdAt: z.string(),
 });

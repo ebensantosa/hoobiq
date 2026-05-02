@@ -16,7 +16,7 @@ import { api } from "@/lib/api/client";
  * Engagement-focused feed card. Like is optimistic; comments lazy-load on
  * expand; views fire once when the card is 50% on-screen.
  */
-export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: string | null }) {
+export function FeedCard({ post, meUsername, meAvatarUrl }: { post: FeedPost; meUsername?: string | null; meAvatarUrl?: string | null }) {
   const dialog = useActionDialog();
   const isOwn = !!meUsername && meUsername === post.author.username;
   const [liked, setLiked]       = React.useState(post.liked);
@@ -394,6 +394,8 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
         <CommentThread
           postId={post.id}
           meUsername={meUsername ?? null}
+          meAvatarUrl={meAvatarUrl ?? null}
+          postAuthorUsername={post.author.username}
           onCountChange={(d) => setComments((n) => Math.max(0, n + d))}
         />
       )}

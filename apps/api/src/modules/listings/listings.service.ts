@@ -105,7 +105,8 @@ export class ListingsService {
           seller: {
             select: {
               id: true, username: true, city: true, trustScore: true,
-              ktpVerified: true, role: true,
+              ktpVerified: true, role: true, level: true,
+              isPremium: true, premiumUntil: true,
             },
           },
         },
@@ -245,7 +246,7 @@ export class ListingsService {
     const listing = await this.prisma.listing.findFirst({
       where: { OR: [{ slug: slugOrId }, { id: slugOrId }] },
       include: {
-        seller: { select: { username: true, name: true, avatarUrl: true, city: true, trustScore: true } },
+        seller: { select: { username: true, name: true, avatarUrl: true, city: true, trustScore: true, level: true, isPremium: true, premiumUntil: true } },
         category: { select: { id: true, slug: true, name: true } },
       },
     });
@@ -487,7 +488,10 @@ type Row = {
   id: string; slug: string; title: string; priceCents: bigint;
   compareAtCents?: bigint | null;
   condition: string; imagesJson: string; boostedUntil: Date | null; createdAt: Date;
-  seller: { username: string; city: string | null; trustScore: number };
+  seller: {
+    username: string; city: string | null; trustScore: number;
+    level?: number; isPremium?: boolean; premiumUntil?: Date | null;
+  };
 };
 
 function toSummary(l: Row) {
@@ -518,7 +522,13 @@ function toSummary(l: Row) {
     images,
     cover: images[0] ?? null,
     boosted: !!l.boostedUntil && l.boostedUntil > new Date(),
-    seller: { username: l.seller.username, city: l.seller.city, trustScore: Number(l.seller.trustScore) },
+    seller: {
+      username: l.seller.username,
+      city: l.seller.city,
+      trustScore: Number(l.seller.trustScore),
+      level: l.seller.level ?? 1,
+      isPremium: !!l.seller.isPremium && !!l.seller.premiumUntil && l.seller.premiumUntil.getTime() > Date.now(),
+    },
     createdAt: l.createdAt.toISOString(),
   };
 }

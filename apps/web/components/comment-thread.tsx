@@ -3,6 +3,7 @@ import * as React from "react";
 import { Avatar } from "@hoobiq/ui";
 import { api } from "@/lib/api/client";
 import { EmojiGifPicker, insertAtCaret } from "./emoji-picker";
+import { useActionDialog } from "./action-dialog";
 
 type Comment = {
   id: string;
@@ -14,16 +15,30 @@ type Comment = {
 /**
  * Lazy-loaded comment thread — fetches on first open so the feed list stays
  * cheap. Submit POSTs the comment then optimistically appends.
+ *
+ * Delete is allowed for:
+ *   - Comment author (own comments)
+ *   - Post author (creator can moderate their own thread)
+ *
+ * The server enforces both checks; the UI just decides whose row gets the
+ * trash icon. Times render as "X menit lalu" / "X jam lalu" style relative
+ * stamps that update on every render (cheap).
  */
 export function CommentThread({
   postId,
   meUsername,
+  meAvatarUrl,
+  postAuthorUsername,
   onCountChange,
 }: {
   postId: string;
   meUsername: string | null;
+  meAvatarUrl?: string | null;
+  /** Username pemilik post — dia juga bisa hapus komentar di postnya. */
+  postAuthorUsername?: string;
   onCountChange: (delta: number) => void;
 }) {
+  const dialog = useActionDialog();
   const [items, setItems] = React.useState<Comment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [body, setBody] = React.useState("");
@@ -58,13 +73,34 @@ export function CommentThread({
           id: created.id,
           body: trimmed,
           createdAt: new Date().toISOString(),
-          author: { username: meUsername ?? "kamu", name: null, avatarUrl: null },
+          // Include the real avatar so the optimistic row matches what
+          // the next refetch returns — gak kelihatan "loncat" pas avatar
+          // muncul belakangan.
+          author: { username: meUsername ?? "kamu", name: null, avatarUrl: meAvatarUrl ?? null },
         };
         setItems((prev) => [...prev, optimistic]);
         onCountChange(+1);
       } catch {
         setBody(trimmed);
       }
+    });
+  }
+
+  function deleteComment(id: string) {
+    dialog.open({
+      title: "Hapus komentar?",
+      description: "Aksi ini tidak bisa di-undo.",
+      tone: "danger",
+      confirmLabel: "Hapus",
+      onConfirm: async () => {
+        try {
+          await api(`/posts/${postId}/comments/${id}`, { method: "DELETE" });
+          setItems((prev) => prev.filter((c) => c.id !== id));
+          onCountChange(-1);
+        } catch (e) {
+          return e instanceof Error ? e.message : "Gagal menghapus.";
+        }
+      },
     });
   }
 
@@ -76,16 +112,42 @@ export function CommentThread({
         <div className="px-5 py-4 text-xs text-fg-subtle">Belum ada komentar. Jadi yang pertama!</div>
       ) : (
         <ul className="flex flex-col gap-3 px-5 py-4">
-          {items.map((c) => (
-            <li key={c.id} className="flex gap-3">
-              <Avatar letter={c.author.username[0]?.toUpperCase() ?? "U"} size="sm" />
-              <div className="flex-1 rounded-xl bg-panel px-3 py-2 text-sm">
-                <p className="font-semibold text-fg">@{c.author.username}</p>
-                <CommentBody body={c.body} />
-                <p className="mt-1 text-[11px] text-fg-subtle">{timeAgo(c.createdAt)}</p>
-              </div>
-            </li>
-          ))}
+          {items.map((c) => {
+            const canDelete = !!meUsername && (
+              meUsername === c.author.username ||
+              meUsername === postAuthorUsername
+            );
+            return (
+              <li key={c.id} className="group flex gap-3">
+                <Avatar
+                  letter={c.author.username[0]?.toUpperCase() ?? "U"}
+                  size="sm"
+                  src={c.author.avatarUrl}
+                  alt={`@${c.author.username}`}
+                />
+                <div className="flex-1 rounded-xl bg-panel px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-fg">
+                      @{c.author.username}
+                      {meUsername === c.author.username && <span className="ml-2 text-[10px] font-normal text-fg-subtle">(kamu)</span>}
+                    </p>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => deleteComment(c.id)}
+                        className="text-[11px] text-fg-subtle opacity-0 transition-opacity hover:text-flame-500 group-hover:opacity-100"
+                        aria-label="Hapus komentar"
+                      >
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+                  <CommentBody body={c.body} />
+                  <p className="mt-1 text-[11px] text-fg-subtle">{timeAgo(c.createdAt)}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -130,9 +192,10 @@ function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60_000);
   if (m < 1) return "baru saja";
-  if (m < 60) return `${m}m`;
+  if (m < 60) return `${m} menit lalu`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}j`;
+  if (h < 24) return `${h} jam lalu`;
   const d = Math.floor(h / 24);
-  return d <= 6 ? `${d}h` : new Date(iso).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+  if (d <= 6) return `${d} hari lalu`;
+  return new Date(iso).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
 }

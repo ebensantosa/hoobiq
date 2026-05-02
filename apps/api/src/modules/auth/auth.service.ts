@@ -330,6 +330,24 @@ export class AuthService {
 
   /* --------------------------- Logout --------------------------- */
 
+  /**
+   * Drop every cached session entry for a user. Called when something
+   * mutates a field surfaced via /me (avatar, name, premium toggle…)
+   * so the next page load reflects the change instead of waiting up to
+   * 60s for the cache TTL. Cheap: scans `sess:*` and inspects the
+   * stored payload — fine for our session volumes.
+   */
+  async invalidateUserSessions(userId: string): Promise<void> {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      select: { tokenHash: true },
+    });
+    if (sessions.length === 0) return;
+    await Promise.all(
+      sessions.map((s) => this.redis.client.del(`sess:${s.tokenHash}`).catch(() => undefined)),
+    );
+  }
+
   async logout(rawToken: string | undefined) {
     if (!rawToken) return;
     const tokenHash = sha256(rawToken);

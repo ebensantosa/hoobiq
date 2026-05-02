@@ -4,6 +4,7 @@ import { ListingOwnerMenu } from "./listing-owner-menu";
 import { CartButton } from "./cart-button";
 import { WishlistButton } from "./wishlist-button";
 import { conditionBadge } from "@/lib/condition-badge";
+import { TierBadge, tierForLevel } from "./tier-badge";
 import type { ListingSummary } from "@hoobiq/types";
 
 /**
@@ -114,11 +115,8 @@ export function ListingCard({
           <PriceLine priceIdr={l.priceIdr} compareAtIdr={l.compareAtIdr ?? null} />
 
           <div className="flex items-center justify-between gap-2 text-[11px] text-fg-subtle">
-            <span className="flex items-center gap-1 truncate">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z" />
-                <circle cx="12" cy="10" r="2.5" />
-              </svg>
+            <span className="flex min-w-0 items-center gap-1.5 truncate">
+              <TierBadge tier={tierForLevel(l.seller.level ?? 1)} premium={!!l.seller.isPremium} size="sm" />
               <span className="truncate">{l.seller.city ?? "—"}</span>
             </span>
             <span

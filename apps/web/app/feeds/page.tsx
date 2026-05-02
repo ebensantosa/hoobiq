@@ -130,7 +130,7 @@ export default async function FeedsPage({
           ) : (
             <div className="flex flex-col gap-6">
               {items.map((p) => (
-                <FeedCard key={p.id} post={p} meUsername={me?.username} />
+                <FeedCard key={p.id} post={p} meUsername={me?.username} meAvatarUrl={me?.avatarUrl} />
               ))}
             </div>
           )}

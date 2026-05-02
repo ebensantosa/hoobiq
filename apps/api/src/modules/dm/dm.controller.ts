@@ -8,6 +8,10 @@ import { DmGateway } from "./dm.gateway";
 
 const StartConvo = z.object({
   withUsername: z.string().min(3).max(40),
+  /** Optional — pin the conversation to a listing. The very first
+   *  message of a fresh thread becomes a "lagi tanya soal: <title>"
+   *  context line so the seller knows which item the buyer means. */
+  listingId: z.string().cuid().optional(),
 });
 
 const PostMessage = z.object({
@@ -103,6 +107,40 @@ export class DmController {
     if (!other) throw new NotFoundException({ code: "user_not_found", message: "User tidak ditemukan." });
     if (other.id === me.id) throw new BadRequestException({ code: "self_dm", message: "Tidak bisa DM diri sendiri." });
 
+    // Resolve listing context (if any) up front so we either pin it on
+    // the existing thread or seed it as the first message of a fresh one.
+    const listingCtx = body.listingId
+      ? await this.prisma.listing.findUnique({
+          where: { id: body.listingId },
+          select: { id: true, slug: true, title: true, priceCents: true, imagesJson: true },
+        })
+      : null;
+    const buyerId = me.id;
+    async function pinListing(this: void, conversationId: string, prisma: PrismaService) {
+      if (!listingCtx) return;
+      let cover: string | null = null;
+      try { const v = JSON.parse(listingCtx.imagesJson); if (Array.isArray(v) && typeof v[0] === "string") cover = v[0]; } catch { /* ignore */ }
+      const priceIdr = Number(listingCtx.priceCents / 100n);
+      // Reuse offerListingId column to anchor the context to the listing
+      // — same field the offer-card render path inspects, so a future
+      // rich-card render can pick this up uniformly.
+      const recent = await prisma.message.findFirst({
+        where: { conversationId, offerListingId: listingCtx.id },
+        select: { id: true },
+      });
+      if (recent) return; // already pinned
+      await prisma.message.create({
+        data: {
+          conversationId,
+          senderId: buyerId,
+          kind: "text",
+          body: `📦 Lagi tanya soal: ${listingCtx.title} · Rp ${priceIdr.toLocaleString("id-ID")}\n/listing/${listingCtx.slug}`,
+          attachmentUrl: cover,
+          offerListingId: listingCtx.id,
+        },
+      });
+    }
+
     // Find existing 1:1 conversation
     const mine = await this.prisma.conversationMember.findMany({
       where: { userId: me.id },
@@ -113,7 +151,10 @@ export class DmController {
         where: { userId: other.id, conversationId: { in: mine.map((m) => m.conversationId) } },
         select: { conversationId: true },
       });
-      if (shared) return { id: shared.conversationId };
+      if (shared) {
+        await pinListing.call(undefined, shared.conversationId, this.prisma);
+        return { id: shared.conversationId };
+      }
     }
 
     // Otherwise create new
@@ -122,6 +163,7 @@ export class DmController {
         members: { create: [{ userId: me.id }, { userId: other.id }] },
       },
     });
+    await pinListing.call(undefined, created.id, this.prisma);
     return { id: created.id };
   }
 

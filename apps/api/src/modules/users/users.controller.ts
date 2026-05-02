@@ -7,6 +7,7 @@ import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { EmailService } from "../email/email.service";
 import { ExpService, EXP_KIND } from "../exp/exp.service";
+import { AuthService } from "../auth/auth.service";
 
 const ImageUrl = z.string().refine(
   (s) => /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
@@ -24,6 +25,7 @@ export class UsersController {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly exp: ExpService,
+    private readonly auth: AuthService,
   ) {}
 
   /**
@@ -630,6 +632,10 @@ export class UsersController {
     if (filled) {
       void this.exp.awardOnce(current.id, EXP_KIND.profileComplete, 200);
     }
+    // Drop the cached SessionUser in Redis so /me + the topbar avatar
+    // pick up the new value on the very next request, instead of
+    // waiting up to 60s for the TTL.
+    await this.auth.invalidateUserSessions(current.id).catch(() => undefined);
     return { user: { ...user, interested: interestedOut } };
   }
 }

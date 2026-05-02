@@ -295,6 +295,12 @@ export class PostsController {
     @Param("id") postId: string,
     @Body(new ZodPipe(CreateComment)) body: z.infer<typeof CreateComment>
   ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true },
+    });
+    if (!post) throw new NotFoundException({ code: "not_found", message: "Post tidak ditemukan." });
+
     const [comment] = await this.prisma.$transaction([
       this.prisma.postComment.create({
         data: { postId, authorId: user.id, body: body.body },
@@ -304,6 +310,19 @@ export class PostsController {
         data: { commentsCount: { increment: 1 } },
       }),
     ]);
+    // Notify the post author when someone else comments. Self-comments
+    // skip notif so users don't ping themselves.
+    if (post.authorId !== user.id) {
+      await this.prisma.notification.create({
+        data: {
+          userId: post.authorId,
+          kind: "post_commented",
+          title: "Komentar baru di post kamu",
+          body: `${user.name ?? `@${user.username}`}: ${body.body.slice(0, 120)}`,
+          dataJson: JSON.stringify({ postId, commentId: comment.id, by: user.username }),
+        },
+      }).catch(() => undefined);
+    }
     return { id: comment.id };
   }
 
@@ -314,9 +333,16 @@ export class PostsController {
     @Param("id") postId: string,
     @Param("commentId") commentId: string
   ) {
-    const c = await this.prisma.postComment.findUnique({ where: { id: commentId } });
-    if (!c || c.postId !== postId) return;
-    if (c.authorId !== user.id && user.role !== "admin") return;
+    const [c, post] = await Promise.all([
+      this.prisma.postComment.findUnique({ where: { id: commentId } }),
+      this.prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } }),
+    ]);
+    if (!c || c.postId !== postId || !post) return;
+    // Allowed: comment author, post author (creator), and admins.
+    const isAdmin = user.role === "admin" || user.role === "ops" || user.role === "superadmin";
+    const isPostAuthor = post.authorId === user.id;
+    const isCommentAuthor = c.authorId === user.id;
+    if (!isCommentAuthor && !isPostAuthor && !isAdmin) return;
     await this.prisma.$transaction([
       this.prisma.postComment.delete({ where: { id: commentId } }),
       this.prisma.post.update({

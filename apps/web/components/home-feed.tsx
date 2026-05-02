@@ -489,43 +489,70 @@ function TrendingStrip({ items }: { items: ListingSummary[] }) {
 /*  Premium grid — dark-gradient cards with rare-collection labels      */
 /* -------------------------------------------------------------------- */
 
+/**
+ * Rare Collection — editorial showcase row. Foto barangnya jadi hero
+ * (full bleed, gak di-overlay warna), label rarity sebagai chip kaca
+ * di pojok atas, dan info di footer dalam panel buram tipis di atas
+ * gambar. Read sebagai galeri premium, bukan kartu pop-art warna-warni.
+ */
 function PremiumGrid({ items }: { items: ListingSummary[] }) {
-  const labels = ["ULTRA RARE", "LEGENDARY", "GEM MINT", "ICONIC", "PREMIUM"];
-  const tones = [
-    "from-violet-600 to-fuchsia-600",
-    "from-amber-500 to-rose-500",
-    "from-emerald-500 to-teal-500",
-    "from-rose-500 to-flame-500",
-    "from-brand-500 to-ultra-500",
-  ];
+  const labels = ["Ultra Rare", "Legendary", "Gem Mint", "Iconic", "Premium"];
   return (
     <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {items.map((l, i) => (
         <Link
           key={l.id}
           href={`/listing/${l.slug}`}
-          className={
-            "group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br p-4 text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl " +
-            (tones[i % tones.length] ?? tones[0])
-          }
+          className="group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-2xl border border-rule bg-ink-900 text-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.45)] transition-all hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(168,85,247,0.45)]"
         >
-          {l.cover && (
+          {l.cover ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={l.cover}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay transition-transform duration-700 group-hover:scale-110"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               loading="lazy"
             />
+          ) : (
+            <div className="absolute inset-0">
+              <CardArt variant={pickArt(l.slug)} />
+            </div>
           )}
-          <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-fg shadow">
+          {/* Subtle dark gradient + gold sheen overlay so labels stay
+              legible without flattening the artwork underneath. */}
+          <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+          <span aria-hidden className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br from-amber-300/20 via-transparent to-fuchsia-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+
+          {/* Rarity chip — frosted glass with a serif feel. */}
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="m12 2 2.39 5.6L20 8.4l-4.5 3.9L17 18l-5-3-5 3 1.5-5.7L4 8.4l5.6-.8z"/>
+            </svg>
             {labels[i % labels.length]}
           </span>
-          <div className="relative z-10">
-            <p className="line-clamp-2 text-sm font-bold drop-shadow-md">{l.title}</p>
-            <p className="mt-1 text-base font-extrabold drop-shadow-md">
-              Rp {l.priceIdr.toLocaleString("id-ID")}
-            </p>
+
+          {/* Boosted indicator — tiny pulse to read as "promoted". */}
+          {l.boosted && (
+            <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-flame-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inset-0 animate-ping rounded-full bg-white/80"/>
+                <span className="relative h-1.5 w-1.5 rounded-full bg-white"/>
+              </span>
+              Boosted
+            </span>
+          )}
+
+          <div className="relative z-10 px-4 pb-4">
+            <p className="line-clamp-2 text-[13px] font-semibold leading-tight drop-shadow-md">{l.title}</p>
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <p className="font-mono text-base font-extrabold tracking-tight text-amber-200 drop-shadow">
+                Rp {l.priceIdr.toLocaleString("id-ID")}
+              </p>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-white/60">
+                @{l.seller.username}
+              </span>
+            </div>
           </div>
         </Link>
       ))}

@@ -10,13 +10,23 @@ export const dynamic = "force-dynamic";
 export default async function DMPage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string }>;
+  searchParams: Promise<{ to?: string; listing?: string }>;
 }) {
   const me = await getSessionUser();
   if (!me) redirect("/masuk");
 
   const sp = await searchParams;
   const to = sp.to?.trim();
+  const listingRef = sp.listing?.trim() || null;
+
+  // Resolve listing slug → cuid for the StartConvo body. The endpoint
+  // pins the listing as a context message in the freshly-opened thread
+  // so the seller knows which item the buyer means.
+  let listingId: string | null = null;
+  if (listingRef) {
+    const listing = await serverApi<{ id: string }>(`/listings/${encodeURIComponent(listingRef)}`).catch(() => null);
+    if (listing?.id) listingId = listing.id;
+  }
 
   // If `?to=username` was passed (e.g. from a profile's "Pesan" button),
   // open or resume that 1:1 conversation server-side before rendering so the
@@ -26,7 +36,7 @@ export default async function DMPage({
     const started = await serverApi<{ id: string }>("/dm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ withUsername: to }),
+      body: JSON.stringify({ withUsername: to, ...(listingId && { listingId }) }),
     });
     if (started?.id) openConversationId = started.id;
   }

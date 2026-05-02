@@ -30,6 +30,7 @@ import { EmailModule } from "./modules/email/email.module";
 import { BoostModule } from "./modules/boost/boost.module";
 import { PayoutsModule } from "./modules/payouts/payouts.module";
 import { BannersModule } from "./modules/banners/banners.module";
+import { ExpModule } from "./modules/exp/exp.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BannersModule } from "./modules/banners/banners.module";
     PrismaModule,
     RedisModule,
     CsrfMiddlewareModule,
+    ExpModule,
 
     AuthModule,
     UsersModule,

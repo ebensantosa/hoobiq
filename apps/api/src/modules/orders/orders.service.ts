@@ -20,6 +20,7 @@ import { env } from "../../config/env";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { EmailService } from "../email/email.service";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const CENTS_PER_RUPIAH = 100n;
 const PLATFORM_FEE_BPS = 200n;
@@ -42,8 +43,22 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
-    @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider
+    @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider,
+    private readonly exp: ExpService,
   ) {}
+
+  /**
+   * Centralized EXP grants for an order transitioning to `completed`.
+   * Buyer side: +50 per completion (no cap). Seller side: +20 per
+   * completion + a one-shot +500 for the seller's very first completed
+   * sale. Called from every codepath that flips order.status to
+   * completed (confirmReceipt, scheduler auto-release, etc).
+   */
+  private async grantCompletionExp(buyerId: string, sellerId: string) {
+    void this.exp.award(buyerId, EXP_KIND.purchaseComplete, 50);
+    void this.exp.awardOnce(sellerId, EXP_KIND.firstSaleComplete, 500);
+    void this.exp.award(sellerId, EXP_KIND.saleComplete, 20);
+  }
 
   // -------------------------------------------------------------- checkout
   async checkout(buyerId: string, input: CheckoutInput) {
@@ -83,6 +98,11 @@ export class OrdersService {
         totalCents: total, courierCode: input.courierCode, status: "pending_payment",
       },
     });
+
+    // EXP: first-purchase one-shot (300). Per spec ("mau berhasil atau
+    // enggak tetap dapat langsung") — fires at checkout regardless of
+    // whether the payment ultimately succeeds.
+    void this.exp.awardOnce(buyerId, EXP_KIND.firstPurchase, 300);
 
     const webBase = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
     const charge = await this.payment.createCharge({
@@ -316,6 +336,7 @@ export class OrdersService {
     });
     await this.notify(o.sellerId, "order_completed", "Pesanan selesai", "Dana sudah dilepas ke saldo kamu.", { humanId }, { important: true });
     await this.logSystemMessage(o.id, "✅ Buyer konfirmasi diterima — dana dirilis ke seller. Pesanan selesai.");
+    await this.grantCompletionExp(o.buyerId, o.sellerId);
     return { ok: true, status: "completed" };
   }
 
@@ -702,6 +723,7 @@ export class OrdersService {
     const o = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (o) {
       await this.notify(o.sellerId, "order_auto_released", "Dana dilepas otomatis", "Buyer tidak konfirmasi dalam 3 hari.", { humanId: o.humanId }, { important: true });
+      await this.grantCompletionExp(o.buyerId, o.sellerId);
     }
   }
 
@@ -773,6 +795,11 @@ export class OrdersService {
       // refund. Helper is a no-op if the order was never paid.
       await this.addBackStockOnRefund(d.orderId);
       await this.tryRefund(d.orderId, "dispute");
+    } else {
+      // Seller wins → order completed, grant completion EXP just like
+      // a normal release path so seller's grind isn't punished by the
+      // dispute resolution.
+      await this.grantCompletionExp(d.buyerId, d.sellerId);
     }
     await this.logSystemMessage(d.orderId, `🛡️ Admin putuskan: ${labelDecision(input.decision)}${input.adminNote ? ` Catatan admin: "${input.adminNote}"` : ""}`);
     return { ok: true, decision: input.decision };

@@ -82,11 +82,33 @@ model User {
   orderMessages    OrderMessage[]  @relation("OrderMessageSender")
   follows          UserFollow[]    @relation("FollowerUser")
   followers        UserFollow[]    @relation("FollowedUser")
+  expAwards        ExpAward[]
 
   @@index([email])
   @@index([username])
   @@index([status, trustScore])
   @@map("users")
+}
+
+/// EXP grant ledger. One row per award; idempotent grants use a
+/// dedupeKey (e.g. "once" for first-time awards or "daily:YYYY-MM-DD"
+/// for once-per-day) so retries are no-ops. Awards without a dedupeKey
+/// are unbounded (NULLs are not equal under unique constraints, so
+/// multiple rows with the same user+kind+null are allowed).
+model ExpAward {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  kind      String
+  amount    Int
+  dedupeKey String?  @map("dedupe_key")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, dedupeKey])
+  @@index([userId, createdAt])
+  @@index([userId, kind, createdAt])
+  @@map("exp_awards")
 }
 
 /// Directed follow graph. (followerId → followedId) means the follower

@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { ListingSearchInput, CreateListingInput, UpdateListingInput } from "@hoobiq/types";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { RedisService } from "../../infrastructure/redis/redis.service";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const CENTS_PER_RUPIAH = 100n;
 const MAX_LIMIT = 60;
@@ -31,7 +32,8 @@ function collectSlugs(single: string | undefined, multi: string[] | undefined): 
 export class ListingsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService
+    private readonly redis: RedisService,
+    private readonly exp: ExpService,
   ) {}
 
   async search(input: ListingSearchInput) {
@@ -374,6 +376,9 @@ export class ListingsService {
       },
     });
     await this.redis.invalidate("listings:search:*");
+    // EXP: first-listing one-shot (300) — only fires the first time the
+    // seller publishes a listing, regardless of moderation state.
+    void this.exp.awardOnce(sellerId, EXP_KIND.firstListing, 300);
     return { id: listing.id, slug: listing.slug, pendingCategory: !!categoryRequestId };
   }
 

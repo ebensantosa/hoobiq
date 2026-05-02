@@ -57,16 +57,27 @@ const fmtIdrCompact = (n: number): string => {
  * inline stat ticker (no card-per-stat noise), and a discreet gradient ring
  * around the avatar as the only "decorative" element.
  */
+export type ExpProgress = {
+  level: number;
+  exp: number;
+  lowerBound: number;
+  upperBound: number;
+  intoLevel: number;
+  neededForNext: number;
+};
+
 export function PassportHero({
   user,
   passport,
   isOwn = false,
   follow,
+  expProgress,
 }: {
   user: PassportUser;
   passport: Passport;
   isOwn?: boolean;
   follow?: { followers: number; following: number; isFollowing: boolean };
+  expProgress?: ExpProgress;
 }) {
   const joined = new Date(user.createdAt).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const isVerified = user.role === "verified" || user.role === "admin";
@@ -172,6 +183,40 @@ export function PassportHero({
                 <p className="mt-3 max-w-xl text-sm leading-relaxed text-fg">
                   {user.bio}
                 </p>
+              )}
+
+              {expProgress && isOwn && (
+                <div className="mt-3 max-w-md">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-fg-subtle">
+                    <span>
+                      LV {expProgress.level} · {expProgress.exp.toLocaleString("id-ID")} EXP
+                    </span>
+                    <span>
+                      {expProgress.neededForNext > 0
+                        ? `${expProgress.neededForNext.toLocaleString("id-ID")} ke LV ${expProgress.level + 1}`
+                        : "MAX"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-panel-2">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-brand-500 via-flame-500 to-ultra-500"
+                      style={{
+                        width: `${
+                          expProgress.upperBound > expProgress.lowerBound
+                            ? Math.min(
+                                100,
+                                Math.max(
+                                  0,
+                                  ((expProgress.intoLevel) /
+                                    (expProgress.upperBound - expProgress.lowerBound)) * 100,
+                                ),
+                              )
+                            : 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </div>

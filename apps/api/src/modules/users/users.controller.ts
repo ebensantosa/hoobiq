@@ -6,6 +6,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { EmailService } from "../email/email.service";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const ImageUrl = z.string().refine(
   (s) => /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
@@ -22,6 +23,7 @@ export class UsersController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly exp: ExpService,
   ) {}
 
   /**
@@ -371,10 +373,26 @@ export class UsersController {
       }),
     };
 
+    // Compute the user's progress within their current level so the UI
+    // can render a "X / Y EXP to next level" progress bar without
+    // recomputing the formula on every page.
+    const lvl = ExpService.levelFromExp(user.exp);
+    const lower = lvl <= 1 ? 0 : ExpService.expForLevel(lvl - 1);
+    const upper = ExpService.expForLevel(lvl);
+    const expProgress = {
+      level: lvl,
+      exp: user.exp,
+      lowerBound: lower,
+      upperBound: upper,
+      intoLevel: Math.max(0, user.exp - lower),
+      neededForNext: Math.max(0, upper - user.exp),
+    };
+
     return {
       user: { ...user, trustScore: Number(user.trustScore), createdAt: user.createdAt.toISOString() },
       passport,
       follow: { followers: followersCount, following: followingCount, isFollowing },
+      expProgress,
     };
   }
 
@@ -604,6 +622,14 @@ export class UsersController {
     });
     let interestedOut: string[] = [];
     try { const v = JSON.parse(user.interestedJson); if (Array.isArray(v)) interestedOut = v; } catch { /* ignore */ }
+    // EXP: profile-complete one-shot (200) — fires the moment all four
+    // critical fields (name, phone, city, avatarUrl) are non-empty.
+    // dedupeKey "once" guarantees the user can re-edit later without
+    // re-triggering the award.
+    const filled = !!user.name?.trim() && !!user.phone?.trim() && !!user.city?.trim() && !!user.avatarUrl?.trim();
+    if (filled) {
+      void this.exp.awardOnce(current.id, EXP_KIND.profileComplete, 200);
+    }
     return { user: { ...user, interested: interestedOut } };
   }
 }

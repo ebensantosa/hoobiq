@@ -5,6 +5,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 // Mirror CreateListingInput.images: accept http(s) URLs *or* data:image
 // URIs. The web composer hands us raw data: URIs in dev (no R2 configured)
@@ -47,7 +48,10 @@ const ReportPost = z.object({
 
 @Controller("posts")
 export class PostsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly exp: ExpService,
+  ) {}
 
   /** Suggested kolektor untuk follow — top engagement 30 hari terakhir
    *  yang belum di-follow oleh viewer. Sengaja di-declare di atas
@@ -195,6 +199,9 @@ export class PostsController {
         moderation: "active",
       },
     });
+    // EXP: 1x first-post (100) + recurring 20/post capped at 100/day.
+    void this.exp.awardOnce(user.id, EXP_KIND.firstPost, 100);
+    void this.exp.awardWithDailyCap(user.id, EXP_KIND.post, 20, 100);
     return { id: post.id };
   }
 

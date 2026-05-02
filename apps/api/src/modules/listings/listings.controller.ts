@@ -24,6 +24,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { ZodPipe } from "../../common/pipes/zod.pipe";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { ListingsService } from "./listings.service";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const ReviewInput = z.object({
   orderId: z.string().cuid(),
@@ -35,7 +36,8 @@ const ReviewInput = z.object({
 export class ListingsController {
   constructor(
     private readonly listings: ListingsService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly exp: ExpService,
   ) {}
 
   @Public()
@@ -262,6 +264,16 @@ export class ListingsController {
         body: body.body ?? null,
       },
     });
+    // EXP awards on review creation:
+    //   buyer  → +20 per review submitted (review_seller).
+    //   seller → +10 if rating >= 4 (rating_received_45).
+    void this.exp.award(user.id, EXP_KIND.reviewSeller, 20);
+    if (body.rating >= 4) {
+      const listing = await this.prisma.listing.findUnique({
+        where: { id: listingId }, select: { sellerId: true },
+      });
+      if (listing) void this.exp.award(listing.sellerId, EXP_KIND.ratingReceived45, 10);
+    }
     return { id: created.id, updated: false };
   }
 }

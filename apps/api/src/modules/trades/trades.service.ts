@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const CENTS_PER_RUPIAH = 100n;
 /** Per-spec daily swipe budget for the discovery deck (Meet Match). */
@@ -57,7 +58,10 @@ export type DeckResult = {
 
 @Injectable()
 export class TradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly exp: ExpService,
+  ) {}
 
   /**
    * Meet Match deck: live marketplace listings (any seller other than the
@@ -181,6 +185,10 @@ export class TradesService {
     }
 
     const remaining = Math.max(0, DAILY_SWIPE_CAP - (used + 1));
+    // EXP: hitting 50 swipes in one day grants +100 once per UTC day.
+    if (used + 1 >= 50) {
+      void this.exp.awardOnceDaily(userId, EXP_KIND.swipe50Daily, 100);
+    }
     return { added, remaining, cap: DAILY_SWIPE_CAP };
   }
 

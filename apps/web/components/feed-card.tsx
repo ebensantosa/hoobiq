@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Avatar } from "@hoobiq/ui";
 import { CardArt, pickArt } from "./card-art";
+import { TierBadge, tierForLevel } from "./tier-badge";
 import { CommentThread } from "./comment-thread";
 import { PullRateWidget } from "./pull-rate-widget";
 import { TrustBadges, deriveTrustBadges } from "./trust-badges";
@@ -236,9 +237,7 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
             className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg hover:text-brand-500"
           >
             {post.author.name ?? `@${post.author.username}`}
-            <span className="rounded-full bg-flame-400/15 px-2 py-0.5 text-[10px] font-bold text-flame-600">
-              LV {post.author.level}
-            </span>
+            <TierBadge tier={tierForLevel(post.author.level)} level={post.author.level} size="sm" />
           </Link>
           <p className="text-xs text-fg-subtle">
             {post.author.city ?? "Lokasi belum diisi"} · {timeAgo(post.createdAt)}

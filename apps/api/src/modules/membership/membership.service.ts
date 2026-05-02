@@ -1,5 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
+import { env } from "../../config/env";
 
 export type Tier = "bronze" | "silver" | "gold" | "platinum" | "elite";
 
@@ -37,9 +39,20 @@ const TIER_THRESHOLDS: Array<{ tier: Tier; minLevel: number }> = [
  * branches on level / tier; it asks `perksFor(user)` and reads off
  * exactly what's allowed.
  */
+/** Premium subscription pricing. IDR. */
+export const PREMIUM_MONTHLY_IDR = 159_000;
+/** Yearly bundle = 10 months' price (2 months free). */
+export const PREMIUM_YEARLY_IDR = 159_000 * 10;
+/** Provider-tx prefix so the webhook can route premium charges separately. */
+export const PREMIUM_PREFIX = "PRM-";
+
 @Injectable()
 export class MembershipService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly log = new Logger(MembershipService.name);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider,
+  ) {}
 
   static tierForLevel(level: number): Tier {
     for (const t of TIER_THRESHOLDS) if (level >= t.minLevel) return t.tier;
@@ -113,6 +126,103 @@ export class MembershipService {
       data: { [field]: { increment: 1 } },
     });
     return true;
+  }
+
+  /* ------------------- Premium checkout (Midtrans) ------------------- */
+
+  /** Kick off a Midtrans Snap charge for premium. Caller (controller)
+   *  passes the resolved customer profile. Returns the redirect URL the
+   *  client should bounce the buyer to. */
+  async createPremiumCheckout(userId: string, months: 1 | 12, customer: { email: string; name: string; phone: string }) {
+    const monthsClamped = months === 12 ? 12 : 1;
+    const priceIdr = monthsClamped === 12 ? PREMIUM_YEARLY_IDR : PREMIUM_MONTHLY_IDR;
+    const priceCents = BigInt(priceIdr) * 100n;
+
+    // Create pending row first so the providerTxId can be embedded in
+    // Midtrans order_id (snap requires the id at charge time).
+    const purchase = await this.prisma.membershipPurchase.create({
+      data: {
+        userId, months: monthsClamped, priceCents,
+        providerTxId: "", status: "pending",
+      },
+    });
+    const providerTxId = `${PREMIUM_PREFIX}${purchase.id}`;
+    await this.prisma.membershipPurchase.update({
+      where: { id: purchase.id },
+      data: { providerTxId },
+    });
+
+    const webBase = (env.PUBLIC_WEB_BASE ?? "http://localhost:3000").replace(/\/$/, "");
+    const charge = await this.payment.createCharge({
+      orderId: purchase.id,
+      humanId: providerTxId,
+      amountCents: priceCents,
+      method: "snap",
+      customer,
+      items: [{
+        id: `premium-${monthsClamped}m`,
+        name: `Hoobiq Premium · ${monthsClamped === 12 ? "12 bulan (hemat 2 bln)" : "1 bulan"}`,
+        priceCents,
+        qty: 1,
+      }],
+      returnUrl: `${webBase}/premium?status=ok`,
+    });
+
+    return {
+      purchaseId: purchase.id,
+      providerTxId,
+      redirectUrl: charge.redirectUrl ?? null,
+      months: monthsClamped,
+      priceIdr,
+    };
+  }
+
+  /** Webhook hook — flip status to paid, extend User.premiumUntil. */
+  async markPremiumPaid(providerTxId: string) {
+    const purchase = await this.prisma.membershipPurchase.findUnique({
+      where: { providerTxId },
+    });
+    if (!purchase) {
+      this.log.warn(`markPremiumPaid: purchase not found for ${providerTxId}`);
+      return;
+    }
+    if (purchase.status === "paid") return; // idempotent
+
+    const now = new Date();
+    const user = await this.prisma.user.findUnique({
+      where: { id: purchase.userId },
+      select: { premiumUntil: true, premiumStartedAt: true, isPremium: true },
+    });
+    if (!user) throw new NotFoundException({ code: "user_not_found", message: "User tidak ada." });
+
+    // Stack: kalau premium masih aktif, extend dari premiumUntil; kalau
+    // udah expired/baru, mulai dari now.
+    const startsFrom = user.premiumUntil && user.premiumUntil > now ? user.premiumUntil : now;
+    const endsAt = new Date(startsFrom.getTime() + purchase.months * 30 * 86_400_000);
+
+    await this.prisma.$transaction([
+      this.prisma.membershipPurchase.update({
+        where: { id: purchase.id },
+        data: { status: "paid", paidAt: now, startsAt: startsFrom, endsAt },
+      }),
+      this.prisma.user.update({
+        where: { id: purchase.userId },
+        data: {
+          isPremium: true,
+          premiumUntil: endsAt,
+          premiumStartedAt: user.premiumStartedAt ?? now,
+        },
+      }),
+      this.prisma.notification.create({
+        data: {
+          userId: purchase.userId,
+          kind: "premium_active",
+          title: "Hoobiq Premium aktif!",
+          body: `Premium kamu aktif sampai ${endsAt.toLocaleDateString("id-ID")}. Semua perks udah unlocked.`,
+          dataJson: JSON.stringify({ purchaseId: purchase.id }),
+        },
+      }),
+    ]);
   }
 
   async usageThisMonth(userId: string) {

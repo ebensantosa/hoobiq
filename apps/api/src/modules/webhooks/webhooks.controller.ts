@@ -15,6 +15,7 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-provider.interface";
 import { OrdersService } from "../orders/orders.service";
 import { BoostService, BOOST_PREFIX } from "../boost/boost.service";
+import { MembershipService, PREMIUM_PREFIX } from "../membership/membership.service";
 
 /**
  * Webhook handlers — CSRF-exempt (set in CsrfMiddlewareModule) but every
@@ -29,6 +30,7 @@ export class WebhooksController {
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
     private readonly boost: BoostService,
+    private readonly membership: MembershipService,
     @Inject(PAYMENT_PROVIDER) private readonly payment: PaymentProvider
   ) {}
 
@@ -74,6 +76,8 @@ export class WebhooksController {
       // OrdersService.markPaid as before.
       if (orderHumanId.startsWith(BOOST_PREFIX)) {
         await this.boost.markPaid(orderHumanId);
+      } else if (orderHumanId.startsWith(PREMIUM_PREFIX)) {
+        await this.membership.markPremiumPaid(orderHumanId);
       } else {
         const order = await this.prisma.order.findUnique({ where: { humanId: orderHumanId } });
         if (order && order.status === "pending_payment") {

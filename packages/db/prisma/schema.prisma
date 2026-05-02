@@ -100,6 +100,28 @@ model User {
   @@map("users")
 }
 
+/// One row per premium-subscription purchase. Mirrors the BoostPurchase
+/// pattern: create pending → fire Midtrans Snap → webhook flips status
+/// to paid and extends `User.premiumUntil`. providerTxId carries the
+/// "PRM-" prefix so the webhook router can dispatch to membership.
+model MembershipPurchase {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  months       Int
+  priceCents   BigInt    @map("price_cents")
+  providerTxId String    @unique @map("provider_tx_id")
+  status       String    @default("pending") // pending | paid | failed | cancelled
+  paidAt       DateTime? @map("paid_at")
+  startsAt     DateTime? @map("starts_at")
+  endsAt       DateTime? @map("ends_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("membership_purchases")
+}
+
 /// Per-user, per-month counter of consumable membership perks (free
 /// boost slots, free ongkir slots). Period is "YYYY-MM" UTC. We
 /// increment usage atomically when the user claims a perk so a

@@ -72,35 +72,24 @@ export class MembershipController {
   }
 
   /**
-   * Self-service premium upgrade. V1 grants the entitlement immediately
-   * (extending the existing premiumUntil if active, or starting a fresh
-   * 30-day window otherwise). Real billing (Midtrans subscription /
-   * Recurring) lands once the marketing CTA is wired — for now this is
-   * the entry point used by admin tooling and the upcoming pay flow.
+   * Start a Midtrans Snap charge for premium. Returns the redirect URL
+   * the client bounces the user to. Premium is NOT activated here —
+   * the webhook flips the entitlement once the payment settles.
    */
-  @Post("upgrade")
+  @Post("checkout")
   @HttpCode(200)
-  async upgrade(@CurrentUser() user: SessionUser, @Body() body: { months?: number }) {
-    const months = Math.min(12, Math.max(1, Math.floor(Number(body?.months ?? 1))));
+  async checkout(@CurrentUser() user: SessionUser, @Body() body: { months?: number }) {
+    const months = Number(body?.months) === 12 ? 12 : 1;
     const dbUser = await this.prisma.user.findUnique({
       where: { id: user.id },
-      select: { isPremium: true, premiumUntil: true, premiumStartedAt: true },
+      select: { email: true, name: true, username: true, phone: true },
     });
     if (!dbUser) throw new BadRequestException({ code: "user_not_found", message: "User tidak ditemukan." });
-    const now = new Date();
-    const baseFrom = dbUser.premiumUntil && dbUser.premiumUntil.getTime() > now.getTime()
-      ? dbUser.premiumUntil
-      : now;
-    const next = new Date(baseFrom.getTime() + months * 30 * 86_400_000);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        isPremium: true,
-        premiumUntil: next,
-        premiumStartedAt: dbUser.premiumStartedAt ?? now,
-      },
+    return this.membership.createPremiumCheckout(user.id, months as 1 | 12, {
+      email: dbUser.email,
+      name: dbUser.name ?? dbUser.username,
+      phone: dbUser.phone ?? "",
     });
-    return { isPremium: true, premiumUntil: next.toISOString(), months };
   }
 
   /** Admin-only / self cancel. Doesn't refund — just stops auto-renew

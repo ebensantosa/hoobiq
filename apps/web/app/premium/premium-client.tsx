@@ -49,25 +49,34 @@ export function PremiumPage({ data }: { data: Data }) {
   const [pending, setPending] = React.useState(false);
   const tier = tierForLevel(data.level);
 
-  async function upgrade(months: number) {
+  async function checkout(months: number) {
     setPending(true);
     try {
-      await api("/membership/upgrade", { method: "POST", body: { months } });
-      toast.success("Selamat!", "Premium aktif — semua perks sudah unlocked.");
-      router.refresh();
+      const res = await api<{ redirectUrl: string | null; providerTxId: string }>(
+        "/membership/checkout",
+        { method: "POST", body: { months } },
+      );
+      if (res.redirectUrl) {
+        // Bounce to Midtrans Snap. Webhook activates premium after
+        // payment settles; user lands back on /premium?status=ok.
+        window.location.assign(res.redirectUrl);
+      } else {
+        toast.error("Gagal", "Link pembayaran tidak tersedia. Coba lagi.");
+        setPending(false);
+      }
     } catch (e) {
       toast.error("Gagal", e instanceof ApiError ? e.message : "Coba lagi.");
-    } finally {
       setPending(false);
     }
   }
 
   function confirmUpgrade(months: number, label: string) {
+    const idr = months === 12 ? 1_590_000 : 159_000;
     dialog.open({
       title: `Aktifkan Premium ${label}?`,
-      description: `Premium aktif segera setelah pembayaran. Saat ini upgrade gratis selama beta — tagihan akan aktif setelah billing diintegrasikan.`,
-      confirmLabel: "Aktifkan sekarang",
-      onConfirm: () => upgrade(months),
+      description: `Kamu akan diarahkan ke Hoobiq Pay untuk membayar Rp ${idr.toLocaleString("id-ID")}. Premium aktif otomatis setelah pembayaran sukses.`,
+      confirmLabel: "Lanjut ke pembayaran",
+      onConfirm: () => checkout(months),
     });
   }
 

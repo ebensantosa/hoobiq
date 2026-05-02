@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { MembershipService } from "../membership/membership.service";
 
 /**
  * Centralized EXP awarder. Every codepath that wants to give a user
@@ -21,6 +22,19 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 export class ExpService {
   private readonly log = new Logger(ExpService.name);
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Apply the user's current tier + premium multiplier. Rounded down
+   *  so we don't accidentally award fractional EXP. */
+  private async applyMultiplier(userId: string, amount: number): Promise<number> {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { level: true, isPremium: true, premiumUntil: true },
+    });
+    if (!u) return amount;
+    const premium = MembershipService.isPremiumNow(u);
+    const perks = MembershipService.perksFor(u.level, premium);
+    return Math.floor(amount * perks.expMultiplier);
+  }
 
   /** Compute level from cumulative EXP. Min level is 1. */
   static levelFromExp(exp: number): number {
@@ -69,10 +83,15 @@ export class ExpService {
   private async insertAndBump(
     userId: string,
     kind: string,
-    amount: number,
+    rawAmount: number,
     dedupeKey: string | null,
   ): Promise<{ awarded: number }> {
-    if (amount <= 0) return { awarded: 0 };
+    if (rawAmount <= 0) return { awarded: 0 };
+    // Apply tier + premium multiplier to ALL awards except the daily
+    // login one (which the spec already specifies as the final amount).
+    const amount = kind === "daily_login"
+      ? rawAmount
+      : await this.applyMultiplier(userId, rawAmount);
     try {
       await this.prisma.expAward.create({
         data: { userId, kind, amount, dedupeKey },

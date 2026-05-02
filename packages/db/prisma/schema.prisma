@@ -83,11 +83,40 @@ model User {
   follows          UserFollow[]    @relation("FollowerUser")
   followers        UserFollow[]    @relation("FollowedUser")
   expAwards        ExpAward[]
+  // Premium membership state. `isPremium=true` while premiumUntil is in
+  // the future; the runtime treats them as a pair. premiumStartedAt is
+  // kept for analytics (renewal cadence, churn).
+  isPremium        Boolean   @default(false) @map("is_premium")
+  premiumUntil     DateTime? @map("premium_until")
+  premiumStartedAt DateTime? @map("premium_started_at")
+  // Daily check-in (last successful claim). Used both for streak math
+  // (future) and to gate the +exp grant to once-per-UTC-day.
+  lastDailyCheckinAt DateTime? @map("last_daily_checkin_at")
+  membershipUsage  MembershipUsage[]
 
   @@index([email])
   @@index([username])
   @@index([status, trustScore])
   @@map("users")
+}
+
+/// Per-user, per-month counter of consumable membership perks (free
+/// boost slots, free ongkir slots). Period is "YYYY-MM" UTC. We
+/// increment usage atomically when the user claims a perk so a
+/// double-click doesn't grant two boosts. Resets are implicit: the
+/// next month's row is auto-created on first claim.
+model MembershipUsage {
+  userId      String   @map("user_id")
+  period      String
+  boostUsed   Int      @default(0) @map("boost_used")
+  ongkirUsed  Int      @default(0) @map("ongkir_used")
+  voucherUsed Int      @default(0) @map("voucher_used")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, period])
+  @@map("membership_usage")
 }
 
 /// EXP grant ledger. One row per award; idempotent grants use a

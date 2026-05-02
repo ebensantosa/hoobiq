@@ -31,6 +31,7 @@ export function UserMenu({
   // them here would just add noise.
   const links = [
     { href: `/u/${user.username}`, label: "Profil" },
+    { href: "/premium",   label: "Hoobiq Premium" },
     { href: "/pesanan",   label: "Pesanan saya" },
     { href: "/wishlist",  label: "Wishlist" },
     { href: "/saldo",     label: "Hoobiq Pay" },

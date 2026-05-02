@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TrustBadges } from "./trust-badges";
 import { deriveTrustBadges } from "./trust-badges-derive";
 import { FollowButton } from "./follow-button";
+import { TierBadge, tierForLevel } from "./tier-badge";
 
 export type Badge = {
   key: string;
@@ -151,6 +152,7 @@ export function PassportHero({
                 <h1 className="text-[26px] font-extrabold leading-tight tracking-tight text-fg md:text-[32px]">
                   {user.name ?? `@${user.username}`}
                 </h1>
+                <TierBadge tier={tierForLevel(user.level)} level={user.level} size="sm" />
               </div>
               <p className="mt-0.5 text-sm font-medium text-fg-subtle">@{user.username}</p>
 

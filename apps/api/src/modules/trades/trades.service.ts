@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { ExpService, EXP_KIND } from "../exp/exp.service";
+import { MembershipService } from "../membership/membership.service";
 
 const CENTS_PER_RUPIAH = 100n;
 /** Per-spec daily swipe budget for the discovery deck (Meet Match). */
@@ -61,7 +62,16 @@ export class TradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly exp: ExpService,
+    private readonly membership: MembershipService,
   ) {}
+
+  /** Resolve the swipe cap (-1 = unlimited) for a user based on tier
+   *  + premium. Sits next to dailyUsed so the deck endpoint and the
+   *  swipe endpoint compute the cap from one source of truth. */
+  private async swipeCapFor(userId: string): Promise<number> {
+    const perks = await this.membership.perksForUser(userId);
+    return perks.swipeCap;
+  }
 
   /**
    * Meet Match deck: live marketplace listings (any seller other than the
@@ -72,9 +82,11 @@ export class TradesService {
    */
   async deck(userId: string): Promise<DeckResult> {
     const used = await this.dailyUsed(userId);
-    const remaining = Math.max(0, DAILY_SWIPE_CAP - used);
-    if (remaining === 0) {
-      return { items: [], used, remaining, cap: DAILY_SWIPE_CAP };
+    const cap = await this.swipeCapFor(userId);
+    const unlimited = cap < 0;
+    const remaining = unlimited ? Number.MAX_SAFE_INTEGER : Math.max(0, cap - used);
+    if (!unlimited && remaining === 0) {
+      return { items: [], used, remaining: 0, cap };
     }
 
     const swiped = await this.prisma.tradeSwipe.findMany({
@@ -92,7 +104,7 @@ export class TradesService {
         id: { notIn: Array.from(skip) },
       },
       orderBy: [{ boostedUntil: "desc" }, { createdAt: "desc" }],
-      take: remaining,
+      take: unlimited ? 50 : Math.min(50, remaining),
       include: {
         seller: {
           select: {
@@ -103,7 +115,7 @@ export class TradesService {
       },
     });
 
-    if (rows.length === 0) return { items: [], used, remaining, cap: DAILY_SWIPE_CAP };
+    if (rows.length === 0) return { items: [], used, remaining, cap };
 
     // Trade-history lookup for "X trade selesai" badge on each card —
     // kept because it's still a useful trust signal even if the trade
@@ -130,14 +142,14 @@ export class TradesService {
       },
     }));
 
-    return { items, used, remaining, cap: DAILY_SWIPE_CAP };
+    return { items, used, remaining, cap };
   }
 
   /**
    * Record a swipe. Right swipe → upsert into the user's wishlist (idempotent).
-   * Left swipe → dismiss only. Both sides count against the 25/day budget;
-   * once the cap is hit the request is rejected so the client can show the
-   * "limit reached" state and stop sending swipes.
+   * Left swipe → dismiss only. Both sides count against the daily budget
+   * (which scales with tier + premium); once the cap is hit the request
+   * is rejected so the client can show the "limit reached" state.
    */
   async swipe(userId: string, targetListingId: string, direction: "right" | "left"): Promise<SwipeResult> {
     const target = await this.prisma.listing.findUnique({
@@ -155,12 +167,14 @@ export class TradesService {
     }
 
     // Cap check is best-effort — we reject loudly so the UI can lock out
-    // further swipes today instead of silently no-op'ing.
+    // further swipes today instead of silently no-op'ing. cap=-1 means
+    // ELITE-tier unlimited swipes; skip the gate entirely.
     const used = await this.dailyUsed(userId);
-    if (used >= DAILY_SWIPE_CAP) {
+    const cap = await this.swipeCapFor(userId);
+    if (cap >= 0 && used >= cap) {
       throw new ForbiddenException({
         code: "daily_cap",
-        message: `Kamu sudah swipe ${DAILY_SWIPE_CAP} kali hari ini. Coba lagi besok.`,
+        message: `Kamu sudah swipe ${cap} kali hari ini. Coba lagi besok.`,
       });
     }
 
@@ -184,12 +198,12 @@ export class TradesService {
       added = true;
     }
 
-    const remaining = Math.max(0, DAILY_SWIPE_CAP - (used + 1));
+    const remaining = cap < 0 ? Number.MAX_SAFE_INTEGER : Math.max(0, cap - (used + 1));
     // EXP: hitting 50 swipes in one day grants +100 once per UTC day.
     if (used + 1 >= 50) {
       void this.exp.awardOnceDaily(userId, EXP_KIND.swipe50Daily, 100);
     }
-    return { added, remaining, cap: DAILY_SWIPE_CAP };
+    return { added, remaining, cap };
   }
 
   /** Count swipes the user has made since local-day midnight (server TZ). */

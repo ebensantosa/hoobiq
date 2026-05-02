@@ -31,6 +31,7 @@ import { BoostModule } from "./modules/boost/boost.module";
 import { PayoutsModule } from "./modules/payouts/payouts.module";
 import { BannersModule } from "./modules/banners/banners.module";
 import { ExpModule } from "./modules/exp/exp.module";
+import { MembershipModule } from "./modules/membership/membership.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ExpModule } from "./modules/exp/exp.module";
     RedisModule,
     CsrfMiddlewareModule,
     ExpModule,
+    MembershipModule,
 
     AuthModule,
     UsersModule,

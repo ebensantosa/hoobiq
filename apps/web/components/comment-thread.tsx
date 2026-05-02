@@ -135,7 +135,7 @@ export function CommentThread({
                       <button
                         type="button"
                         onClick={() => deleteComment(c.id)}
-                        className="text-[11px] text-fg-subtle opacity-0 transition-opacity hover:text-flame-500 group-hover:opacity-100"
+                        className="text-[11px] font-medium text-fg-subtle transition-colors hover:text-flame-500"
                         aria-label="Hapus komentar"
                       >
                         Hapus

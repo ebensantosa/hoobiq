@@ -351,26 +351,6 @@ export function FeedCard({ post, meUsername, meAvatarUrl }: { post: FeedPost; me
           icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
           label={`${fmt(comments)} ${comments === 1 ? "Comment" : "Comments"}`}
         />
-        {/* Trade button — direct path to DM the author with a preset
-            opener so the buyer can negotiate price/swap without first
-            digging up the seller's profile. Only shows when the post is
-            from someone other than the viewer. */}
-        {meUsername && meUsername !== post.author.username && (
-          <Link
-            href={`/dm?to=${encodeURIComponent(post.author.username)}&intent=trade&post=${encodeURIComponent(post.id)}`}
-            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:bg-panel-2 hover:text-emerald-500"
-            aria-label="Ajukan trade ke author"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17 3 13l4-4" />
-              <path d="M3 13h18" />
-              <path d="m17 7 4 4-4 4" />
-              <path d="M21 11H3" />
-            </svg>
-            <span className="hidden sm:inline">Ajukan trade</span>
-            <span className="sm:hidden">Trade</span>
-          </Link>
-        )}
         <span className="ml-auto hidden items-center gap-1.5 px-2 text-xs text-fg-subtle sm:inline-flex" title={`${post.views} views`}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           {fmt(post.views)}

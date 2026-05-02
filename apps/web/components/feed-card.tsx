@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@hoobiq/ui";
 import { CardArt, pickArt } from "./card-art";
 import { TierBadge, tierForLevel } from "./tier-badge";
+import { ShareToDmDialog } from "./share-dm-dialog";
 import { CommentThread } from "./comment-thread";
 import { PullRateWidget } from "./pull-rate-widget";
 import { TrustBadges, deriveTrustBadges } from "./trust-badges";
@@ -25,6 +26,7 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
   const [menuOpen, setMenuOpen]         = React.useState(false);
   const [shareOpen, setShareOpen]       = React.useState(false);
   const [shareDir, setShareDir]         = React.useState<"up" | "down">("up");
+  const [dmOpen, setDmOpen]             = React.useState(false);
   const [toast, setToast]               = React.useState<string | null>(null);
   const [body, setBody]                 = React.useState(post.body);
   const [editing, setEditing]           = React.useState(false);
@@ -78,23 +80,7 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
   }
 
   function shareToDM() {
-    dialog.open({
-      title: "Kirim post ke DM",
-      description: "Ketik username Hoobiq tujuan (tanpa @). Link akan dikirim ke chat.",
-      fields: [{ key: "u", label: "Username", placeholder: "kolektor_keren" }],
-      confirmLabel: "Kirim",
-      onConfirm: async (v) => {
-        const username = String(v.u ?? "").trim().replace(/^@/, "");
-        if (username.length < 3) return "Username minimal 3 karakter.";
-        try {
-          const conv = await api<{ id: string }>("/dm", { method: "POST", body: { withUsername: username } });
-          await api(`/dm/${encodeURIComponent(conv.id)}/messages`, { method: "POST", body: { body: `${shareText()}\n${postUrl()}` } });
-          setToast(`Terkirim ke @${username}`);
-        } catch (e) {
-          return e instanceof Error ? e.message : "Gagal kirim.";
-        }
-      },
-    });
+    setDmOpen(true);
   }
 
   function shareTo(target: "wa" | "x" | "fb" | "tg" | "ig" | "discord") {
@@ -405,8 +391,14 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
               setShareOpen((v) => {
                 if (!v && shareRef.current) {
                   const r = shareRef.current.getBoundingClientRect();
-                  // Header ~80px; popover ~240px. Flip down if not enough room above.
-                  setShareDir(r.top - 80 < 240 ? "down" : "up");
+                  const POP_H = 280; // worst-case popover height
+                  const HEADER = 80; // sticky topbar reserves the top of the viewport
+                  const spaceAbove = r.top - HEADER;
+                  const spaceBelow = window.innerHeight - r.bottom;
+                  // Pick the side with more breathing room. If neither
+                  // fits the worst-case height the popover scrolls
+                  // internally (max-h-[80vh] + overflow-y-auto).
+                  setShareDir(spaceBelow >= POP_H || spaceBelow > spaceAbove ? "down" : "up");
                 }
                 return !v;
               });
@@ -420,7 +412,7 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
             <div
               role="menu"
               className={
-                "absolute right-0 w-56 overflow-hidden rounded-2xl border border-rule bg-panel p-2 shadow-xl ring-1 ring-black/5 z-50 animate-menu-pop " +
+                "absolute right-0 w-56 max-h-[80vh] overflow-y-auto rounded-2xl border border-rule bg-panel p-2 shadow-xl ring-1 ring-black/5 z-50 animate-menu-pop " +
                 (shareDir === "up"
                   ? "bottom-full mb-2 origin-bottom-right"
                   : "top-full mt-2 origin-top-right")
@@ -468,6 +460,14 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
           onCountChange={(d) => setComments((n) => Math.max(0, n + d))}
         />
       )}
+
+      <ShareToDmDialog
+        open={dmOpen}
+        onClose={() => setDmOpen(false)}
+        url={postUrl()}
+        title={shareText()}
+        meUsername={meUsername}
+      />
     </article>
   );
 }

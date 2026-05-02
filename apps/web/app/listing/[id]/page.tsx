@@ -197,6 +197,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   <ShareButton
                     url={`/listing/${listing.slug}`}
                     title={listing.title}
+                    meUsername={me?.username ?? null}
                     size="sm"
                     className="self-stretch"
                   />

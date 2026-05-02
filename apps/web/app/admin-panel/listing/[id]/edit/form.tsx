@@ -49,6 +49,7 @@ export type AdminListingDetail = {
   tradeable: boolean;
   moderation: "pending" | "pending_category" | "active" | "hidden" | "rejected";
   isPublished: boolean;
+  boostedUntil: string | null;
   images: string[];
   seller: { id: string; username: string; name: string | null; email: string };
   category: { id: string; slug: string; name: string };
@@ -420,6 +421,8 @@ export function ListingEditForm({
           </div>
         </Card>
 
+        <BoostCard listingId={initial.id} initialBoostedUntil={initial.boostedUntil} />
+
         <Card>
           <div className="flex flex-col gap-3 p-5">
             <Section title="Kepemilikan" subtitle="Owner saat ini & opsi pindah ke seller lain." />
@@ -524,6 +527,133 @@ function Section({ title, subtitle }: { title: string; subtitle?: string }) {
       <p className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">{title}</p>
       {subtitle && <p className="mt-0.5 text-[11px] text-fg-subtle">{subtitle}</p>}
     </div>
+  );
+}
+
+function BoostCard({
+  listingId,
+  initialBoostedUntil,
+}: {
+  listingId: string;
+  initialBoostedUntil: string | null;
+}) {
+  const router = useRouter();
+  const [boostedUntil, setBoostedUntil] = React.useState(initialBoostedUntil);
+  const [days, setDays] = React.useState("7");
+  const [fromNow, setFromNow] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [msg, setMsg] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(null), 2500);
+    return () => clearTimeout(t);
+  }, [msg]);
+
+  const now = Date.now();
+  const active = !!boostedUntil && new Date(boostedUntil).getTime() > now;
+  const remainingDays = active && boostedUntil
+    ? Math.ceil((new Date(boostedUntil).getTime() - now) / 86_400_000)
+    : 0;
+
+  async function call(body: { days?: number; until?: string; clear?: boolean; fromNow?: boolean }) {
+    setBusy(true); setErr(null);
+    try {
+      const res = await api<{ boostedUntil: string | null }>(`/admin/listings/${listingId}/boost`, {
+        method: "PATCH",
+        body,
+      });
+      setBoostedUntil(res.boostedUntil);
+      setMsg(body.clear ? "Boost dimatikan." : "Boost diaktifkan.");
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex flex-col gap-3 p-5">
+        <Section title="Boost listing" subtitle="Naikin listing ke posisi atas tanpa via Midtrans (admin grant)." />
+
+        <div className={"rounded-xl border p-3 text-xs " + (active ? "border-brand-400/40 bg-brand-400/5" : "border-rule bg-panel-2/40")}>
+          {active ? (
+            <>
+              <p className="font-semibold text-brand-600 dark:text-brand-400">✦ Boost aktif</p>
+              <p className="mt-1 text-fg-muted">
+                Sampai {new Date(boostedUntil!).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                {" · "}
+                {remainingDays} hari lagi
+              </p>
+            </>
+          ) : (
+            <p className="text-fg-muted">Boost tidak aktif.</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            placeholder="Durasi (hari)"
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={busy || !days}
+            onClick={() => call({ days: Number(days), fromNow })}
+          >
+            {active && !fromNow ? "Tambah" : "Boost"}
+          </Button>
+        </div>
+
+        {active && (
+          <label className="flex items-center gap-2 text-[11px] text-fg-muted">
+            <input
+              type="checkbox"
+              checked={fromNow}
+              onChange={(e) => setFromNow(e.target.checked)}
+            />
+            Mulai ulang dari sekarang (gak stack)
+          </label>
+        )}
+
+        <div className="flex flex-wrap gap-1.5">
+          {[3, 7, 14, 30].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => call({ days: d })}
+              disabled={busy}
+              className="rounded-full border border-rule px-2.5 py-1 text-[11px] font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500 disabled:opacity-50"
+            >
+              +{d}h
+            </button>
+          ))}
+        </div>
+
+        {active && (
+          <button
+            type="button"
+            onClick={() => call({ clear: true })}
+            disabled={busy}
+            className="self-start rounded-md px-2 py-1 text-xs font-semibold text-flame-500 hover:bg-flame-500/10 disabled:opacity-50"
+          >
+            Matikan boost
+          </button>
+        )}
+
+        {err && <p className="text-xs text-flame-500">{err}</p>}
+        {msg && <p className="text-xs text-emerald-600 dark:text-emerald-400">{msg}</p>}
+      </div>
+    </Card>
   );
 }
 

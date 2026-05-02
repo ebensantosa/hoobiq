@@ -351,6 +351,7 @@ export class AdminController {
       tradeable: l.tradeable,
       moderation: l.moderation,
       isPublished: l.isPublished,
+      boostedUntil: l.boostedUntil?.toISOString() ?? null,
       images,
       seller: l.seller,
       category: l.category,
@@ -429,6 +430,73 @@ export class AdminController {
     });
     await this.writeAudit(user.id, "listing.admin_update", `listing:${id}`, input);
     return { ok: true, id: updated.id };
+  }
+
+  /**
+   * Manually boost (or extend / clear) a listing without going through
+   * Midtrans. Admin-only escape hatch for promo seedings, comp'd boosts
+   * for partner sellers, or fixing a botched payment.
+   *
+   * Body shapes:
+   *   { days: 14 }                  → set boostedUntil = max(existing, now) + 14d
+   *   { days: 14, fromNow: true }   → ignore existing, start fresh from now
+   *   { until: "2026-06-01..." }    → set absolute deadline
+   *   { clear: true }               → drop boost immediately
+   */
+  @Patch("listings/:id/boost")
+  async boostListing(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body() body: { days?: number; until?: string; clear?: boolean; fromNow?: boolean },
+  ) {
+    const exists = await this.prisma.listing.findUnique({
+      where: { id }, select: { id: true, boostedUntil: true, title: true, sellerId: true },
+    });
+    if (!exists) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+
+    let boostedUntil: Date | null;
+    if (body.clear) {
+      boostedUntil = null;
+    } else if (body.until) {
+      const d = new Date(body.until);
+      if (Number.isNaN(d.getTime())) {
+        throw new BadRequestException({ code: "bad_until", message: "Format tanggal until tidak valid." });
+      }
+      if (d.getTime() <= Date.now()) {
+        throw new BadRequestException({ code: "until_in_past", message: "Tanggal until harus di masa depan." });
+      }
+      boostedUntil = d;
+    } else {
+      const days = Math.floor(Number(body.days ?? 0));
+      if (!days || days <= 0 || days > 365) {
+        throw new BadRequestException({ code: "bad_days", message: "Days harus antara 1–365, atau pakai field clear/until." });
+      }
+      const now = new Date();
+      // Default behaviour stacks on top of any active boost so an admin
+      // grant doesn't shorten an in-flight paid boost. fromNow=true forces
+      // a fresh window starting now.
+      const baseFrom = !body.fromNow && exists.boostedUntil && exists.boostedUntil > now
+        ? exists.boostedUntil
+        : now;
+      boostedUntil = new Date(baseFrom.getTime() + days * 86_400_000);
+    }
+
+    await this.prisma.listing.update({ where: { id }, data: { boostedUntil } });
+    await this.writeAudit(user.id, body.clear ? "listing.boost_clear" : "listing.boost_grant", `listing:${id}`, {
+      days: body.days, until: body.until, fromNow: body.fromNow, clear: body.clear, boostedUntil: boostedUntil?.toISOString() ?? null,
+    });
+    if (boostedUntil) {
+      await this.prisma.notification.create({
+        data: {
+          userId: exists.sellerId,
+          kind: "boost_admin_grant",
+          title: "Listing kamu di-boost admin",
+          body: `Listing "${exists.title}" boosted sampai ${boostedUntil.toLocaleString("id-ID")}.`,
+          dataJson: JSON.stringify({ listingId: id }),
+        },
+      });
+    }
+    return { ok: true, boostedUntil: boostedUntil?.toISOString() ?? null };
   }
 
   /** Hard delete — caller asked for permanent. Cascades via FK SET NULL on

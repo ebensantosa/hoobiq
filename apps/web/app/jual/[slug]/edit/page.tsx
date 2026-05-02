@@ -52,7 +52,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
     // placeholder so the seller can either keep or repick. Repicking gives us
     // a fresh Destination object with the label.
     origin: listing.originSubdistrictId
-      ? { id: listing.originSubdistrictId, label: "(lokasi tersimpan)", city: "", province: "", postalCode: "" }
+      ? { id: listing.originSubdistrictId, label: "(lokasi tersimpan)", subdistrict: "", district: "", city: "", province: "", postalCode: "" }
       : null,
     tradeable: listing.tradeable ?? false,
   };

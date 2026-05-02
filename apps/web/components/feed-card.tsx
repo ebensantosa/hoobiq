@@ -25,7 +25,6 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
   const [showComments, setShowComments] = React.useState(false);
   const [menuOpen, setMenuOpen]         = React.useState(false);
   const [shareOpen, setShareOpen]       = React.useState(false);
-  const [shareDir, setShareDir]         = React.useState<"up" | "down">("up");
   const [dmOpen, setDmOpen]             = React.useState(false);
   const [toast, setToast]               = React.useState<string | null>(null);
   const [body, setBody]                 = React.useState(post.body);
@@ -37,7 +36,6 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
   const seenRef = React.useRef(false);
   const cardRef = React.useRef<HTMLElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const shareRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -46,14 +44,6 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
     if (menuOpen) document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [menuOpen]);
-
-  React.useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false);
-    }
-    if (shareOpen) document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [shareOpen]);
 
   React.useEffect(() => {
     if (!toast) return;
@@ -385,66 +375,13 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           {fmt(post.views)}
         </span>
-        <div ref={shareRef} className="relative sm:ml-1">
-          <ActionButton
-            onClick={() => {
-              setShareOpen((v) => {
-                if (!v && shareRef.current) {
-                  const r = shareRef.current.getBoundingClientRect();
-                  const POP_H = 280; // worst-case popover height
-                  const HEADER = 80; // sticky topbar reserves the top of the viewport
-                  const spaceAbove = r.top - HEADER;
-                  const spaceBelow = window.innerHeight - r.bottom;
-                  // Pick the side with more breathing room. If neither
-                  // fits the worst-case height the popover scrolls
-                  // internally (max-h-[80vh] + overflow-y-auto).
-                  setShareDir(spaceBelow >= POP_H || spaceBelow > spaceAbove ? "down" : "up");
-                }
-                return !v;
-              });
-            }}
-            active={shareOpen}
-            activeColor="text-brand-500"
-            icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>}
-            label="Bagikan"
-          />
-          {shareOpen && (
-            <div
-              role="menu"
-              className={
-                "absolute right-0 w-56 max-h-[80vh] overflow-y-auto rounded-2xl border border-rule bg-panel p-2 shadow-xl ring-1 ring-black/5 z-50 animate-menu-pop " +
-                (shareDir === "up"
-                  ? "bottom-full mb-2 origin-bottom-right"
-                  : "top-full mt-2 origin-top-right")
-              }
-            >
-              <div className="grid grid-cols-3 gap-1">
-                <ShareTarget label="WhatsApp"  color="text-[#25D366]" onClick={() => shareTo("wa")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>} />
-                <ShareTarget label="X"         color="text-fg"        onClick={() => shareTo("x")}       icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>} />
-                <ShareTarget label="Facebook" color="text-[#1877F2]" onClick={() => shareTo("fb")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>} />
-                <ShareTarget label="Telegram" color="text-[#26A5E4]" onClick={() => shareTo("tg")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>} />
-                <ShareTarget label="Instagram" color="text-[#E4405F]" onClick={() => shareTo("ig")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>} />
-                <ShareTarget label="Discord"  color="text-[#5865F2]" onClick={() => shareTo("discord")} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>} />
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShareOpen(false); shareToDM(); }}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-600"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Kirim ke DM Hoobiq
-              </button>
-              <button
-                type="button"
-                onClick={() => { copyLink(); setShareOpen(false); }}
-                className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-lg border border-rule px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                Salin tautan
-              </button>
-            </div>
-          )}
-        </div>
+        <ActionButton
+          onClick={() => setShareOpen(true)}
+          active={shareOpen}
+          activeColor="text-brand-500"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>}
+          label="Bagikan"
+        />
       </div>
 
       {toast && (
@@ -461,6 +398,15 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
         />
       )}
 
+      {shareOpen && (
+        <ShareModal
+          onClose={() => setShareOpen(false)}
+          onDM={() => { setShareOpen(false); setDmOpen(true); }}
+          onCopy={() => { setShareOpen(false); copyLink(); }}
+          onSocial={(t) => { setShareOpen(false); shareTo(t); }}
+        />
+      )}
+
       <ShareToDmDialog
         open={dmOpen}
         onClose={() => setDmOpen(false)}
@@ -469,6 +415,109 @@ export function FeedCard({ post, meUsername }: { post: FeedPost; meUsername?: st
         meUsername={meUsername}
       />
     </article>
+  );
+}
+
+function ShareModal({
+  onClose, onDM, onCopy, onSocial,
+}: {
+  onClose: () => void;
+  onDM: () => void;
+  onCopy: () => void;
+  onSocial: (t: "wa" | "x" | "fb" | "tg" | "ig" | "discord") => void;
+}) {
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 backdrop-blur-sm p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-rule bg-panel shadow-2xl"
+      >
+        <header className="flex items-center justify-between gap-3 border-b border-rule px-5 py-4">
+          <p className="text-base font-bold text-fg">Bagikan post</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full text-fg-subtle hover:bg-panel-2 hover:text-fg"
+            aria-label="Tutup"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </header>
+
+        <div className="flex flex-col gap-3 p-5">
+          <button
+            type="button"
+            onClick={onDM}
+            className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-brand-500 to-flame-500 p-4 text-left text-white transition-transform hover:-translate-y-0.5"
+          >
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-white/20">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-bold">Kirim ke DM Hoobiq</p>
+              <p className="text-[11px] text-white/80">Pilih kolektor dari list — chat & followers kamu.</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onCopy}
+            className="flex items-center gap-3 rounded-xl border border-rule bg-canvas p-4 text-left transition-colors hover:border-brand-400/60 hover:bg-panel-2/60"
+          >
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-400/15 text-brand-500">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-fg">Salin tautan</p>
+              <p className="text-[11px] text-fg-muted">Tinggal paste ke chat lain.</p>
+            </div>
+          </button>
+
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Sosial media</p>
+          <div className="grid grid-cols-3 gap-2">
+            <SocialButton label="WhatsApp"  color="text-[#25D366]" onClick={() => onSocial("wa")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.607z"/></svg>} />
+            <SocialButton label="X"         color="text-fg"        onClick={() => onSocial("x")}       icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>} />
+            <SocialButton label="Facebook"  color="text-[#1877F2]" onClick={() => onSocial("fb")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>} />
+            <SocialButton label="Telegram"  color="text-[#26A5E4]" onClick={() => onSocial("tg")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0z"/></svg>} />
+            <SocialButton label="Instagram" color="text-[#E4405F]" onClick={() => onSocial("ig")}      icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>} />
+            <SocialButton label="Discord"   color="text-[#5865F2]" onClick={() => onSocial("discord")} icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SocialButton({ label, color, icon, onClick }: { label: string; color: string; icon: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-1 rounded-xl border border-rule bg-canvas px-2 py-3 text-[10px] font-semibold text-fg-muted transition-colors hover:border-brand-400/40 hover:bg-panel-2/60"
+    >
+      <span className={color}>{icon}</span>
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -548,21 +597,6 @@ function Tile({
         </span>
       )}
     </div>
-  );
-}
-
-function ShareTarget({
-  icon, label, color, onClick,
-}: { icon: React.ReactNode; label: string; color: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-fg-muted transition-colors hover:bg-panel-2"
-    >
-      <span className={color}>{icon}</span>
-      <span className="text-[10px] font-medium">{label}</span>
-    </button>
   );
 }
 

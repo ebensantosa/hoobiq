@@ -7,6 +7,8 @@ const BASE_URL = "https://rajaongkir.komerce.id/api/v1";
 export type Destination = {
   id: number;
   label: string;          // human-readable: "Jakarta Selatan, Kebayoran Baru, ..."
+  subdistrict: string;    // kelurahan
+  district: string;       // kecamatan
   city: string;
   province: string;
   postalCode: string;
@@ -126,6 +128,8 @@ export class ShippingService {
         return rows.map((r) => ({
           id: r.id,
           label: r.label,
+          subdistrict: r.subdistrict_name,
+          district: r.district_name,
           city: r.city_name,
           province: r.province_name,
           postalCode: r.zip_code,

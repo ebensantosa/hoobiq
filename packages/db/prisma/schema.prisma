@@ -183,6 +183,12 @@ model Address {
   city      String
   province  String
   postal    String
+  // Kelurahan (subdistrict) + kecamatan (district). Only auto-filled
+  // when the user picks via the destination autocomplete; left blank
+  // for legacy rows + manual entries. Surfaces on the order detail
+  // page so couriers see the full Indonesian address hierarchy.
+  subdistrict String? @map("subdistrict")
+  district    String? @map("district")
   // RajaOngkir/Komerce subdistrict id — populated when buyer picks an
   // address via the destination autocomplete. Required for accurate ongkir
   // calculation; if missing, checkout falls back to a city-level estimate.

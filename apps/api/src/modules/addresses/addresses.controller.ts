@@ -10,6 +10,10 @@ const AddressInput = z.object({
   name: z.string().min(2).max(120),
   phone: z.string().min(8).max(32),
   line: z.string().min(5).max(240),
+  // Kelurahan + kecamatan — Indonesian-specific and required for couriers
+  // to deliver. Optional for legacy rows, but the picker fills both.
+  subdistrict: z.string().trim().max(80).optional().nullable(),
+  district:    z.string().trim().max(80).optional().nullable(),
   city: z.string().min(2).max(64),
   province: z.string().min(2).max(64),
   postal: z.string().min(4).max(10),

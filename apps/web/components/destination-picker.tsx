@@ -6,6 +6,8 @@ import { api } from "@/lib/api/client";
 export type Destination = {
   id: number;
   label: string;
+  subdistrict: string;  // kelurahan
+  district: string;     // kecamatan
   city: string;
   province: string;
   postalCode: string;

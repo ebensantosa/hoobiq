@@ -66,7 +66,10 @@ export default async function CheckoutPage({
   // expects recipient/line1/postalCode. Normalize at the boundary.
   type RawAddress = {
     id: string; label: string; name: string; phone: string;
-    line: string; city: string; province: string; postal: string;
+    line: string;
+    subdistrict?: string | null;
+    district?: string | null;
+    city: string; province: string; postal: string;
     subdistrictId: number | null; primary: boolean;
   };
 

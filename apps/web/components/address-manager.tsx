@@ -7,7 +7,9 @@ import { DestinationPicker, type Destination } from "./destination-picker";
 import { useActionDialog } from "./action-dialog";
 
 const empty: AddressInput = {
-  label: "Rumah", name: "", phone: "", line: "", city: "", province: "", postal: "",
+  label: "Rumah", name: "", phone: "", line: "",
+  subdistrict: "", district: "",
+  city: "", province: "", postal: "",
   subdistrictId: null,
   primary: false,
 };
@@ -98,9 +100,10 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                   editing.data.subdistrictId
                     ? {
                         id: editing.data.subdistrictId,
-                        label: editing.data.city
-                          ? `${editing.data.city}, ${editing.data.province}`
-                          : "(lokasi tersimpan)",
+                        label: [editing.data.subdistrict, editing.data.district, editing.data.city, editing.data.province]
+                          .filter(Boolean).join(", ") || "(lokasi tersimpan)",
+                        subdistrict: editing.data.subdistrict ?? "",
+                        district: editing.data.district ?? "",
                         city: editing.data.city,
                         province: editing.data.province,
                         postalCode: editing.data.postal,
@@ -114,6 +117,8 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                       ? {
                           ...editing.data,
                           subdistrictId: d.id,
+                          subdistrict: d.subdistrict,
+                          district: d.district,
                           city: d.city,
                           province: d.province,
                           postal: d.postalCode,
@@ -123,11 +128,31 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                 }
               />
               {editing.data.subdistrictId && editing.data.city && (
-                <p className="rounded-lg bg-mint-400/10 px-3 py-2 text-xs text-mint-600">
-                  ✓ {editing.data.city}, {editing.data.province} · {editing.data.postal}
+                <p className="rounded-lg bg-emerald-400/10 px-3 py-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  ✓ Kel. {editing.data.subdistrict || "—"} · Kec. {editing.data.district || "—"}<br/>
+                  {editing.data.city}, {editing.data.province} · {editing.data.postal}
                 </p>
               )}
             </Field>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Kelurahan">
+                <Input
+                  value={editing.data.subdistrict ?? ""}
+                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, subdistrict: e.target.value } })}
+                  placeholder="Wedarijaksa"
+                  maxLength={80}
+                />
+              </Field>
+              <Field label="Kecamatan">
+                <Input
+                  value={editing.data.district ?? ""}
+                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, district: e.target.value } })}
+                  placeholder="Pati"
+                  maxLength={80}
+                />
+              </Field>
+            </div>
 
             {/* Manual fallback — always editable so users can still save when
                 Komerce search is down or returns no match. If filled in
@@ -196,6 +221,13 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                   </div>
                   <p className="mt-2 text-sm text-fg">{a.name} · {a.phone}</p>
                   <p className="mt-1 text-sm text-fg-muted">{a.line}</p>
+                  {(a.subdistrict || a.district) && (
+                    <p className="text-sm text-fg-muted">
+                      {a.subdistrict ? `Kel. ${a.subdistrict}` : ""}
+                      {a.subdistrict && a.district ? " · " : ""}
+                      {a.district ? `Kec. ${a.district}` : ""}
+                    </p>
+                  )}
                   <p className="text-sm text-fg-muted">{a.city}, {a.province} {a.postal}</p>
                 </div>
                 <div className="flex flex-col gap-2 text-right">

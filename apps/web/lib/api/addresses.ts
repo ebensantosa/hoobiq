@@ -6,6 +6,10 @@ export type Address = {
   name: string;
   phone: string;
   line: string;
+  // Kelurahan + kecamatan — auto-filled by destination picker, kept
+  // optional for legacy rows.
+  subdistrict?: string | null;
+  district?: string | null;
   city: string;
   province: string;
   postal: string;

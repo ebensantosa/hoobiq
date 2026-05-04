@@ -5,6 +5,7 @@ import { themeInitScript } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
 import { ToastProvider } from "@/components/toast-provider";
 import { ActionDialogProvider } from "@/components/action-dialog";
+import { ExpToastPoller } from "@/components/exp-toast-poller";
 import { getSiteSettings } from "@/lib/site-settings";
 import "./globals.css";
 
@@ -77,6 +78,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               the logout dialog from UserMenu when rendered on marketing
               pages like /bantuan. */}
           <ActionDialogProvider>{children}</ActionDialogProvider>
+          {/* Floating "+N EXP" chip whenever an award lands. Polls
+              /exp/recent every 6s while the tab is visible. */}
+          <ExpToastPoller />
         </ToastProvider>
       </body>
     </html>

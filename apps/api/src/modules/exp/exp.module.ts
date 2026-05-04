@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { ExpService } from "./exp.service";
+import { ExpController } from "./exp.controller";
 
 /**
  * Global so any module that wants to award EXP can inject ExpService
@@ -9,6 +10,7 @@ import { ExpService } from "./exp.service";
  */
 @Global()
 @Module({
+  controllers: [ExpController],
   providers: [ExpService],
   exports: [ExpService],
 })

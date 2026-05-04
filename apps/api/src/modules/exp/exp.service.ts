@@ -1,6 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { RedisService } from "../../infrastructure/redis/redis.service";
 import { MembershipService } from "../membership/membership.service";
+
+const PENDING_TOAST_KEY = (userId: string) => `exp:pending:${userId}`;
+const PENDING_TOAST_TTL_SEC = 300; // 5 menit — kalau user lama gak buka tab, drop biar gak nimbun
 
 /**
  * Centralized EXP awarder. Every codepath that wants to give a user
@@ -21,7 +25,44 @@ import { MembershipService } from "../membership/membership.service";
 @Injectable()
 export class ExpService {
   private readonly log = new Logger(ExpService.name);
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
+
+  /** Return + clear pending toast entries for this user. Called by the
+   *  client poller; each entry shows once then never again. Stored as
+   *  a single JSON-encoded array under one key so we can use the
+   *  RedisService's existing get/setex/del surface (no list ops). */
+  async drainToasts(userId: string): Promise<Array<{ amount: number; kind: string; at: number }>> {
+    const key = PENDING_TOAST_KEY(userId);
+    const raw = await this.redis.client.get(key);
+    if (!raw) return [];
+    await this.redis.client.del(key);
+    try {
+      const parsed = JSON.parse(raw) as Array<{ amount: number; kind: string; at: number }>;
+      return Array.isArray(parsed) ? parsed.filter((p) => p && Number.isFinite(p.amount)) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async pushToast(userId: string, kind: string, amount: number) {
+    if (amount <= 0) return;
+    const key = PENDING_TOAST_KEY(userId);
+    try {
+      // Read-modify-write — bursty awards (post create grants 2 in a
+      // row: post_first + post) can race here, but the worst case is
+      // one entry lost to a race. Acceptable for a nice-to-have UI.
+      const raw = await this.redis.client.get(key);
+      const list: Array<{ amount: number; kind: string; at: number }> = raw ? JSON.parse(raw) : [];
+      // Cap at 20 entries to avoid runaway growth if the client never
+      // drains (offline tab, broken poller).
+      list.push({ kind, amount, at: Date.now() });
+      while (list.length > 20) list.shift();
+      await this.redis.client.setex(key, PENDING_TOAST_TTL_SEC, JSON.stringify(list));
+    } catch { /* best-effort — toast surface is nice-to-have */ }
+  }
 
   /** Apply the user's current tier + premium multiplier. Rounded down
    *  so we don't accidentally award fractional EXP. */
@@ -116,6 +157,7 @@ export class ExpService {
         data: { level: newLevel },
       });
     }
+    void this.pushToast(userId, kind, amount);
     return { awarded: amount };
   }
 }

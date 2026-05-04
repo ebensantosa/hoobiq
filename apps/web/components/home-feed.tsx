@@ -114,17 +114,6 @@ export function HomeFeed({
           </div>
         )}
 
-        {popular.length > 0 && (
-          <div className="mt-12">
-            <SectionHeader
-              title="Rare Collection"
-              href="/marketplace?sort=trending"
-              ctaLabel="Lihat semua"
-            />
-            <PremiumGrid items={popular.slice(0, 5)} />
-          </div>
-        )}
-
         <TrustSection />
 
         {pool.length === 0 && (

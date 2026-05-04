@@ -18,6 +18,10 @@ type KycItem = {
   rejectNote: string | null;
   frontUrl: string | null;
   selfieUrl: string | null;
+  fullName: string | null;
+  nik: string | null;
+  dob: string | null;
+  address: string | null;
 };
 
 export default async function AdminKycPage({

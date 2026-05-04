@@ -336,22 +336,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </div>
             </Card>
 
-            {/* Trade hint — hidden when the buyer is the seller (you
-                can't trade with yourself), and when the listing has
-                explicitly opted out of trade. The `tradeable` flag now
-                defaults to true at upload time so this surfaces on most
-                listings; sellers can disable per item. */}
-            {!isOwn && listing.tradeable && (
-            <div className="mt-4 rounded-md border border-rule p-4 text-xs text-fg-muted">
-              Mau tukar daripada beli?{" "}
-              <Link
-                href={`/trades?to=${encodeURIComponent(listing.seller.username)}`}
-                className="font-semibold text-brand-500"
-              >
-                Coba trade dengan {listing.seller.name ?? `@${listing.seller.username}`}
-              </Link>
-            </div>
-            )}
           </aside>
         </div>
 

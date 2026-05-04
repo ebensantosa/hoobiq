@@ -137,14 +137,14 @@ export function CategoryRequestForm({
     });
   }
 
-  const Wrapper: React.FC<{ children: React.ReactNode }> = inline
-    ? ({ children }) => <div className="rounded-xl border border-rule bg-panel-2/40 p-4">{children}</div>
-    : ({ children }) => <Card><div className="space-y-4 p-6">{children}</div></Card>;
-
   const selectClass = "h-11 rounded-md border border-rule bg-panel px-3 text-sm text-fg focus:border-brand-400 focus:outline-none";
 
-  return (
-    <Wrapper>
+  // Inline the wrapper instead of declaring it inside the component
+  // body — defining a component there gives it a fresh identity every
+  // render, which makes React unmount + remount the entire input tree
+  // on each keystroke. That was killing focus after every character.
+  const inner = (
+    <>
       {!inline && (
         <div>
           <h2 className="text-lg font-bold text-fg">Request kategori baru</h2>
@@ -246,6 +246,10 @@ export function CategoryRequestForm({
           {pending ? "Mengirim…" : "Kirim request"}
         </Button>
       </div>
-    </Wrapper>
+    </>
   );
+
+  return inline
+    ? <div className="rounded-xl border border-rule bg-panel-2/40 p-4">{inner}</div>
+    : <Card><div className="space-y-4 p-6">{inner}</div></Card>;
 }

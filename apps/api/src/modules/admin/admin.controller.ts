@@ -82,6 +82,9 @@ export class AdminController {
   async overview() {
     const since = new Date(Date.now() - 24 * 3600 * 1000);
 
+    const monthStart = new Date();
+    monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+
     const [
       userCount,
       activeWeek,
@@ -90,6 +93,15 @@ export class AdminController {
       gmv24h,
       orders24h,
       escrow,
+      // Omset = total GMV (subtotal+shipping+fees) of paid+ orders this month.
+      // Keuntungan = sum of platform revenue (buyer fee 1% + seller fee 5%)
+      // on orders that already cleared (status="completed"). Both reported
+      // for: lifetime + this calendar month + last 24h.
+      revLifetime,
+      revMonth,
+      rev24h,
+      omsetMonth,
+      omsetLifetime,
     ] = await Promise.all([
       this.prisma.user.count({ where: { status: "active" } }),
       this.prisma.user.count({ where: { status: "active", updatedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } } }),
@@ -104,7 +116,30 @@ export class AdminController {
         _sum: { totalCents: true },
         where: { status: { in: ["paid", "shipped"] } },
       }),
+      this.prisma.order.aggregate({
+        _sum: { platformFeeCents: true, sellerFeeCents: true },
+        where: { status: "completed" },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { platformFeeCents: true, sellerFeeCents: true },
+        where: { status: "completed", completedAt: { gte: monthStart } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { platformFeeCents: true, sellerFeeCents: true },
+        where: { status: "completed", completedAt: { gte: since } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalCents: true },
+        where: { paidAt: { gte: monthStart } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalCents: true },
+        where: { paidAt: { not: null } },
+      }),
     ]);
+
+    const sumRev = (a: { _sum: { platformFeeCents: bigint | null; sellerFeeCents: bigint | null } }) =>
+      Number(((a._sum.platformFeeCents ?? 0n) + (a._sum.sellerFeeCents ?? 0n)) / 100n);
 
     const recentActivity = await this.prisma.auditEntry.findMany({
       orderBy: { createdAt: "desc" },
@@ -121,6 +156,14 @@ export class AdminController {
         gmv24hIdr: Number((gmv24h._sum.totalCents ?? 0n) / 100n),
         orders24h,
         escrowIdr: Number((escrow._sum.totalCents ?? 0n) / 100n),
+        // Omset = gross transaksi pembeli (totalCents) yang sudah dibayar.
+        omsetMonthIdr:    Number((omsetMonth._sum.totalCents ?? 0n) / 100n),
+        omsetLifetimeIdr: Number((omsetLifetime._sum.totalCents ?? 0n) / 100n),
+        // Keuntungan = revenue platform = buyer fee (1%) + seller fee (5%)
+        // dari order yang sudah completed.
+        keuntungan24hIdr:       sumRev(rev24h),
+        keuntunganMonthIdr:     sumRev(revMonth),
+        keuntunganLifetimeIdr:  sumRev(revLifetime),
       },
       recentActivity: recentActivity.map((a) => ({
         id: a.id,

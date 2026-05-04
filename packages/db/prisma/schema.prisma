@@ -530,7 +530,13 @@ model Order {
   qty                Int       @default(1)
   priceCents         BigInt    @map("price_cents")
   shippingCents      BigInt    @default(0) @map("shipping_cents")
+  // Buyer-side platform fee (1%) — added on top of subtotal at checkout
+  // and shown to the buyer. Renamed semantic from "platform fee".
   platformFeeCents   BigInt    @default(0) @map("platform_fee_cents")
+  // Seller-side platform fee (5%) — deducted from the seller's payout
+  // when the order completes. Tracked here so admin keuangan can sum
+  // total platform revenue (= sum(platformFeeCents + sellerFeeCents)).
+  sellerFeeCents     BigInt    @default(0) @map("seller_fee_cents")
   payFeeCents        BigInt    @default(0) @map("pay_fee_cents")
   insuranceCents     BigInt    @default(0) @map("insurance_cents")
   totalCents         BigInt    @map("total_cents")

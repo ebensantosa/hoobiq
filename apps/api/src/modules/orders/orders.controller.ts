@@ -114,6 +114,7 @@ export class OrdersController {
         priceIdr:        Number(o.priceCents / 100n),
         shippingIdr:     Number(o.shippingCents / 100n),
         platformFeeIdr:  Number(o.platformFeeCents / 100n),
+        sellerFeeIdr:    Number(o.sellerFeeCents / 100n),
         payFeeIdr:       Number(o.payFeeCents / 100n),
         insuranceIdr:    Number(o.insuranceCents / 100n),
         totalIdr:        Number(o.totalCents / 100n),

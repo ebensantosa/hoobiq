@@ -23,7 +23,11 @@ import { PAYMENT_PROVIDER, type PaymentProvider } from "../payments/payment-prov
 import { ExpService, EXP_KIND } from "../exp/exp.service";
 
 const CENTS_PER_RUPIAH = 100n;
-const PLATFORM_FEE_BPS = 200n;
+// Fee structure: 1% buyer (added to total at checkout), 5% seller
+// (deducted from payout on completion). PAY_FEE is the payment-gateway
+// pass-through (Midtrans Snap MDR ~1%) — bundled into the buyer total.
+const BUYER_FEE_BPS = 100n;   // 1%
+const SELLER_FEE_BPS = 500n;  // 5%
 const PAY_FEE_BPS = 100n;
 
 // Timer constants — single source of truth, also referenced by the scheduler.
@@ -94,9 +98,12 @@ export class OrdersService {
     // their subdistrict via Komerce). Falls back to the legacy 18k flat
     // for old clients that don't send shippingCents yet.
     const shipping = input.shippingCents > 0 ? BigInt(input.shippingCents) : 18_000n * CENTS_PER_RUPIAH;
-    const platformFee = (subtotal * PLATFORM_FEE_BPS) / 10_000n;
+    const platformFee = (subtotal * BUYER_FEE_BPS) / 10_000n;
+    const sellerFee   = (subtotal * SELLER_FEE_BPS) / 10_000n;
     const payFee = (subtotal * PAY_FEE_BPS) / 10_000n;
     const insurance = input.insurance ? 15_000n * CENTS_PER_RUPIAH : 0n;
+    // Buyer total: subtotal + shipping + buyer fee (1%) + payment fee + insurance.
+    // Seller fee is NOT in buyer total — it's deducted from seller payout.
     const total = subtotal + shipping + platformFee + payFee + insurance;
     const humanId = genHumanId();
 
@@ -111,7 +118,7 @@ export class OrdersService {
         ...(pickedVariant && { variantId: pickedVariant.id }),
         qty: input.qty,
         priceCents: unitPriceCents, shippingCents: shipping,
-        platformFeeCents: platformFee, payFeeCents: payFee, insuranceCents: insurance,
+        platformFeeCents: platformFee, sellerFeeCents: sellerFee, payFeeCents: payFee, insuranceCents: insurance,
         totalCents: total, courierCode: input.courierCode, status: "pending_payment",
       },
     });

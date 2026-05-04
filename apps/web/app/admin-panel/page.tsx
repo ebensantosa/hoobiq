@@ -15,6 +15,11 @@ type Overview = {
     gmv24hIdr: number;
     orders24h: number;
     escrowIdr: number;
+    omsetMonthIdr: number;
+    omsetLifetimeIdr: number;
+    keuntungan24hIdr: number;
+    keuntunganMonthIdr: number;
+    keuntunganLifetimeIdr: number;
   };
   recentActivity: Array<{ id: string; actor: string; action: string; target: string; at: string }>;
 };
@@ -40,9 +45,14 @@ export default async function AdminDashboard() {
     { label: "Dispute terbuka", value: String(k.openDisputes), accent: k.openDisputes > 0 },
   ];
   const money = [
-    { label: "GMV 24 jam",       value: `Rp ${k.gmv24hIdr.toLocaleString("id-ID")}` },
-    { label: "Order 24 jam",     value: String(k.orders24h) },
-    { label: "Dana di escrow",   value: `Rp ${k.escrowIdr.toLocaleString("id-ID")}` },
+    { label: "Omset 24 jam",        value: `Rp ${k.gmv24hIdr.toLocaleString("id-ID")}` },
+    { label: "Omset bulan ini",     value: `Rp ${k.omsetMonthIdr.toLocaleString("id-ID")}` },
+    { label: "Omset all-time",      value: `Rp ${k.omsetLifetimeIdr.toLocaleString("id-ID")}` },
+    { label: "Keuntungan 24 jam",   value: `Rp ${k.keuntungan24hIdr.toLocaleString("id-ID")}` },
+    { label: "Keuntungan bulan ini", value: `Rp ${k.keuntunganMonthIdr.toLocaleString("id-ID")}` },
+    { label: "Keuntungan all-time", value: `Rp ${k.keuntunganLifetimeIdr.toLocaleString("id-ID")}` },
+    { label: "Order 24 jam",        value: String(k.orders24h) },
+    { label: "Dana di escrow",      value: `Rp ${k.escrowIdr.toLocaleString("id-ID")}` },
   ];
 
   return (
@@ -66,7 +76,7 @@ export default async function AdminDashboard() {
           ))}
         </section>
 
-        <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <section className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {money.map((t) => (
             <Card key={t.label}>
               <div className="p-5">

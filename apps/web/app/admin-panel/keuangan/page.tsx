@@ -11,6 +11,11 @@ type Overview = {
     gmv24hIdr: number;
     orders24h: number;
     escrowIdr: number;
+    omsetMonthIdr: number;
+    omsetLifetimeIdr: number;
+    keuntungan24hIdr: number;
+    keuntunganMonthIdr: number;
+    keuntunganLifetimeIdr: number;
   };
 };
 
@@ -24,13 +29,34 @@ export default async function AdminKeuanganPage() {
         <div className="border-b border-rule pb-6">
           <h1 className="text-3xl font-bold text-fg">Keuangan</h1>
           <p className="mt-2 text-sm text-fg-muted">
-            GMV, escrow, dan reconciliation. Detail revenue per fee + payout antrean
-            akan tampil di sini setelah modul payout di-wire.
+            Omset (gross transaksi) + keuntungan platform (1% buyer fee + 5% seller fee).
+            Detail audit transaksi + antrian payout di link bawah.
           </p>
         </div>
 
+        {/* Omset = total transaksi pembeli yang sudah dibayar. */}
+        <div className="mt-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-fg-subtle">Omset (GMV)</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Tile label="Omset 24 jam"     value={k ? rp(k.gmv24hIdr) : "—"} />
+            <Tile label="Omset bulan ini"  value={k ? rp(k.omsetMonthIdr) : "—"} />
+            <Tile label="Omset all-time"   value={k ? rp(k.omsetLifetimeIdr) : "—"} accent="brand" />
+          </div>
+        </div>
+
+        {/* Keuntungan = revenue platform dari fee, hanya order yg sudah completed. */}
+        <div className="mt-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-fg-subtle">
+            Keuntungan platform <span className="ml-1 normal-case text-fg-subtle">(buyer 1% + seller 5%)</span>
+          </p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Tile label="Keuntungan 24 jam"     value={k ? rp(k.keuntungan24hIdr) : "—"} />
+            <Tile label="Keuntungan bulan ini"  value={k ? rp(k.keuntunganMonthIdr) : "—"} />
+            <Tile label="Keuntungan all-time"   value={k ? rp(k.keuntunganLifetimeIdr) : "—"} accent="emerald" />
+          </div>
+        </div>
+
         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Tile label="GMV 24 jam"      value={k ? rp(k.gmv24hIdr) : "—"} />
           <Tile label="Order 24 jam"    value={fmt(k?.orders24h)} />
           <Tile label="Dana di escrow"  value={k ? rp(k.escrowIdr) : "—"} />
         </div>
@@ -58,9 +84,14 @@ function rp(n: number) {
   return `Rp ${n.toLocaleString("id-ID")}`;
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
+function Tile({ label, value, accent }: { label: string; value: string; accent?: "brand" | "emerald" }) {
+  const tone = accent === "brand"
+    ? "border-brand-400/40 bg-brand-500/5"
+    : accent === "emerald"
+    ? "border-emerald-400/40 bg-emerald-500/5"
+    : "";
   return (
-    <Card>
+    <Card className={tone}>
       <div className="p-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">{label}</p>
         <p className="mt-3 text-3xl font-bold text-fg">{value}</p>

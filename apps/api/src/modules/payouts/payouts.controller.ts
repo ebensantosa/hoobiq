@@ -87,20 +87,26 @@ export class PayoutsController {
       throw new BadRequestException({ code: "invalid_bank", message: "Rekening tidak valid." });
     }
 
-    // Available balance = completed orders − sum of non-rejected payout
-    // requests. We subtract approved/paid AND pending so a seller can't
-    // double-spend by submitting multiple requests in parallel.
+    // Available balance = completed orders' SELLER NET (subtotal - sellerFee)
+    // − sum of non-rejected payout requests. Shipping/insurance/buyer fee
+    // never flow to the seller — they're passed to courier/platform.
+    // Subtract approved/paid AND pending so a seller can't double-spend by
+    // submitting multiple requests in parallel.
     const [completed, pendingOut] = await Promise.all([
-      this.prisma.order.aggregate({
-        _sum: { totalCents: true },
+      this.prisma.order.findMany({
         where: { sellerId: user.id, status: "completed" },
+        select: { priceCents: true, qty: true, sellerFeeCents: true },
       }),
       this.prisma.payoutRequest.aggregate({
         _sum: { amountCents: true },
         where: { userId: user.id, status: { in: ["pending", "approved", "paid"] } },
       }),
     ]);
-    const available = (completed._sum.totalCents ?? 0n) - (pendingOut._sum.amountCents ?? 0n);
+    const sellerEarned = completed.reduce(
+      (acc, o) => acc + (o.priceCents * BigInt(o.qty) - o.sellerFeeCents),
+      0n,
+    );
+    const available = sellerEarned - (pendingOut._sum.amountCents ?? 0n);
     if (amountCents > available) {
       throw new BadRequestException({ code: "insufficient", message: "Saldo tidak cukup." });
     }

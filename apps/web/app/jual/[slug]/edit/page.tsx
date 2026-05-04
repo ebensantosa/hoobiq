@@ -35,6 +35,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
 
   const existing: UploadFormExisting = {
     id: listing.id,
+    slug: listing.slug,
     title: listing.title,
     description: listing.description,
     priceIdr: listing.priceIdr,

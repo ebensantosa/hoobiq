@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button, Card, Input, Label, Textarea } from "@hoobiq/ui";
 import { ImageUpload } from "./image-upload";
 import { CourierPicker } from "./courier-picker";
@@ -31,6 +32,7 @@ const conditions: readonly Condition[] = [
 
 export type UploadFormExisting = {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   priceIdr: number;
@@ -520,6 +522,21 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
           <span className="text-sm text-fg">{showOnFeed ? "Tampilkan di feed profil" : "Sembunyikan dari feed profil (marketplace only)"}</span>
         </label>
       </Section>
+
+      {existing?.slug && (
+        <Section title="Salin produk" subtitle="Buat listing baru pakai spec yang sama. Judul, foto, deskripsi & kondisi mulai dari kosong — kategori, brand, dimensi, dll. otomatis ke-isi.">
+          <Link
+            href={`/upload?clone=${encodeURIComponent(existing.slug)}`}
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-rule bg-panel px-4 text-sm font-semibold text-fg transition-colors hover:border-brand-400/60 hover:text-brand-500"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Salin jadi listing baru
+          </Link>
+        </Section>
+      )}
 
       {submitErr && (
         <div role="alert" className="rounded-xl border border-flame-400/40 bg-flame-400/10 px-4 py-3 text-sm text-flame-600">

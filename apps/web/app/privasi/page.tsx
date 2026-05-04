@@ -6,8 +6,8 @@ export default function PrivasiPage() {
   return (
     <DocPage
       eyebrow="Kebijakan Privasi"
-      title="Data kamu, kendali kamu."
-      lead="Kami memperlakukan data pribadi kamu seperti barang koleksi langka — disimpan rapi, dikeluarkan hanya saat perlu, dan tidak pernah diperdagangkan. Kebijakan ini mengikuti UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP)."
+      title="Data kamu, tetap milik kamu."
+      lead="Kami memperlakukan data pribadi kamu dengan hati-hati. Hanya digunakan untuk menjalankan layanan Hoobiq, disimpan dengan aman, dan tidak pernah diperjualbelikan. Kebijakan ini mengikuti peraturan yang berlaku di Indonesia, termasuk UU Perlindungan Data Pribadi."
       updated="24 April 2026"
       sections={[
         {

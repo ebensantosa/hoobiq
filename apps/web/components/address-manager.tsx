@@ -279,13 +279,51 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /**
- * Lightweight pin picker — uses navigator.geolocation for GPS, allows
- * manual lat/lng entry, and renders an OpenStreetMap iframe preview
- * centered on the picked point. No JS map library required (keeps the
- * bundle small); for finer-grained drag/drop picking, "Pilih di peta"
- * opens openstreetmap.org in a new tab so the user can copy a precise
- * point back. Coordinates are validated to Indonesian bounds server-side.
+ * Interactive Leaflet map picker — click anywhere on the map to drop a
+ * pin, or drag the pin to fine-tune. GPS button centers + drops a pin
+ * at the device location. Leaflet itself is lazy-loaded from a public
+ * CDN (~150 KB JS + 14 KB CSS) only when the form is opened, so the
+ * cost stays off the cold-load path.
  */
+
+const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+
+let leafletPromise: Promise<unknown> | null = null;
+function loadLeaflet(): Promise<unknown> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  // @ts-expect-error - leaflet attaches L on window
+  if (window.L) return Promise.resolve(window.L);
+  if (leafletPromise) return leafletPromise;
+  leafletPromise = new Promise((resolve, reject) => {
+    if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = LEAFLET_CSS_URL;
+      document.head.appendChild(link);
+    }
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${LEAFLET_JS_URL}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => {
+        // @ts-expect-error - global
+        resolve(window.L);
+      });
+      existing.addEventListener("error", () => reject(new Error("Leaflet load failed")));
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = LEAFLET_JS_URL;
+    s.async = true;
+    s.onload = () => {
+      // @ts-expect-error - global
+      resolve(window.L);
+    };
+    s.onerror = () => reject(new Error("Leaflet load failed"));
+    document.head.appendChild(s);
+  });
+  return leafletPromise;
+}
+
 function MapPinPicker({
   lat, lng, onChange,
 }: {
@@ -293,12 +331,103 @@ function MapPinPicker({
   lng: number | null;
   onChange: (lat: number | null, lng: number | null) => void;
 }) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = React.useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markerRef = React.useRef<any>(null);
+  const onChangeRef = React.useRef(onChange);
+  React.useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const [ready, setReady] = React.useState(false);
+
+  // Init map once
+  React.useEffect(() => {
+    let cancelled = false;
+    loadLeaflet().then((L) => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Lx = L as any;
+      // Leaflet's default icon auto-detects path from <script src=>; with
+      // unpkg CDN that breaks. Point it at the matching CDN images dir.
+      Lx.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+      const initLat = lat ?? -6.2;
+      const initLng = lng ?? 106.816666;
+      const map = Lx.map(containerRef.current).setView([initLat, initLng], lat != null ? 16 : 11);
+      Lx.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap",
+      }).addTo(map);
+
+      function setPin(la: number, ln: number) {
+        if (markerRef.current) {
+          markerRef.current.setLatLng([la, ln]);
+        } else {
+          markerRef.current = Lx.marker([la, ln], { draggable: true }).addTo(map);
+          markerRef.current.on("dragend", () => {
+            const p = markerRef.current.getLatLng();
+            onChangeRef.current(round6(p.lat), round6(p.lng));
+          });
+        }
+      }
+
+      if (lat != null && lng != null) setPin(lat, lng);
+
+      map.on("click", (e: { latlng: { lat: number; lng: number } }) => {
+        setPin(e.latlng.lat, e.latlng.lng);
+        onChangeRef.current(round6(e.latlng.lat), round6(e.latlng.lng));
+      });
+
+      mapRef.current = map;
+      setReady(true);
+    }).catch(() => {
+      setErr("Gagal memuat peta. Coba refresh halaman.");
+    });
+    return () => {
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync external lat/lng changes back into the map (e.g., GPS button)
+  React.useEffect(() => {
+    if (!mapRef.current) return;
+    if (lat == null || lng == null) {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Lx = (window as any).L;
+    if (!Lx) return;
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+    } else {
+      markerRef.current = Lx.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+      markerRef.current.on("dragend", () => {
+        const p = markerRef.current.getLatLng();
+        onChangeRef.current(round6(p.lat), round6(p.lng));
+      });
+    }
+    mapRef.current.setView([lat, lng], 16);
+  }, [lat, lng]);
 
   function useGps() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setErr("Browser kamu nggak dukung GPS. Isi koordinat manual di bawah.");
+      setErr("Browser kamu nggak dukung GPS. Klik langsung di peta untuk drop pin.");
       return;
     }
     setBusy(true); setErr(null);
@@ -311,8 +440,8 @@ function MapPinPicker({
         setBusy(false);
         setErr(
           e.code === e.PERMISSION_DENIED
-            ? "Akses lokasi ditolak. Cek izin lokasi browser."
-            : "Gagal ambil lokasi. Coba lagi atau isi manual.",
+            ? "Akses lokasi ditolak. Klik langsung di peta untuk drop pin."
+            : "Gagal ambil lokasi. Klik langsung di peta untuk drop pin.",
         );
       },
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
@@ -325,32 +454,13 @@ function MapPinPicker({
   }
 
   const hasPin = lat != null && lng != null;
-  // OSM embed centered on the pin with a marker. ~0.005 deg = ~500m
-  // window — close enough to verify the pin without zoom controls.
-  const bbox = hasPin
-    ? `${lng - 0.005},${lat - 0.005},${lng + 0.005},${lat + 0.005}`
-    : null;
-  const embedSrc = hasPin
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
-    : null;
-  const pickUrl = hasPin
-    ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`
-    : `https://www.openstreetmap.org/`;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={useGps} disabled={busy}>
-          {busy ? "Mengambil…" : (hasPin ? "↻ Refresh GPS" : "📍 Pakai lokasi sekarang")}
+          {busy ? "Mengambil…" : "📍 Pakai lokasi sekarang"}
         </Button>
-        <a
-          href={pickUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-8 items-center rounded-md border border-rule px-3 text-xs font-semibold text-fg-muted hover:border-brand-400/60 hover:text-brand-500"
-        >
-          Pilih di peta ↗
-        </a>
         {hasPin && (
           <Button type="button" variant="ghost" size="sm" onClick={clear}>Hapus pin</Button>
         )}
@@ -358,41 +468,19 @@ function MapPinPicker({
 
       {err && <p role="alert" className="text-xs text-flame-600">{err}</p>}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Latitude">
-          <Input
-            type="number"
-            step="0.000001"
-            value={lat ?? ""}
-            onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value), lng)}
-            placeholder="-6.200000"
-          />
-        </Field>
-        <Field label="Longitude">
-          <Input
-            type="number"
-            step="0.000001"
-            value={lng ?? ""}
-            onChange={(e) => onChange(lat, e.target.value === "" ? null : Number(e.target.value))}
-            placeholder="106.816666"
-          />
-        </Field>
-      </div>
-
-      {hasPin && embedSrc && (
-        <div className="overflow-hidden rounded-xl border border-rule">
-          <iframe
-            title="Peta lokasi alamat"
-            src={embedSrc}
-            className="block h-64 w-full"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+      <div className="overflow-hidden rounded-xl border border-rule">
+        <div ref={containerRef} className="block h-64 w-full bg-panel-2" />
+        {!ready && (
+          <p className="bg-panel-2/40 px-3 py-1.5 text-[11px] text-fg-subtle">Memuat peta…</p>
+        )}
+        {ready && (
           <p className="bg-panel-2/40 px-3 py-1.5 text-[11px] text-fg-subtle">
-            Pin: {lat?.toFixed(6)}, {lng?.toFixed(6)}
+            {hasPin
+              ? <>Pin: {lat?.toFixed(6)}, {lng?.toFixed(6)} · klik atau geser pin untuk pindah</>
+              : <>Klik di peta untuk drop pin, atau pakai GPS.</>}
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

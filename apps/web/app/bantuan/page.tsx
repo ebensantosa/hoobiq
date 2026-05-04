@@ -10,53 +10,98 @@ type Section = { id: string; title: string; blurb: string; faqs: FAQ[] };
 const sections: Section[] = [
   {
     id: "akun",
-    title: "Akun & profil",
-    blurb: "Pertanyaan seputar daftar, login, verifikasi, dan pengaturan akun.",
+    title: "Akun & Keamanan",
+    blurb: "Pengelolaan akun, verifikasi, dan perlindungan data pengguna.",
     faqs: [
       {
-        q: "Apakah daftar Hoobiq berbayar?",
+        q: "Bagaimana cara membuat akun di Hoobiq?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Buka aplikasi atau website Hoobiq</li>
+            <li>Pilih daftar / sign up</li>
+            <li>Isi data yang diperlukan</li>
+            <li>Lengkapi profil dan minat</li>
+            <li>Setelah itu, kamu bisa langsung mulai menggunakan Hoobiq.</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana jika saya lupa password?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Pilih opsi "lupa password" di halaman login</li>
+            <li>Ikuti instruksi untuk reset password</li>
+            <li>Gunakan password baru untuk masuk kembali</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Apakah saya perlu verifikasi akun?",
         a: (
           <>
-            Tidak. Pendaftaran, pemasangan listing, dan post komunitas gratis
-            selamanya. Biaya hanya muncul saat transaksi terjadi (2% platform fee
-            dari pembeli) atau saat kamu memilih fitur opsional seperti boost
-            listing.
+            Untuk menggunakan fitur tertentu, kamu mungkin diminta melakukan
+            verifikasi.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Verifikasi dapat berupa nomor telepon atau identitas (KTP)</li>
+              <li>Verifikasi membantu meningkatkan keamanan dan kepercayaan dalam transaksi</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Saya lupa password, bagaimana?",
+        q: "Apakah saya boleh memiliki lebih dari satu akun?",
         a: (
           <>
-            Di halaman login, klik "Lupa password?". Kami kirim tautan reset ke
-            email kamu yang masa berlakunya 30 menit. Kalau email tidak masuk,
-            cek folder spam atau kontak{" "}
-            <a className="text-brand-400" href="mailto:bantuan@hoobiq.com">
-              bantuan@hoobiq.com
-            </a>
-            .
+            Pengguna dapat memiliki lebih dari satu akun, namun:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Setiap pengguna hanya diperbolehkan memiliki 1 akun yang terverifikasi identitas</li>
+              <li>Penggunaan beberapa akun tidak boleh untuk tujuan penyalahgunaan sistem</li>
+            </ul>
+            <p className="mt-2">
+              Hoobiq berhak meninjau dan mengambil tindakan terhadap akun yang
+              melanggar ketentuan.
+            </p>
           </>
         ),
       },
       {
-        q: "Kapan saya perlu verifikasi seller?",
+        q: "Bagaimana cara menjaga keamanan akun?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Gunakan password yang kuat dan tidak dibagikan ke orang lain</li>
+            <li>Jangan membagikan kode verifikasi kepada siapa pun</li>
+            <li>Hindari login di perangkat yang tidak aman</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Apa yang harus dilakukan jika akun saya bermasalah?",
         a: (
           <>
-            Verifikasi KTP + selfie diminta otomatis saat kamu pertama kali
-            memasang listing di atas Rp 2.000.000, atau saat menerima payout
-            kumulatif lebih dari Rp 10.000.000 dalam 30 hari. Proses verifikasi
-            biasanya selesai dalam 1×24 jam.
+            Jika kamu mengalami kendala seperti akun tidak bisa diakses atau
+            aktivitas mencurigakan:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Segera ubah password akun</li>
+              <li>
+                Hubungi tim Hoobiq melalui{" "}
+                <a className="text-brand-400" href="mailto:hello.hoobiq@gmail.com">
+                  hello.hoobiq@gmail.com
+                </a>
+              </li>
+              <li>Sertakan informasi yang diperlukan untuk proses verifikasi</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Bisa punya dua akun?",
+        q: "Apakah data pribadi saya aman?",
         a: (
           <>
-            Tidak. Kami membatasi satu individu satu akun untuk menjaga integritas
-            rating dan Trust Score. Akun ganda yang terdeteksi akan dinonaktifkan.
-            Kalau kamu ingin memisahkan aktivitas jual dan beli, semua itu bisa
-            dilakukan di satu akun.
+            Hoobiq berkomitmen menjaga keamanan data pengguna.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Data disimpan dan diproses dengan standar keamanan yang wajar</li>
+              <li>Akses data dibatasi hanya untuk kebutuhan layanan</li>
+            </ul>
           </>
         ),
       },
@@ -65,53 +110,175 @@ const sections: Section[] = [
   {
     id: "jual",
     title: "Menjual",
-    blurb: "Cara memasang listing, boost, dan menerima pembayaran.",
+    blurb: "Cara memasang listing, mengelola pesanan, dan menerima pembayaran.",
     faqs: [
       {
         q: "Bagaimana cara memasang listing?",
         a: (
           <>
-            Klik tombol "Post" di pojok kanan atas, pilih "Listing baru". Isi
-            foto (maks 8, yang pertama jadi cover), pilih kategori sampai level
-            sub-seri, atur harga dan kondisi, lalu publish. Listing muncul di
-            marketplace dalam 2 menit setelah review otomatis.
+            Untuk mulai menjual di Hoobiq:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Buka menu jual / tambah produk</li>
+              <li>Upload foto produk (disarankan foto asli dan jelas)</li>
+              <li>Isi nama produk, deskripsi, harga, berat, kondisi, dan stok</li>
+              <li>Pilih kategori yang sesuai</li>
+              <li>Tentukan apakah produk ready stock atau pre-order</li>
+              <li>Publish listing</li>
+            </ul>
+            <p className="mt-2">
+              Produk kamu akan langsung tampil di marketplace setelah dipublikasikan.
+            </p>
           </>
         ),
       },
       {
-        q: "Apa itu Boost dan perlu nggak?",
+        q: "Apakah ada potongan dari hasil penjualan?",
         a: (
           <>
-            Boost menempatkan listing kamu di 4 slot teratas marketplace dan top
-            feed kategori selama 7 hari dengan biaya Rp 15.000. Rata-rata view
-            naik 6.2× dibanding listing non-boost. Boost tidak menjamin
-            penjualan — listing dengan foto buruk tetap akan diabaikan meski
-            di-boost.
+            Ya. Hoobiq mengenakan biaya layanan sebesar <b>5% dari nilai transaksi</b>{" "}
+            kepada penjual.
+            <p className="mt-2">
+              Biaya ini digunakan untuk mendukung operasional platform, termasuk
+              penyediaan sistem transaksi yang aman (escrow), pengembangan fitur,
+              serta membantu mempertemukan penjual dengan lebih banyak pembeli.
+            </p>
+            <p className="mt-2">
+              Potongan akan langsung diperhitungkan secara otomatis sebelum dana
+              diterima oleh penjual.
+            </p>
           </>
         ),
       },
       {
-        q: "Kapan dana saya cair ke rekening?",
+        q: "Apa itu Boost dan perlu digunakan?",
         a: (
           <>
-            Dana cair ke saldo Hoobiq Pay kamu 3 hari kerja setelah pembeli
-            konfirmasi barang diterima (atau auto-release 7 hari setelah status
-            <em> delivered</em> dari kurir). Dari saldo, kamu bisa withdraw ke
-            rekening bank terverifikasi — tiba dalam 1×24 jam hari kerja.
+            Boost adalah fitur berbayar yang membantu meningkatkan visibilitas
+            produk kamu di Hoobiq.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Produk yang di-boost akan lebih sering muncul di pencarian atau feed</li>
+              <li>Membantu menjangkau lebih banyak pembeli dalam waktu lebih cepat</li>
+              <li>Cocok digunakan untuk produk yang ingin cepat terjual atau meningkatkan exposure</li>
+            </ul>
+            <p className="mt-2">
+              Biaya boost bervariasi tergantung pilihan paket atau durasi yang
+              dipilih, dan akan ditampilkan sebelum kamu mengaktifkannya.
+            </p>
+            <p className="mt-2">
+              Penggunaan boost bersifat opsional dan tidak mempengaruhi proses
+              transaksi atau keamanan penjualan.
+            </p>
           </>
         ),
       },
       {
-        q: "Apa saja yang tidak boleh dijual?",
+        q: "Kapan dana dari penjualan masuk ke saya?",
         a: (
           <>
-            Barang bajakan, bootleg tanpa label jelas, barang curian, benda
-            terlarang (narkotika, senjata, satwa dilindungi), dan akun digital
-            yang dilarang di ToS platform asalnya. Daftar lengkap ada di{" "}
-            <Link href="/ketentuan#listing" className="text-brand-400">
-              Ketentuan Layanan bagian 2
-            </Link>
-            .
+            Hoobiq menggunakan sistem escrow untuk menjaga keamanan transaksi.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Dana akan ditahan sementara setelah pembeli melakukan pembayaran</li>
+              <li>Dana akan diteruskan setelah pembeli mengonfirmasi pesanan diterima</li>
+              <li>Jika tidak ada konfirmasi, dana otomatis diteruskan dalam 3 hari setelah barang sampai</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apa yang harus dilakukan setelah ada pesanan masuk?",
+        a: (
+          <>
+            Jika kamu menerima pesanan:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Segera siapkan dan kemas barang dengan aman</li>
+              <li>Kirim barang melalui kurir yang dipilih pembeli</li>
+              <li>Input nomor resi di sistem</li>
+            </ul>
+            <p className="mt-2">
+              Pesanan akan berubah menjadi status "dikirim (SHIPPED)" setelah resi
+              diinput.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Berapa lama waktu untuk mengirim barang?",
+        a: (
+          <>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Untuk produk ready stock: maksimal 7×24 jam setelah pembayaran dikonfirmasi</li>
+              <li>Untuk produk pre-order: mengikuti estimasi waktu yang kamu tentukan di listing</li>
+            </ul>
+            <p className="mt-2">
+              Pastikan estimasi yang diberikan realistis untuk menghindari pembatalan.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Apa itu produk pre-order (PO)?",
+        a: (
+          <>
+            Pre-order adalah produk yang tidak langsung tersedia dan membutuhkan
+            waktu sebelum dikirim.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Penjual menentukan estimasi pengiriman (2–30 hari)</li>
+              <li>Terdapat tambahan waktu maksimal untuk proses pengiriman</li>
+              <li>Pembeli tidak dapat membatalkan pesanan sebelum melewati estimasi tersebut</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apa saja yang tidak boleh dijual di Hoobiq?",
+        a: (
+          <>
+            Beberapa contoh barang yang dilarang:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Barang bajakan atau tidak original tanpa keterangan jelas</li>
+              <li>Barang ilegal atau melanggar hukum</li>
+              <li>Barang hasil curian atau sengketa</li>
+              <li>Klaim autentikasi palsu</li>
+            </ul>
+            <p className="mt-2">
+              Listing yang melanggar dapat dihapus dan akun dapat dikenakan sanksi.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana jika pembeli ingin membatalkan pesanan?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Pembeli hanya dapat mengajukan pembatalan sebelum barang dikirim</li>
+            <li>Kamu dapat menyetujui atau menolak permintaan tersebut</li>
+            <li>Jika tidak merespons dalam 24 jam, pesanan akan otomatis dibatalkan</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana jika terjadi retur atau dispute?",
+        a: (
+          <>
+            Jika ada masalah:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Diskusikan terlebih dahulu dengan pembeli melalui chat</li>
+              <li>Jika tidak ada kesepakatan, kasus dapat diajukan ke sistem dispute</li>
+              <li>Hoobiq akan meninjau dan memberikan keputusan akhir</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apakah saya bertanggung jawab atas kerusakan saat pengiriman?",
+        a: (
+          <>
+            Ya, jika kerusakan disebabkan oleh pengemasan yang tidak memadai.
+            <p className="mt-2">Pastikan:</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Barang dikemas dengan aman sesuai jenis produk</li>
+              <li>Menggunakan pelindung tambahan untuk barang fragile</li>
+            </ul>
           </>
         ),
       },
@@ -120,53 +287,150 @@ const sections: Section[] = [
   {
     id: "beli",
     title: "Membeli",
-    blurb: "Keamanan transaksi, Hoobiq Pay, dan menyelesaikan pembelian.",
+    blurb: "Cara memilih produk, melakukan pembayaran, dan menerima pesanan.",
     faqs: [
       {
-        q: "Kenapa harus bayar lewat Hoobiq Pay, nggak bisa transfer langsung?",
+        q: "Bagaimana cara membeli barang di Hoobiq?",
         a: (
           <>
-            Hoobiq Pay melindungi pembayaran kamu sampai barang diterima
-            dengan kondisi sesuai deskripsi. Transfer langsung ke seller tidak
-            kami dukung dan kamu kehilangan semua perlindungan kalau terjadi
-            masalah. Seller yang memaksa transfer langsung bisa dilaporkan ke{" "}
-            <a className="text-brand-400" href="mailto:trust@hoobiq.com">
-              trust@hoobiq.com
-            </a>
-            .
+            Untuk membeli produk di Hoobiq:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Pilih produk yang kamu inginkan</li>
+              <li>(Opsional) Hubungi penjual melalui chat untuk bertanya</li>
+              <li>Klik beli / checkout</li>
+              <li>Isi alamat pengiriman (jika belum ada)</li>
+              <li>Pilih metode pengiriman dan lihat ongkir</li>
+              <li>Lakukan pembayaran</li>
+            </ul>
+            <p className="mt-2">
+              Setelah pembayaran berhasil, pesanan akan diproses oleh penjual.
+            </p>
           </>
         ),
       },
       {
-        q: "Metode pembayaran apa yang didukung?",
+        q: "Metode pembayaran apa saja yang tersedia?",
         a: (
           <>
-            BCA VA, Mandiri VA, BNI VA, BRI VA, GoPay, OVO, ShopeePay, DANA,
-            LinkAja, QRIS, dan kartu kredit Visa/Mastercard/JCB. Semua diproses
-            melalui Midtrans.
+            Hoobiq menyediakan berbagai metode pembayaran melalui sistem payment
+            gateway.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>
+                Metode pembayaran akan ditampilkan saat checkout: BCA VA, Mandiri
+                VA, BNI VA, BRI VA, GoPay, OVO, ShopeePay, DANA, LinkAja, QRIS, dan
+                kartu kredit Visa/Mastercard/JCB. Semua diproses melalui Midtrans.
+              </li>
+              <li>Pilih metode yang paling sesuai sebelum menyelesaikan pembayaran</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Berapa lama waktu pengiriman?",
+        q: "Apakah pembayaran di Hoobiq aman?",
         a: (
           <>
-            Bergantung kurir yang kamu pilih di checkout:
-            JNE REG (2–3 hari), J&amp;T Express (1–2 hari), SiCepat (1–3 hari),
-            GoSend Same Day (hari yang sama, khusus Jabodetabek). Seller wajib
-            kirim dalam 2×24 jam hari kerja — kalau tidak, kamu bisa cancel dan
-            dana kembali otomatis.
+            Ya. Hoobiq menggunakan sistem escrow untuk melindungi transaksi.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Dana akan ditahan sementara setelah pembayaran</li>
+              <li>Dana tidak langsung diterima penjual</li>
+              <li>Dana hanya akan diteruskan setelah pesanan diterima</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Bagaimana cara nego harga?",
+        q: "Apakah ada biaya layanan di Hoobiq?",
         a: (
           <>
-            Di halaman listing, klik "Pesan seller". Di thread Pesan akan muncul opsi
-            "Kirim penawaran" — masukkan harga yang kamu ajukan. Seller bisa
-            terima, counter, atau tolak. Penawaran yang diterima otomatis jadi
-            link checkout aktif selama 24 jam.
+            Hoobiq mengenakan biaya layanan sebesar <b>1% dari nilai transaksi</b>{" "}
+            kepada pembeli.
+            <p className="mt-2">
+              Biaya ini digunakan untuk mendukung operasional platform, termasuk
+              pengembangan fitur, sistem keamanan, dan layanan pengguna. Biaya
+              layanan akan ditampilkan secara transparan saat proses checkout.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana cara melacak pesanan saya?",
+        a: (
+          <>
+            Setelah penjual mengirim barang:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Penjual akan menginput nomor resi</li>
+              <li>Kamu dapat melihat status pengiriman di halaman pesanan</li>
+              <li>Gunakan nomor resi untuk melacak paket melalui kurir</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Kapan saya harus mengonfirmasi pesanan diterima?",
+        a: (
+          <>
+            Setelah barang sampai:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Periksa kondisi barang terlebih dahulu</li>
+              <li>Jika sudah sesuai, klik "pesanan diterima"</li>
+            </ul>
+            <p className="mt-2">
+              Jika tidak dikonfirmasi, sistem akan otomatis menyelesaikan pesanan
+              dalam 3 hari setelah status pengiriman selesai.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana jika barang tidak dikirim oleh penjual?",
+        a: (
+          <>
+            Jika penjual tidak mengirim barang:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Sistem akan membatalkan pesanan secara otomatis setelah batas waktu tertentu</li>
+              <li>Dana akan dikembalikan kepada kamu</li>
+            </ul>
+            <p className="mt-2">
+              Kamu juga dapat mengajukan pembatalan selama pesanan belum berstatus
+              dikirim.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana jika barang rusak atau tidak sesuai?",
+        a: (
+          <>
+            Jika barang yang diterima tidak sesuai atau rusak:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Dokumentasikan kondisi barang (foto/video, disarankan saat unboxing)</li>
+              <li>Hubungi penjual melalui chat</li>
+              <li>Jika tidak ada kesepakatan, ajukan dispute melalui sistem</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana cara mengajukan pembatalan pesanan?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Pembatalan hanya dapat diajukan sebelum barang dikirim</li>
+            <li>Penjual dapat menyetujui atau menolak pembatalan</li>
+            <li>Jika penjual tidak merespons dalam 24 jam, pesanan akan otomatis dibatalkan</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana sistem pre-order (PO)?",
+        a: (
+          <>
+            Produk pre-order memiliki waktu pengiriman yang lebih lama dibanding
+            ready stock.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Estimasi pengiriman ditentukan oleh penjual</li>
+              <li>Selama masih dalam estimasi, pesanan tidak dapat dibatalkan</li>
+              <li>Pembatalan dapat diajukan setelah melewati estimasi waktu</li>
+            </ul>
           </>
         ),
       },
@@ -175,36 +439,99 @@ const sections: Section[] = [
   {
     id: "pengiriman",
     title: "Pengiriman",
-    blurb: "Kurir, packaging, asuransi, dan tracking.",
+    blurb: "Informasi tentang proses pengiriman, kurir, dan pelacakan pesanan.",
     faqs: [
       {
-        q: "Siapa yang bayar ongkir?",
+        q: "Kurir apa saja yang tersedia di Hoobiq?",
         a: (
           <>
-            Secara default ongkir ditanggung pembeli, dihitung otomatis saat
-            checkout berdasarkan berat barang dan alamat. Beberapa seller
-            menawarkan promo "ongkir ditanggung" untuk listing tertentu.
+            Hoobiq menyediakan berbagai pilihan kurir yang dapat dipilih saat
+            checkout.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Pilihan kurir akan muncul berdasarkan layanan yang tersedia</li>
+              <li>Ongkir akan dihitung otomatis sesuai alamat dan berat barang</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Barang saya rusak saat sampai, gimana?",
+        q: "Bagaimana cara cek ongkir?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Ongkir akan otomatis dihitung saat kamu mengisi alamat pengiriman</li>
+            <li>Biaya pengiriman tergantung lokasi, berat barang, dan kurir yang dipilih</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Berapa lama waktu pengiriman?",
         a: (
           <>
-            Jangan buka paket sebelum direkam. Rekam video unboxing utuh (dari
-            memegang paket dari kurir sampai barang keluar), lalu buka dispute
-            di halaman transaksi setelah status <em>delivered</em>.
-            Dana tidak akan cair ke seller selama dispute aktif.
+            Waktu pengiriman terdiri dari dua bagian:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Waktu proses dari penjual (maksimal 7×24 jam untuk ready stock)</li>
+              <li>Waktu pengiriman oleh kurir</li>
+            </ul>
+            <p className="mt-2">
+              Untuk produk pre-order, waktu pengiriman mengikuti estimasi yang
+              ditentukan penjual.
+            </p>
           </>
         ),
       },
       {
-        q: "Bisa nggak pakai kurir lain selain yang tersedia?",
+        q: "Bagaimana cara melacak pesanan?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Setelah barang dikirim, penjual akan menginput nomor resi</li>
+            <li>Kamu dapat melihat status pengiriman di halaman pesanan</li>
+            <li>Gunakan nomor resi untuk melacak paket melalui kurir</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Apa yang harus dilakukan jika barang belum dikirim?",
         a: (
           <>
-            Belum. Integrasi kurir kami lewat Komerce, dan untuk sekarang cuma
-            JNE/J&amp;T/SiCepat/GoSend yang resmi didukung. Pengiriman via kurir
-            di luar itu tidak di-cover Hoobiq Pay.
+            Jika pesanan belum dikirim:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Kamu dapat menghubungi penjual melalui chat</li>
+              <li>Kamu dapat mengajukan pembatalan selama status belum "dikirim (SHIPPED)"</li>
+              <li>Sistem akan membatalkan pesanan secara otomatis jika melebihi batas waktu pengiriman yaitu 7 × 24 jam sejak pesanan diterima</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apa yang harus dilakukan jika barang belum sampai?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Cek status pengiriman menggunakan nomor resi</li>
+            <li>Hubungi pihak kurir untuk informasi lebih lanjut</li>
+            <li>Jika terjadi kendala, kamu dapat menghubungi penjual</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana jika barang rusak saat pengiriman?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Dokumentasikan kondisi paket dan barang (disarankan saat unboxing)</li>
+            <li>Hubungi penjual melalui chat</li>
+            <li>Ajukan retur atau dispute jika diperlukan</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Apakah pengiriman diasuransikan?",
+        a: (
+          <>
+            Untuk transaksi tertentu, kamu dapat menggunakan asuransi pengiriman
+            yang disediakan oleh kurir.
+            <p className="mt-2">Tanpa asuransi:</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Penanganan kehilangan atau kerusakan mengikuti kebijakan pihak kurir</li>
+            </ul>
           </>
         ),
       },
@@ -212,38 +539,124 @@ const sections: Section[] = [
   },
   {
     id: "dispute",
-    title: "Dispute & refund",
-    blurb: "Kalau ada masalah di transaksi kamu.",
+    title: "Dispute & Refund",
+    blurb: "Cara menyelesaikan masalah transaksi, retur, dan pengembalian dana.",
     faqs: [
       {
-        q: "Barang tidak sesuai deskripsi, apa yang harus saya lakukan?",
+        q: "Kapan saya bisa mengajukan dispute?",
         a: (
           <>
-            Buka halaman transaksi, lalu klik "Ajukan dispute". Isi alasan, upload
-            foto/video bukti, dan kirim. Seller dapat 48 jam untuk merespons.
-            Kalau tidak ada respons, tim Trust &amp; Safety otomatis mereview
-            kasus. Keputusan biasanya keluar dalam 5 hari kerja.
+            Kamu dapat mengajukan dispute jika:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Barang tidak sesuai dengan deskripsi</li>
+              <li>Barang rusak saat diterima</li>
+              <li>Barang tidak lengkap atau berbeda dari pesanan</li>
+            </ul>
+            <p className="mt-2">
+              Dispute sebaiknya diajukan setelah barang diterima dan sebelum pesanan
+              diselesaikan.
+            </p>
           </>
         ),
       },
       {
-        q: "Berapa lama refund masuk ke rekening?",
+        q: "Bagaimana cara mengajukan dispute?",
         a: (
           <>
-            Refund penuh ke sumber pembayaran memakan 3–14 hari kerja tergantung
-            metode (VA paling cepat, kartu kredit paling lama). Refund ke saldo
-            Hoobiq Pay instan.
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Buka halaman pesanan terkait</li>
+              <li>Pilih opsi ajukan dispute</li>
+              <li>Sertakan bukti berupa foto atau video</li>
+              <li>Jelaskan masalah yang terjadi</li>
+            </ul>
+            <p className="mt-2">
+              Setelah itu, kamu dapat berdiskusi dengan penjual melalui chat.
+            </p>
           </>
         ),
       },
       {
-        q: "Saya seller dan merasa dispute tidak adil — bisa banding?",
+        q: "Apa yang terjadi setelah dispute diajukan?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Pembeli dan penjual dapat berdiskusi untuk mencapai kesepakatan</li>
+            <li>Jika tidak ada kesepakatan, kasus akan ditinjau oleh Hoobiq</li>
+            <li>Dana akan tetap ditahan selama proses berlangsung</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bukti apa yang perlu disiapkan?",
         a: (
           <>
-            Bisa. Klik "Banding keputusan" di halaman dispute dalam 7 hari
-            setelah keputusan final. Kasus akan ditinjau oleh admin senior yang
-            berbeda. Untuk transaksi di atas Rp 5 juta, kamu juga bisa lanjut ke
-            mediasi via BPSK.
+            Untuk mempercepat proses:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Foto atau video kondisi barang</li>
+              <li>Video unboxing (sangat disarankan)</li>
+              <li>Bukti komunikasi dengan penjual (jika ada)</li>
+            </ul>
+            <p className="mt-2">Semakin lengkap bukti, semakin cepat proses penyelesaian.</p>
+          </>
+        ),
+      },
+      {
+        q: "Apa saja kemungkinan hasil dari dispute?",
+        a: (
+          <>
+            Berdasarkan hasil peninjauan:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Barang dikembalikan ke penjual dan dana dikembalikan ke pembeli</li>
+              <li>Barang tidak perlu dikembalikan dan dana dikembalikan ke pembeli</li>
+              <li>Dana tetap diteruskan ke penjual</li>
+            </ul>
+            <p className="mt-2">Keputusan Hoobiq bersifat final.</p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana cara mengajukan retur (pengembalian barang)?",
+        a: (
+          <>
+            Jika disepakati untuk retur:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Ajukan retur melalui sistem</li>
+              <li>Tunggu persetujuan dari penjual</li>
+            </ul>
+            <p className="mt-2">Setelah disetujui:</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Kirim barang kembali maksimal 5 hari</li>
+              <li>Input nomor resi pengembalian</li>
+              <li>Penjual akan mengonfirmasi setelah barang diterima</li>
+            </ul>
+            <p className="mt-2">
+              Jika penjual tidak merespons dalam 48 jam, retur dapat dilanjutkan
+              secara otomatis.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Kapan dana refund dikembalikan?",
+        a: (
+          <>
+            Refund akan diproses setelah:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Retur selesai dan dikonfirmasi</li>
+              <li>Atau keputusan dispute menyatakan refund dilakukan</li>
+            </ul>
+            <p className="mt-2">
+              Dana akan dikembalikan melalui metode pembayaran atau saldo sesuai
+              kebijakan yang berlaku.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Apakah saya bisa membatalkan retur?",
+        a: (
+          <>
+            Ya, selama proses retur belum selesai dan kedua pihak sepakat, retur
+            dapat dibatalkan dan transaksi dilanjutkan.
           </>
         ),
       },
@@ -251,39 +664,248 @@ const sections: Section[] = [
   },
   {
     id: "reputasi",
-    title: "Reputasi, EXP & badge",
-    blurb: "Cara kerja level, Trust Score, dan display case.",
+    title: "Reputasi, Level, Badge & Membership",
+    blurb: "Sistem level, EXP, badge, dan keuntungan yang bisa kamu dapatkan di Hoobiq.",
     faqs: [
       {
-        q: "Bagaimana EXP dihitung?",
+        q: "Apa itu sistem level di Hoobiq?",
         a: (
           <>
-            +25 EXP per listing baru, +50 EXP per trade selesai dengan rating ≥
-            4, +5 EXP per post feed, +10 EXP per kontribusi kategori yang
-            disetujui admin. EXP tidak bisa dibeli dengan uang.
+            Hoobiq memiliki sistem level yang mencerminkan aktivitas dan reputasi
+            pengguna di platform.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Level akan meningkat seiring bertambahnya EXP (experience)</li>
+              <li>Semakin tinggi level, semakin banyak benefit yang bisa kamu dapatkan</li>
+              <li>Level juga membantu meningkatkan kepercayaan antar pengguna</li>
+            </ul>
           </>
         ),
       },
       {
-        q: "Apa itu Trust Score?",
+        q: "Bagaimana cara mendapatkan EXP?",
         a: (
           <>
-            Angka 0–5 yang merangkum rating, tingkat dispute, response time, dan
-            usia akun. Trust Score yang di bawah 3.5 akan mendapat batasan
-            otomatis (misal: listing di atas Rp 1 juta butuh verifikasi
-            tambahan).
+            EXP (experience) diperoleh dari aktivitas di Hoobiq, seperti:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Melakukan transaksi (membeli atau menjual)</li>
+              <li>Menyelesaikan pesanan dengan baik</li>
+              <li>Memberikan rating dan review</li>
+              <li>Aktivitas lain yang berkontribusi pada ekosistem platform</li>
+            </ul>
+            <p className="mt-2">
+              Semakin aktif kamu menggunakan Hoobiq, semakin cepat EXP kamu
+              bertambah.
+            </p>
           </>
         ),
       },
       {
-        q: "Apakah badge bisa hilang?",
+        q: "Apa itu badge dan fungsinya?",
         a: (
           <>
-            Badge biasa permanen. Tapi badge "Trusted Seller" dan "Elite
-            Collector" di-review ulang tiap 90 hari — kalau kriterianya sudah
-            tidak terpenuhi (misal: rating turun di bawah 4.7), badge dilepas
-            otomatis sampai kamu memenuhi lagi.
+            Badge adalah penanda pencapaian yang diberikan berdasarkan aktivitas
+            tertentu di Hoobiq.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Badge mencerminkan pengalaman dan kepercayaan pengguna</li>
+              <li>Dapat diperoleh dari milestone tertentu (misalnya jumlah transaksi)</li>
+              <li>Ditampilkan di profil untuk meningkatkan kredibilitas</li>
+            </ul>
+            <p className="mt-2">
+              Badge tidak mempengaruhi sistem transaksi secara langsung, tetapi
+              dapat meningkatkan kepercayaan pengguna lain.
+            </p>
           </>
+        ),
+      },
+      {
+        q: "Apakah level dan badge mempengaruhi penjualan?",
+        a: (
+          <>
+            Secara langsung tidak, namun:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Level dan badge dapat meningkatkan kepercayaan pembeli</li>
+              <li>Profil dengan reputasi baik cenderung lebih dipilih</li>
+              <li>Membantu membangun kredibilitas di marketplace</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apa itu membership di Hoobiq?",
+        a: (
+          <>
+            Hoobiq menyediakan sistem membership untuk memberikan keuntungan
+            tambahan kepada pengguna. Terdapat dua jenis:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Basic (default)</li>
+              <li>Premium (berbayar)</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Apa perbedaan Basic dan Premium?",
+        a: (
+          <>
+            Pengguna Premium mendapatkan benefit tambahan dibanding Basic, seperti:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Keuntungan eksklusif dalam penggunaan fitur</li>
+              <li>Potensi peningkatan visibilitas</li>
+              <li>Akses ke fitur atau benefit tertentu</li>
+            </ul>
+            <p className="mt-2">
+              Detail benefit dapat berkembang seiring dengan pengembangan platform.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Apakah membership Premium wajib?",
+        a: (
+          <>
+            Tidak.
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Semua pengguna dapat menggunakan Hoobiq tanpa Premium</li>
+              <li>Premium bersifat opsional untuk mendapatkan keuntungan tambahan</li>
+            </ul>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana cara upgrade ke Premium?",
+        a: (
+          <>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Buka halaman membership di Hoobiq</li>
+              <li>Pilih paket Premium yang tersedia</li>
+              <li>Lakukan pembayaran sesuai metode yang disediakan</li>
+            </ul>
+            <p className="mt-2">
+              Setelah pembayaran berhasil, benefit Premium akan langsung aktif.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Apakah EXP, level, atau badge bisa hilang?",
+        a: (
+          <>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>EXP dan level bersifat progresif dan tidak berkurang</li>
+              <li>Badge tetap tersimpan selama akun aktif</li>
+            </ul>
+            <p className="mt-2">
+              Namun, dalam kondisi tertentu (seperti pelanggaran), Hoobiq dapat
+              mengambil tindakan terhadap akun.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Apakah sistem ini mempengaruhi keamanan transaksi?",
+        a: (
+          <>
+            Tidak secara langsung. Keamanan transaksi tetap dijaga melalui sistem
+            escrow. Namun, sistem reputasi membantu pengguna dalam menilai
+            kepercayaan satu sama lain.
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    id: "pembayaran",
+    title: "Pembayaran & Dana",
+    blurb: "Informasi tentang pembayaran, saldo, dan pencairan dana di Hoobiq.",
+    faqs: [
+      {
+        q: "Bagaimana cara melakukan pembayaran?",
+        a: (
+          <>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Pilih produk dan lanjut ke checkout</li>
+              <li>Pilih metode pembayaran yang tersedia</li>
+              <li>Selesaikan pembayaran sesuai instruksi</li>
+            </ul>
+            <p className="mt-2">
+              Setelah pembayaran berhasil, status pesanan akan berubah menjadi{" "}
+              <b>PAID</b> dan penjual akan mulai memproses pesanan.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: "Kapan dana diteruskan ke penjual?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Setelah pembeli mengonfirmasi pesanan diterima</li>
+            <li>Jika tidak dikonfirmasi, otomatis dalam 3 hari setelah barang sampai</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana jika pembayaran gagal?",
+        a: (
+          <>
+            Jika pembayaran tidak berhasil:
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Pastikan metode pembayaran yang dipilih benar</li>
+              <li>Coba ulangi proses pembayaran</li>
+              <li>Gunakan metode pembayaran lain jika diperlukan</li>
+            </ul>
+            <p className="mt-2">Jika masalah berlanjut, hubungi tim Hoobiq.</p>
+          </>
+        ),
+      },
+      {
+        q: "Bagaimana jika saya sudah bayar tapi status belum berubah?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Tunggu beberapa saat hingga sistem memperbarui status</li>
+            <li>Periksa kembali riwayat pembayaran</li>
+            <li>Jika belum berubah, hubungi tim Hoobiq dengan bukti pembayaran</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana cara menarik saldo (withdraw)?",
+        a: (
+          <>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Masuk ke halaman saldo / wallet</li>
+              <li>Pilih opsi tarik dana</li>
+              <li>Masukkan rekening tujuan</li>
+              <li>Konfirmasi penarikan</li>
+            </ul>
+            <p className="mt-2">Dana akan diproses sesuai waktu yang ditentukan.</p>
+          </>
+        ),
+      },
+      {
+        q: "Berapa lama proses penarikan dana?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Proses penarikan biasanya membutuhkan waktu tertentu sesuai sistem</li>
+            <li>Waktu dapat berbeda tergantung metode dan kondisi sistem</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Apakah ada biaya penarikan dana?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Biaya penarikan (jika ada) akan ditampilkan sebelum konfirmasi</li>
+            <li>Besaran biaya dapat berbeda tergantung metode yang digunakan</li>
+          </ul>
+        ),
+      },
+      {
+        q: "Bagaimana jika terjadi refund?",
+        a: (
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Dana akan dikembalikan setelah pembatalan atau dispute disetujui</li>
+            <li>Refund dapat masuk ke metode pembayaran atau saldo pengguna</li>
+          </ul>
         ),
       },
     ],
@@ -305,13 +927,13 @@ export default function BantuanPage() {
             </h1>
             <p className="mt-4 max-w-xl text-base text-fg-muted md:text-lg">
               Cari di bawah, atau kontak tim bantuan di{" "}
-              <a className="text-brand-400" href="mailto:bantuan@hoobiq.com">
-                bantuan@hoobiq.com
+              <a className="text-brand-400" href="mailto:hello.hoobiq@gmail.com">
+                hello.hoobiq@gmail.com
               </a>
-              . Rata-rata respon &lt; 6 jam di hari kerja.
+              .
             </p>
 
-            <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
               {sections.map((s) => (
                 <a
                   key={s.id}
@@ -356,33 +978,32 @@ export default function BantuanPage() {
           </div>
 
           <div className="mt-20 rounded-2xl border border-rule bg-panel p-8 md:p-12">
-            <h2 className="text-2xl font-bold text-fg">Masih belum ketemu jawabannya?</h2>
+            <h2 className="text-2xl font-bold text-fg">Masih belum menemukan jawaban?</h2>
             <p className="mt-2 text-fg-muted">
-              Tim kami membaca setiap email. Untuk kasus mendesak (penipuan,
-              akun di-hack, barang mahal rusak), tulis "URGENT" di subject.
+              Tim kami siap membantu. Hubungi kami melalui email di bawah, dan kami
+              akan merespons secepat mungkin. Untuk kasus mendesak (seperti
+              penipuan, akun bermasalah, atau kendala transaksi), kamu bisa
+              menuliskan <b>"URGENT"</b> di subject email.
             </p>
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <Contact label="Bantuan umum" email="bantuan@hoobiq.com" hint="Respons < 6 jam" />
-              <Contact label="Penipuan / keamanan" email="trust@hoobiq.com" hint="Respons < 1 jam" />
-              <Contact label="Privasi & data" email="privacy@hoobiq.com" hint="Respons < 24 jam" />
+            <div className="mt-6">
+              <a
+                href="mailto:hello.hoobiq@gmail.com"
+                className="inline-flex flex-col gap-1 rounded-xl border border-rule bg-canvas px-5 py-4 transition-colors hover:border-brand-400/50"
+              >
+                <span className="text-xs uppercase tracking-wider text-fg-subtle">Bantuan Hoobiq</span>
+                <span className="text-base font-semibold text-brand-400">hello.hoobiq@gmail.com</span>
+              </a>
             </div>
           </div>
+
+          <p className="mt-8 text-center text-xs text-fg-subtle">
+            <Link href="/ketentuan" className="text-brand-400 hover:underline">Ketentuan Layanan</Link>
+            {" · "}
+            <Link href="/privasi" className="text-brand-400 hover:underline">Kebijakan Privasi</Link>
+          </p>
         </div>
       </main>
       <MarketingFooter />
     </>
-  );
-}
-
-function Contact({ label, email, hint }: { label: string; email: string; hint: string }) {
-  return (
-    <a
-      href={`mailto:${email}`}
-      className="flex flex-col gap-1 rounded-xl border border-rule bg-canvas px-4 py-3 transition-colors hover:border-brand-400/50"
-    >
-      <span className="text-xs uppercase tracking-wider text-fg-subtle">{label}</span>
-      <span className="font-medium text-brand-400">{email}</span>
-      <span className="text-xs text-fg-muted">{hint}</span>
-    </a>
   );
 }

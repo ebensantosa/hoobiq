@@ -45,14 +45,14 @@ export function FeedComposer({
     setCaption("");
   }
 
-  async function ingest(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function ingest(files: FileList | File[] | null) {
+    if (!files || (files as { length: number }).length === 0) return;
     const slots = MAX_IMAGES - previews.length;
     if (slots <= 0) {
       toast.error("Slot foto penuh", `Maks ${MAX_IMAGES} foto per post.`);
       return;
     }
-    const arr = Array.from(files).slice(0, slots);
+    const arr = Array.from(files as ArrayLike<File>).slice(0, slots);
     const tooLarge: string[] = [];
     const wrongType: string[] = [];
     const ok: File[] = [];
@@ -153,7 +153,7 @@ export function FeedComposer({
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-1 border-t border-rule pt-3">
+          <div className="grid grid-cols-2 gap-2 border-t border-rule pt-3">
             <ComposerChip
               as="label"
               htmlFor={inputId}
@@ -168,31 +168,8 @@ export function FeedComposer({
               tone="brand"
             />
             <ComposerChip
-              as="button"
-              onClick={() => toast.error("Belum tersedia", "Upload video lagi disiapin — pakai foto dulu ya.")}
-              icon={
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7"/>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                </svg>
-              }
-              label="Video"
-              tone="flame"
-            />
-            <ComposerChip
               as="link"
-              href="/wishlist"
-              icon={
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
-                </svg>
-              }
-              label="Koleksi"
-              tone="amber"
-            />
-            <ComposerChip
-              as="link"
-              href="/upload"
+              href="/jual"
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
@@ -326,10 +303,13 @@ export function FeedComposer({
         className="sr-only"
         tabIndex={-1}
         onChange={(e) => {
-          const files = e.target.files;
-          // Clear so the same file can be re-selected after a remove.
+          // Materialize the FileList into a real array BEFORE clearing
+          // the input — clearing first invalidates the FileList in some
+          // browsers and FileReader.readAsDataURL ends up with empty
+          // results, hence the missing preview.
+          const arr: File[] = Array.from(e.target.files ?? []);
           e.target.value = "";
-          void ingest(files);
+          void ingest(arr);
         }}
       />
 

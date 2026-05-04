@@ -246,13 +246,29 @@ export class ListingsService {
     const listing = await this.prisma.listing.findFirst({
       where: { OR: [{ slug: slugOrId }, { id: slugOrId }] },
       include: {
-        seller: { select: { username: true, name: true, avatarUrl: true, city: true, trustScore: true, level: true, isPremium: true, premiumUntil: true } },
+        seller: {
+          select: {
+            username: true, name: true, avatarUrl: true, city: true,
+            trustScore: true, level: true, isPremium: true, premiumUntil: true,
+            // Primary address subdistrict drives the ongkir origin so
+            // sellers don't have to configure origin per listing.
+            addresses: {
+              where: { primary: true },
+              select: { subdistrictId: true },
+              take: 1,
+            },
+          },
+        },
         category: { select: { id: true, slug: true, name: true } },
       },
     });
     if (!listing || listing.deletedAt || !listing.isPublished) {
       throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
     }
+    // Override originSubdistrictId from seller's primary address (V2).
+    // Listing-level column is kept as a legacy fallback.
+    const sellerOriginId = listing.seller.addresses[0]?.subdistrictId ?? null;
+    if (sellerOriginId) listing.originSubdistrictId = sellerOriginId;
     // Aggregate review stats — single roundtrip; cheap because indexed on listingId.
     const ratingAgg = await this.prisma.listingReview.aggregate({
       where: { listingId: listing.id },

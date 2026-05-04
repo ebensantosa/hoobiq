@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { CheckoutForm } from "@/components/checkout-form";
 import { MultiCheckoutForm, type MultiCheckoutItem } from "@/components/multi-checkout-form";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
@@ -9,20 +8,6 @@ import type { CartItem } from "@/lib/api/cart";
 import type { ListingDetail } from "@hoobiq/types";
 
 export const dynamic = "force-dynamic";
-
-type Address = {
-  id: string;
-  label: string;
-  recipient: string;
-  phone: string;
-  line1: string;
-  line2: string | null;
-  city: string;
-  province: string;
-  postalCode: string;
-  subdistrictId: number | null;
-  primary: boolean;
-};
 
 export default async function CheckoutPage({
   searchParams,
@@ -129,22 +114,16 @@ export default async function CheckoutPage({
     return (
       <AppShell active="Marketplace">
         <div className="px-4 pb-12 sm:px-6 lg:px-10">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-flame-500">
-            Hoobiq Pay · Multi-item checkout
-          </span>
-          <h1 className="mt-2 text-3xl font-bold text-fg">
-            Selesaikan pembelian ({items.length} item).
-          </h1>
-          <p className="mt-2 text-sm text-fg-muted">
-            Pesanan dari beberapa seller akan dipecah menjadi beberapa transaksi.
-            Pembayaran kamu tetap aman lewat Hoobiq Pay sampai barang diterima.
-          </p>
+          <h1 className="text-2xl font-bold text-fg sm:text-3xl">Checkout</h1>
           <MultiCheckoutForm items={items} addresses={addresses} />
         </div>
       </AppShell>
     );
   }
 
+  // Single-item path now reuses the multi-checkout form so the layout
+  // and ongkir/insurance/fee computation stays identical regardless of
+  // item count. We just synthesize a one-item array out of the listing.
   const [listing, addressesRes] = await Promise.all([
     serverApi<ListingDetail>(`/listings/${encodeURIComponent(listingId!)}`),
     serverApi<{ items: RawAddress[] }>("/addresses"),
@@ -176,13 +155,12 @@ export default async function CheckoutPage({
     );
   }
 
-  const addresses: Address[] = (addressesRes?.items ?? []).map((a) => ({
+  const addresses = (addressesRes?.items ?? []).map((a) => ({
     id: a.id,
     label: a.label,
     recipient: a.name,
     phone: a.phone,
     line1: a.line,
-    line2: null,
     city: a.city,
     province: a.province,
     postalCode: a.postal,
@@ -190,29 +168,25 @@ export default async function CheckoutPage({
     primary: a.primary,
   }));
 
+  const items: MultiCheckoutItem[] = [{
+    cartItemId: `direct:${listing.id}`,
+    listingId: listing.id,
+    listingSlug: listing.slug,
+    title: listing.title,
+    cover: listing.cover,
+    priceIdr: listing.priceIdr,
+    qty,
+    weightGrams: listing.weightGrams,
+    couriers: listing.couriers ?? [],
+    originSubdistrictId: listing.originSubdistrictId ?? null,
+    seller: { id: "", username: listing.seller.username, name: listing.seller.name ?? null, city: listing.seller.city ?? null },
+  }];
+
   return (
     <AppShell active="Marketplace">
-      <div className="mx-auto max-w-[1100px] px-6 pb-8 lg:px-10">
+      <div className="px-4 pb-12 sm:px-6 lg:px-10">
         <h1 className="text-2xl font-bold text-fg sm:text-3xl">Checkout</h1>
-
-        <CheckoutForm
-          listing={{
-            id: listing.id,
-            title: listing.title,
-            slug: listing.slug,
-            priceIdr: listing.priceIdr,
-            condition: listing.condition,
-            cover: listing.cover,
-            stock: listing.stock,
-            category: listing.category,
-            seller: listing.seller,
-            weightGrams: listing.weightGrams,
-            couriers: listing.couriers ?? [],
-            originSubdistrictId: listing.originSubdistrictId ?? null,
-          }}
-          qty={qty}
-          addresses={addresses}
-        />
+        <MultiCheckoutForm items={items} addresses={addresses} />
       </div>
     </AppShell>
   );

@@ -73,9 +73,15 @@ export class CartController {
             seller: {
               select: {
                 username: true, name: true, city: true,
-                // sellerId surfaces so the form can group by user id
-                // without leaking other users' details.
                 id: true,
+                // Pull the seller's primary address so we can use its
+                // subdistrictId as the origin instead of the listing's
+                // own column. Listings no longer need per-item origin.
+                addresses: {
+                  where: { primary: true },
+                  select: { subdistrictId: true },
+                  take: 1,
+                },
               },
             },
           },
@@ -114,8 +120,16 @@ export class CartController {
           stock: r.listing.stock,
           weightGrams: r.listing.weightGrams,
           couriers,
-          originSubdistrictId: r.listing.originSubdistrictId,
-          seller: r.listing.seller,
+          // Origin = seller's primary address subdistrict. Falls back to
+          // the listing's old origin column for legacy rows.
+          originSubdistrictId:
+            r.listing.seller.addresses[0]?.subdistrictId ?? r.listing.originSubdistrictId,
+          seller: {
+            username: r.listing.seller.username,
+            name: r.listing.seller.name,
+            city: r.listing.seller.city,
+            id: r.listing.seller.id,
+          },
         },
       };
     });

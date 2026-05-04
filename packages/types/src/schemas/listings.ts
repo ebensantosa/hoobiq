@@ -98,6 +98,8 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
     avatarUrl: z.string().nullable().optional(),
     city: z.string().nullable(),
     trustScore: z.number(),
+    level: z.number().default(1),
+    isPremium: z.boolean().default(false),
   }),
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;

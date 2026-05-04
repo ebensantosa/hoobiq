@@ -285,6 +285,11 @@ export class ListingsService {
         avatarUrl: listing.seller.avatarUrl,
         city: listing.seller.city,
         trustScore: Number(listing.seller.trustScore),
+        level: listing.seller.level ?? 1,
+        isPremium:
+          !!listing.seller.isPremium &&
+          !!listing.seller.premiumUntil &&
+          listing.seller.premiumUntil.getTime() > Date.now(),
       },
       rating: {
         avg: ratingAgg._avg.rating,

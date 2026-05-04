@@ -477,6 +477,11 @@ model ListingReview {
   orderId   String   @unique @map("order_id")
   rating    Int // 1–5
   body      String?
+  // Optional seller reply. Sellers can post a single reply per review
+  // (subsequent saves overwrite). Surfaced under the review on the
+  // listing detail page so buyers see the seller's response.
+  sellerReply   String?   @map("seller_reply")
+  sellerReplyAt DateTime? @map("seller_reply_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

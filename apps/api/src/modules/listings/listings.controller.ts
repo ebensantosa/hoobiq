@@ -32,6 +32,10 @@ const ReviewInput = z.object({
   body: z.string().max(1000).optional(),
 });
 
+const ReviewReplyInput = z.object({
+  body: z.string().trim().min(1).max(1000),
+});
+
 @Controller("listings")
 export class ListingsController {
   constructor(
@@ -185,6 +189,8 @@ export class ListingsController {
         body: r.body,
         createdAt: r.createdAt.toISOString(),
         buyer: r.buyer,
+        sellerReply: r.sellerReply,
+        sellerReplyAt: r.sellerReplyAt ? r.sellerReplyAt.toISOString() : null,
       })),
     };
   }
@@ -275,5 +281,45 @@ export class ListingsController {
       if (listing) void this.exp.award(listing.sellerId, EXP_KIND.ratingReceived45, 10);
     }
     return { id: created.id, updated: false };
+  }
+
+  /**
+   * Seller reply to a buyer review. Only the listing owner can reply.
+   * One reply per review (PUT semantics — subsequent calls overwrite).
+   * Pass body="" to clear via DELETE — not implemented here yet.
+   */
+  @Post(":id/reviews/:reviewId/reply")
+  @HttpCode(200)
+  async replyToReview(
+    @CurrentUser() user: SessionUser,
+    @Param("id") listingId: string,
+    @Param("reviewId") reviewId: string,
+    @Body(new ZodPipe(ReviewReplyInput)) body: z.infer<typeof ReviewReplyInput>,
+  ) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { sellerId: true },
+    });
+    if (!listing) throw new NotFoundException({ code: "not_found", message: "Listing tidak ditemukan." });
+    if (listing.sellerId !== user.id) {
+      throw new ForbiddenException({ code: "forbidden", message: "Hanya seller listing ini yang bisa balas." });
+    }
+    const review = await this.prisma.listingReview.findUnique({
+      where: { id: reviewId },
+      select: { id: true, listingId: true },
+    });
+    if (!review || review.listingId !== listingId) {
+      throw new NotFoundException({ code: "not_found", message: "Review tidak ditemukan." });
+    }
+    const updated = await this.prisma.listingReview.update({
+      where: { id: reviewId },
+      data: { sellerReply: body.body, sellerReplyAt: new Date() },
+      select: { id: true, sellerReply: true, sellerReplyAt: true },
+    });
+    return {
+      id: updated.id,
+      sellerReply: updated.sellerReply,
+      sellerReplyAt: updated.sellerReplyAt ? updated.sellerReplyAt.toISOString() : null,
+    };
   }
 }

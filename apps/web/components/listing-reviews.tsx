@@ -9,6 +9,8 @@ export type Review = {
   body: string | null;
   createdAt: string;
   buyer: { username: string; name: string | null; avatarUrl: string | null; city: string | null };
+  sellerReply: string | null;
+  sellerReplyAt: string | null;
 };
 
 export type ReviewSummary = {
@@ -135,7 +137,19 @@ export function ListingReviews({
             </div>
           </Card>
         ) : (
-          items.map((r) => <ReviewItem key={r.id} review={r} />)
+          items.map((r) => (
+            <ReviewItem
+              key={r.id}
+              review={r}
+              listingId={listingId}
+              canReply={isOwn}
+              onReplied={(reply, repliedAt) =>
+                setItems((prev) =>
+                  prev.map((it) => (it.id === r.id ? { ...it, sellerReply: reply, sellerReplyAt: repliedAt } : it)),
+                )
+              }
+            />
+          ))
         )}
       </div>
     </section>
@@ -174,6 +188,8 @@ function ReviewForm({
           body: body.trim() || null,
           createdAt: new Date().toISOString(),
           buyer: { username: "kamu", name: null, avatarUrl: null, city: null },
+          sellerReply: null,
+          sellerReplyAt: null,
         },
         res.updated
       );
@@ -216,7 +232,37 @@ function ReviewForm({
 
 /* ---------------- review item ---------------- */
 
-function ReviewItem({ review }: { review: Review }) {
+function ReviewItem({
+  review, listingId, canReply, onReplied,
+}: {
+  review: Review;
+  listingId: string;
+  canReply: boolean;
+  onReplied: (reply: string, repliedAt: string) => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(review.sellerReply ?? "");
+  const [pending, setPending] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  async function submitReply() {
+    const trimmed = draft.trim();
+    if (!trimmed) { setErr("Tulis balasan dulu."); return; }
+    setPending(true); setErr(null);
+    try {
+      const res = await api<{ sellerReply: string; sellerReplyAt: string }>(
+        `/listings/${encodeURIComponent(listingId)}/reviews/${encodeURIComponent(review.id)}/reply`,
+        { method: "POST", body: { body: trimmed } },
+      );
+      onReplied(res.sellerReply, res.sellerReplyAt);
+      setEditing(false);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Gagal kirim balasan.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <Card>
       <div className="flex gap-4 p-5">
@@ -241,6 +287,67 @@ function ReviewItem({ review }: { review: Review }) {
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-fg">
               {review.body}
             </p>
+          )}
+
+          {/* Existing seller reply */}
+          {review.sellerReply && !editing && (
+            <div className="mt-3 rounded-xl border border-brand-400/25 bg-brand-400/[0.06] px-4 py-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-semibold text-brand-500">Balasan seller</span>
+                {review.sellerReplyAt && (
+                  <span className="text-[11px] text-fg-subtle">{relTime(review.sellerReplyAt)}</span>
+                )}
+              </div>
+              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-fg">
+                {review.sellerReply}
+              </p>
+              {canReply && (
+                <button
+                  type="button"
+                  onClick={() => { setDraft(review.sellerReply ?? ""); setEditing(true); }}
+                  className="mt-2 text-xs font-semibold text-brand-500 hover:underline"
+                >
+                  Edit balasan
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Reply CTA when none yet */}
+          {canReply && !review.sellerReply && !editing && (
+            <button
+              type="button"
+              onClick={() => { setDraft(""); setEditing(true); }}
+              className="mt-3 text-xs font-semibold text-brand-500 hover:underline"
+            >
+              Balas review
+            </button>
+          )}
+
+          {/* Reply form */}
+          {canReply && editing && (
+            <div className="mt-3 rounded-xl border border-brand-400/30 bg-brand-400/5 p-3">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Balas review pembeli — terima kasih, klarifikasi, atau info tambahan."
+                maxLength={1000}
+                rows={3}
+                className="w-full resize-none rounded-lg border border-rule bg-panel px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand-400/60 focus:outline-none focus:ring-2 focus:ring-brand-400/15"
+              />
+              {err && <p role="alert" className="mt-1 text-xs text-flame-600">{err}</p>}
+              <div className="mt-2 flex items-center justify-between">
+                <span className="font-mono text-[11px] text-fg-subtle">{draft.length} / 1000</span>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={pending}>
+                    Batal
+                  </Button>
+                  <Button type="button" variant="primary" size="sm" onClick={submitReply} disabled={pending || !draft.trim()}>
+                    {pending ? "Mengirim…" : "Kirim balasan"}
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

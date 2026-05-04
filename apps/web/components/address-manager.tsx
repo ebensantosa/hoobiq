@@ -350,13 +350,6 @@ function MapPinPicker({
       if (cancelled || !containerRef.current || mapRef.current) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Lx = L as any;
-      // Leaflet's default icon auto-detects path from <script src=>; with
-      // unpkg CDN that breaks. Point it at the matching CDN images dir.
-      Lx.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
       const initLat = lat ?? -6.2;
       const initLng = lng ?? 106.816666;
       const map = Lx.map(containerRef.current).setView([initLat, initLng], lat != null ? 16 : 11);
@@ -365,11 +358,22 @@ function MapPinPicker({
         attribution: "© OpenStreetMap",
       }).addTo(map);
 
+      const pinIcon = Lx.divIcon({
+        className: "hbq-pin",
+        html:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44" fill="none">' +
+          '<path d="M16 2 C8.27 2 2 8.27 2 16 c0 10.5 14 26 14 26 s14-15.5 14-26 C30 8.27 23.73 2 16 2 z" fill="#A855F7" stroke="white" stroke-width="2"/>' +
+          '<circle cx="16" cy="16" r="5" fill="white"/>' +
+          "</svg>",
+        iconSize: [32, 44],
+        iconAnchor: [16, 42],
+      });
+
       function setPin(la: number, ln: number) {
         if (markerRef.current) {
           markerRef.current.setLatLng([la, ln]);
         } else {
-          markerRef.current = Lx.marker([la, ln], { draggable: true }).addTo(map);
+          markerRef.current = Lx.marker([la, ln], { draggable: true, icon: pinIcon }).addTo(map);
           markerRef.current.on("dragend", () => {
             const p = markerRef.current.getLatLng();
             onChangeRef.current(round6(p.lat), round6(p.lng));
@@ -416,7 +420,17 @@ function MapPinPicker({
     if (markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
     } else {
-      markerRef.current = Lx.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+      const pinIcon = Lx.divIcon({
+        className: "hbq-pin",
+        html:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44" fill="none">' +
+          '<path d="M16 2 C8.27 2 2 8.27 2 16 c0 10.5 14 26 14 26 s14-15.5 14-26 C30 8.27 23.73 2 16 2 z" fill="#A855F7" stroke="white" stroke-width="2"/>' +
+          '<circle cx="16" cy="16" r="5" fill="white"/>' +
+          "</svg>",
+        iconSize: [32, 44],
+        iconAnchor: [16, 42],
+      });
+      markerRef.current = Lx.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(mapRef.current);
       markerRef.current.on("dragend", () => {
         const p = markerRef.current.getLatLng();
         onChangeRef.current(round6(p.lat), round6(p.lng));

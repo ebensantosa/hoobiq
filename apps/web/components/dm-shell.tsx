@@ -99,9 +99,20 @@ export function DMShell({
     let cancelled = false;
     setLoading(true);
     dmApi.messages(activeId)
-      .then((res) => { if (!cancelled) setMessages(res.items); })
+      .then((res) => { if (!cancelled) setMessages(res?.items ?? []); })
       .catch(() => { if (!cancelled) setMessages([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
+
+    // If activeId points to a conversation not in our local list (the
+    // server just created it via ?to=), refetch the conversation list
+    // so the thread header + sidebar entry show up correctly.
+    if (!conversations.some((c) => c.id === activeId)) {
+      dmApi.list()
+        .then((res) => {
+          if (!cancelled && res?.items) setConversations(res.items);
+        })
+        .catch(() => undefined);
+    }
 
     // Join socket room for realtime
     const socket = getSocket();
@@ -173,7 +184,7 @@ export function DMShell({
                     (c.id === activeId ? "bg-brand-400/10" : "hover:bg-panel-2")
                   }
                 >
-                  <Avatar letter={c.counterpart?.username[0] ?? "U"} size="md" />
+                  <Avatar letter={(c.counterpart?.username ?? "U")[0]?.toUpperCase() ?? "U"} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                       <p className="truncate text-sm font-semibold text-fg">
@@ -218,7 +229,7 @@ export function DMShell({
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
-            <Avatar letter={active.counterpart?.username[0] ?? "U"} size="md" />
+            <Avatar letter={(active.counterpart?.username ?? "U")[0]?.toUpperCase() ?? "U"} size="md" />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-fg">{active.counterpart ? `@${active.counterpart.username}` : ""}</p>
               <p className="truncate text-xs text-fg-subtle">

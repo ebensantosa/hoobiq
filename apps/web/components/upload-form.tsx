@@ -138,7 +138,7 @@ function validate(state: FormState, images: string[], condition: string, hasVari
   return e;
 }
 
-export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?: UploadFormExisting; clone?: UploadFormExisting }) {
+export function UploadForm({ tree, existing, clone, pickupLabel }: { tree: Node[]; existing?: UploadFormExisting; clone?: UploadFormExisting; pickupLabel?: string | null }) {
   const router = useRouter();
 
   // Clone seeds the form like `existing` does, but submit goes through
@@ -358,6 +358,32 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
 
   return (
     <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-6" noValidate>
+      {/* Lokasi pickup banner — pickup origin + couriers come from the
+          seller's profile address (Shopee-style), so they don't have to
+          re-enter shipping per listing. The banner makes the current
+          address visible and links to /pengaturan/alamat for editing. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule bg-panel-2/50 px-4 py-3 text-sm">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-500/15 text-brand-500">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">Lokasi pickup</p>
+            <p className="truncate text-fg">
+              {pickupLabel ?? <span className="text-flame-600">Belum diatur — atur dulu di profil.</span>}
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/pengaturan/alamat"
+          className="shrink-0 text-xs font-semibold text-brand-500 hover:text-brand-600 hover:underline"
+        >
+          {pickupLabel ? "Ubah alamat" : "Atur alamat"} →
+        </Link>
+      </div>
+
       <Section
         title="Foto"
         subtitle={

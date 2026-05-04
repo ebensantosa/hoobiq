@@ -25,10 +25,25 @@ export default async function UploadPage({
   // can be seeded with the spec-block fields (kategori, kondisi, brand,
   // dimensi, dll.) sambil tetap meninggalkan judul/deskripsi/foto/harga
   // kosong supaya seller wajib isi ulang per-SKU.
-  const [tree, cloneSrc] = await Promise.all([
+  type RawAddress = {
+    id: string; label: string; line: string;
+    subdistrict?: string | null; district?: string | null;
+    city: string; province: string; postal: string;
+    subdistrictId: number | null; primary: boolean;
+  };
+
+  const [tree, cloneSrc, addressesRes] = await Promise.all([
     serverApi<Node[]>("/categories", { revalidate: 60 }),
     cloneSlug ? serverApi<ListingDetail>(`/listings/${encodeURIComponent(cloneSlug)}`).catch(() => null) : Promise.resolve(null),
+    serverApi<{ items: RawAddress[] }>("/addresses").catch(() => null),
   ]);
+
+  const primary = (addressesRes?.items ?? []).find((a) => a.primary) ?? (addressesRes?.items ?? [])[0] ?? null;
+  const pickupLabel = primary
+    ? [primary.subdistrict, primary.district, primary.city, primary.province, primary.postal]
+        .filter((s): s is string => !!s && s.trim().length > 0)
+        .join(", ")
+    : null;
 
   const clone: UploadFormExisting | undefined = cloneSrc
     ? {
@@ -72,7 +87,7 @@ export default async function UploadPage({
               : "Foto jelas + deskripsi jujur = listing terjual lebih cepat. Listing masuk antrian moderasi sebelum tayang publik (biasanya < 5 menit)."}
           </p>
         </header>
-        <UploadForm tree={tree ?? []} clone={clone} />
+        <UploadForm tree={tree ?? []} clone={clone} pickupLabel={pickupLabel} />
       </div>
     </AppShell>
   );

@@ -15,10 +15,24 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
   const me = await getSessionUser();
   if (!me) redirect(`/masuk?next=/jual/${encodeURIComponent(slug)}/edit`);
 
-  const [listing, tree] = await Promise.all([
+  type RawAddress = {
+    id: string; label: string; line: string;
+    subdistrict?: string | null; district?: string | null;
+    city: string; province: string; postal: string;
+    subdistrictId: number | null; primary: boolean;
+  };
+
+  const [listing, tree, addressesRes] = await Promise.all([
     serverApi<ListingDetail>(`/listings/${encodeURIComponent(slug)}`),
     serverApi<Node[]>("/categories", { revalidate: 60 }),
+    serverApi<{ items: RawAddress[] }>("/addresses").catch(() => null),
   ]);
+  const primary = (addressesRes?.items ?? []).find((a) => a.primary) ?? (addressesRes?.items ?? [])[0] ?? null;
+  const pickupLabel = primary
+    ? [primary.subdistrict, primary.district, primary.city, primary.province, primary.postal]
+        .filter((s): s is string => !!s && s.trim().length > 0)
+        .join(", ")
+    : null;
   if (!listing) notFound();
   if (listing.seller.username !== me.username) {
     return (
@@ -67,7 +81,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ sl
             Perubahan akan langsung tampil di marketplace setelah disimpan.
           </p>
         </header>
-        <UploadForm tree={tree ?? []} existing={existing} />
+        <UploadForm tree={tree ?? []} existing={existing} pickupLabel={pickupLabel} />
       </div>
     </AppShell>
   );

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { UploadForm, type UploadFormExisting } from "@/components/upload-form";
 import { serverApi } from "@/lib/server/api";
@@ -77,18 +78,45 @@ export default async function UploadPage({
   return (
     <AppShell active="Marketplace">
       <div className="px-4 pb-12 sm:px-6 lg:px-10">
-        <header className="border-b border-rule pb-8">
-          <h1 className="text-3xl font-bold text-fg md:text-4xl">
-            {isClone ? "Salin produk" : "Pasang listing baru"}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted md:text-base">
-            {isClone
-              ? "Spec dari listing sebelumnya udah keisi (kategori, kondisi, berat, brand, dll.). Isi judul, foto, harga, dan deskripsi yang baru."
-              : "Foto jelas + deskripsi jujur = listing terjual lebih cepat. Listing masuk antrian moderasi sebelum tayang publik (biasanya < 5 menit)."}
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-8">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-3xl font-bold text-fg md:text-4xl">
+              {isClone ? "Salin produk" : "Pasang listing baru"}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted md:text-base">
+              {isClone
+                ? "Spec dari listing sebelumnya udah keisi (kategori, kondisi, berat, brand, dll.). Isi judul, foto, harga, dan deskripsi yang baru."
+                : "Foto jelas + deskripsi jujur = listing terjual lebih cepat. Listing masuk antrian moderasi sebelum tayang publik (biasanya < 5 menit)."}
+            </p>
+          </div>
+          <PickupHeader label={pickupLabel} />
         </header>
-        <UploadForm tree={tree ?? []} clone={clone} pickupLabel={pickupLabel} />
+        <UploadForm tree={tree ?? []} clone={clone} />
       </div>
     </AppShell>
+  );
+}
+
+function PickupHeader({ label }: { label: string | null }) {
+  return (
+    <div className="flex max-w-xs shrink-0 items-start gap-2 rounded-xl border border-rule bg-panel-2/60 px-3 py-2.5">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-500/15 text-brand-500">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-fg-subtle">Lokasi pickup</p>
+        <p className="line-clamp-2 text-xs text-fg">
+          {label ?? <span className="text-flame-600">Belum diatur</span>}
+        </p>
+        <Link
+          href="/pengaturan/alamat"
+          className="mt-1 inline-block text-[11px] font-semibold text-brand-500 hover:underline"
+        >
+          {label ? "Ubah" : "Atur sekarang"} →
+        </Link>
+      </div>
+    </div>
   );
 }

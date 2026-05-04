@@ -69,6 +69,16 @@ export const ListingDetailSchema = ListingSummarySchema.extend({
   heightCm: z.number().int().positive().max(500).nullable().optional(),
   isPreorder: z.boolean().optional(),
   preorderShipDays: z.number().int().min(2).max(30).nullable().optional(),
+  hasVariants: z.boolean().optional(),
+  variantGroupName: z.string().nullable().optional(),
+  variants: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string().nullable().optional(),
+    imageUrl: z.string().nullable().optional(),
+    priceIdr: z.number().nullable().optional(),
+    stock: z.number(),
+  })).optional(),
   category: z.object({
     id: z.string(),
     slug: z.string(),
@@ -176,6 +186,21 @@ export const CreateListingInput = z.object({
   // when computing the buyer-cancel deadline.
   isPreorder: z.boolean().default(false),
   preorderShipDays: z.number().int().min(2).max(30).nullable().optional(),
+  // Variations (single-axis V1). When `variants` is non-empty:
+  //   - `variantGroupName` is required (e.g. "Karakter", "Warna")
+  //   - listing.stock = sum of variant.stock (server recomputes)
+  //   - buyer must pick a variant at checkout
+  variantGroupName: z.string().trim().max(60).nullable().optional(),
+  variants: z.array(z.object({
+    name:        z.string().trim().min(1).max(80),
+    description: z.string().trim().max(280).nullable().optional(),
+    imageUrl:    z.string().refine(
+      (s) => !s || /^https?:\/\//i.test(s) || /^data:image\//i.test(s),
+      { message: "URL atau data:image valid" },
+    ).nullable().optional(),
+    priceIdr: z.number().int().min(1000).max(1_000_000_000).nullable().optional(),
+    stock:    z.number().int().min(0).max(999).default(0),
+  })).max(20).optional(),
   // When the seller typed a brand-new sub-category or series in the
   // creatable picker, this carries the proposed name. The server
   // creates a CategoryRequest, links the listing to it, and parks

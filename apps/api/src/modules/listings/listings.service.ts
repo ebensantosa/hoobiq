@@ -260,6 +260,7 @@ export class ListingsService {
           },
         },
         category: { select: { id: true, slug: true, name: true } },
+        variants: { orderBy: { order: "asc" } },
       },
     });
     if (!listing || listing.deletedAt || !listing.isPublished) {
@@ -359,6 +360,18 @@ export class ListingsService {
     }
 
     const slug = await this.uniqueSlug(input.title);
+    // Normalize variants once. When present, listing.stock = sum and
+    // variantGroupName must be set; we override `input.stock` with the
+    // rolled-up value so seller doesn't have to track it twice.
+    const variants = (input.variants ?? []).filter((v) => v && v.name?.trim().length > 0);
+    const hasVariants = variants.length > 0;
+    if (hasVariants && !(input.variantGroupName ?? "").trim()) {
+      throw new BadRequestException({ code: "missing_variant_group", message: "Nama variasi (mis. Karakter, Warna) wajib diisi." });
+    }
+    const rolledStock = hasVariants
+      ? variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+      : input.stock;
+
     const listing = await this.prisma.listing.create({
       data: {
         slug,
@@ -374,7 +387,7 @@ export class ListingsService {
         ...(input.brand    !== undefined && { brand:    input.brand    || null }),
         ...(input.variant  !== undefined && { variant:  input.variant  || null }),
         ...(input.warranty !== undefined && { warranty: input.warranty || null }),
-        stock: input.stock,
+        stock: rolledStock,
         condition: input.condition,
         imagesJson: JSON.stringify(input.images),
         weightGrams: input.weightGrams,
@@ -388,8 +401,22 @@ export class ListingsService {
         heightCm: input.heightCm ?? null,
         isPreorder: input.isPreorder ?? false,
         preorderShipDays: input.isPreorder ? (input.preorderShipDays ?? null) : null,
+        hasVariants,
+        variantGroupName: hasVariants ? (input.variantGroupName ?? "").trim() : null,
         isPublished: initialPublished,
         moderation: initialModeration,
+        ...(hasVariants && {
+          variants: {
+            create: variants.map((v, i) => ({
+              name: v.name.trim(),
+              description: (v.description ?? "").trim() || null,
+              imageUrl: v.imageUrl || null,
+              priceCents: v.priceIdr != null ? BigInt(v.priceIdr) * CENTS_PER_RUPIAH : null,
+              stock: Math.max(0, Number(v.stock) || 0),
+              order: i,
+            })),
+          },
+        }),
       },
     });
     await this.redis.invalidate("listings:search:*");
@@ -445,7 +472,43 @@ export class ListingsService {
       delete data.couriers;
     }
 
-    const updated = await this.prisma.listing.update({ where: { id }, data });
+    // Variants: replace-all when payload includes the field. Drop existing
+    // rows + recreate so the seller can add/remove/reorder freely. Also
+    // re-roll the listing.stock if hasVariants flips on.
+    let nextVariants: Array<{ name: string; description: string | null; imageUrl: string | null; priceCents: bigint | null; stock: number; order: number }> | null = null;
+    if (input.variants !== undefined) {
+      const v = (input.variants ?? []).filter((it) => it && it.name?.trim().length > 0);
+      const has = v.length > 0;
+      if (has && !(input.variantGroupName ?? data.variantGroupName ?? "").toString().trim()) {
+        throw new BadRequestException({ code: "missing_variant_group", message: "Nama variasi (mis. Karakter, Warna) wajib diisi." });
+      }
+      nextVariants = v.map((it, i) => ({
+        name: it.name.trim(),
+        description: (it.description ?? "").trim() || null,
+        imageUrl: it.imageUrl || null,
+        priceCents: it.priceIdr != null ? BigInt(it.priceIdr) * CENTS_PER_RUPIAH : null,
+        stock: Math.max(0, Number(it.stock) || 0),
+        order: i,
+      }));
+      data.hasVariants = has;
+      data.variantGroupName = has ? String(input.variantGroupName ?? "").trim() : null;
+      // Roll-up stock at listing level so search / detail surface the
+      // sum without an N+1 query later.
+      if (has) data.stock = nextVariants.reduce((acc, x) => acc + x.stock, 0);
+    }
+    delete data.variants;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (nextVariants !== null) {
+        await tx.listingVariant.deleteMany({ where: { listingId: id } });
+        if (nextVariants.length > 0) {
+          await tx.listingVariant.createMany({
+            data: nextVariants.map((v) => ({ ...v, listingId: id })),
+          });
+        }
+      }
+      return tx.listing.update({ where: { id }, data });
+    });
     await this.redis.invalidate("listings:search:*");
     return { id: updated.id, slug: updated.slug };
   }
@@ -556,6 +619,9 @@ function toDetail(l: Row & {
   showOnFeed?: boolean;
   lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null;
   isPreorder?: boolean; preorderShipDays?: number | null;
+  hasVariants?: boolean;
+  variantGroupName?: string | null;
+  variants?: Array<{ id: string; name: string; description: string | null; imageUrl: string | null; priceCents: bigint | null; stock: number }>;
   category: { id: string; slug: string; name: string };
 }) {
   let couriers: string[] = [];
@@ -580,6 +646,16 @@ function toDetail(l: Row & {
     heightCm: l.heightCm ?? null,
     isPreorder: l.isPreorder ?? false,
     preorderShipDays: l.preorderShipDays ?? null,
+    hasVariants: l.hasVariants ?? false,
+    variantGroupName: l.variantGroupName ?? null,
+    variants: (l.variants ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      description: v.description ?? null,
+      imageUrl: v.imageUrl ?? null,
+      priceIdr: v.priceCents != null ? Number(v.priceCents / CENTS_PER_RUPIAH) : null,
+      stock: v.stock,
+    })),
     category: l.category,
   };
 }

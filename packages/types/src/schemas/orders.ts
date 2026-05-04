@@ -77,6 +77,8 @@ export type DisputeDecideInput = z.infer<typeof DisputeDecideInput>;
 
 export const CheckoutInput = z.object({
   listingId: z.string().cuid(),
+  /** Required when listing.hasVariants — buyer must pick which variant. */
+  variantId: z.string().cuid().optional(),
   qty: z.number().int().min(1).max(10).default(1),
   addressId: z.string().cuid(),
   courierCode: z.string().min(2).max(40),

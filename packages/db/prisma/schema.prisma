@@ -357,6 +357,13 @@ model Listing {
   // the deadline; once past it, buyer cancel always wins (24h auto).
   isPreorder       Boolean @default(false) @map("is_preorder")
   preorderShipDays Int?    @map("preorder_ship_days")
+  // Variations (Shopee-style, single axis V1). When `hasVariants=true`,
+  // the listing's own `stock` becomes the rolled-up sum of every
+  // variant's stock — recomputed on save. Buyers MUST pick a variant
+  // at checkout; markPaid decrements the picked variant's stock.
+  hasVariants       Boolean @default(false) @map("has_variants")
+  variantGroupName  String? @map("variant_group_name")
+  variants          ListingVariant[]
   // Spec-block fields surfaced on the listing detail page. All optional:
   // not every category has a brand (toys yes, used komik usually no), and
   // varian/garansi only make sense for some items. Empty string treated
@@ -413,6 +420,30 @@ model Listing {
   @@index([isPublished, moderation, createdAt])
   @@index([boostedUntil])
   @@map("listings")
+}
+
+/// One option under a listing's single variation axis (Shopee-style).
+/// Carries its own image, optional price override, and stock counter.
+/// Order.variantId points here when the buyer picks a variant at
+/// checkout, and markPaid decrements `stock` here (not the parent
+/// listing's stock, which is just a roll-up).
+model ListingVariant {
+  id          String  @id @default(cuid())
+  listingId   String  @map("listing_id")
+  name        String
+  description String?
+  imageUrl    String? @map("image_url")
+  /// Override price; null = use listing.priceCents.
+  priceCents  BigInt? @map("price_cents")
+  stock       Int     @default(0)
+  order       Int     @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  orders  Order[]
+
+  @@index([listingId, order])
+  @@map("listing_variants")
 }
 
 // Persistent shopping cart. One row per (user, listing) — adding the
@@ -512,12 +543,17 @@ model Order {
   preorderExtraDays     Int?      @map("preorder_extra_days")
   preorderExtraReason   String?   @map("preorder_extra_reason")
   preorderExtensionAt   DateTime? @map("preorder_extension_at")
+  /// Variant pilihan buyer di checkout (kalau listing.hasVariants).
+  /// Stock yang di-decrement waktu paid = ListingVariant.stock, bukan
+  /// Listing.stock (yang cuma roll-up).
+  variantId          String?   @map("variant_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   buyer          User            @relation("BuyerOrders", fields: [buyerId], references: [id])
   seller         User            @relation("SellerOrders", fields: [sellerId], references: [id])
   listing        Listing         @relation(fields: [listingId], references: [id])
+  variant        ListingVariant? @relation(fields: [variantId], references: [id])
   address        Address         @relation(fields: [addressId], references: [id])
   payment        Payment?
   dispute        Dispute?

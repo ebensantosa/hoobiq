@@ -63,17 +63,33 @@ export class OrdersService {
   // -------------------------------------------------------------- checkout
   async checkout(buyerId: string, input: CheckoutInput) {
     const [listing, address, buyer] = await Promise.all([
-      this.prisma.listing.findUnique({ where: { id: input.listingId }, include: { seller: true } }),
+      this.prisma.listing.findUnique({ where: { id: input.listingId }, include: { seller: true, variants: true } }),
       this.prisma.address.findUnique({ where: { id: input.addressId } }),
       this.prisma.user.findUnique({ where: { id: buyerId } }),
     ]);
 
     if (!listing || listing.deletedAt || !listing.isPublished) throw new NotFoundException({ code: "not_found", message: "Listing tidak tersedia." });
-    if (listing.stock < input.qty) throw new BadRequestException({ code: "out_of_stock", message: "Stok tidak cukup." });
     if (!address || address.userId !== buyerId) throw new BadRequestException({ code: "invalid_address", message: "Alamat tidak valid." });
     if (!buyer || listing.sellerId === buyerId) throw new BadRequestException({ code: "self_purchase", message: "Tidak bisa membeli listing sendiri." });
 
-    const subtotal = listing.priceCents * BigInt(input.qty);
+    // Variant resolution. When the listing has variants, the buyer must
+    // pick one; we use the variant's price (override) and per-variant
+    // stock for the gating + decrement at markPaid.
+    let pickedVariant: { id: string; priceCents: bigint | null; stock: number } | null = null;
+    if (listing.hasVariants) {
+      if (!input.variantId) {
+        throw new BadRequestException({ code: "variant_required", message: "Pilih variasi dulu sebelum checkout." });
+      }
+      const v = listing.variants.find((x) => x.id === input.variantId);
+      if (!v) throw new BadRequestException({ code: "variant_not_found", message: "Variasi tidak valid." });
+      if (v.stock < input.qty) throw new BadRequestException({ code: "out_of_stock", message: "Stok variasi ini habis." });
+      pickedVariant = { id: v.id, priceCents: v.priceCents, stock: v.stock };
+    } else {
+      if (listing.stock < input.qty) throw new BadRequestException({ code: "out_of_stock", message: "Stok tidak cukup." });
+    }
+    const unitPriceCents = pickedVariant?.priceCents ?? listing.priceCents;
+
+    const subtotal = unitPriceCents * BigInt(input.qty);
     // Use the quote the buyer saw at checkout (already calculated against
     // their subdistrict via Komerce). Falls back to the legacy 18k flat
     // for old clients that don't send shippingCents yet.
@@ -92,8 +108,9 @@ export class OrdersService {
     const order = await this.prisma.order.create({
       data: {
         humanId, buyerId, sellerId: listing.sellerId, listingId: listing.id, addressId: address.id,
+        ...(pickedVariant && { variantId: pickedVariant.id }),
         qty: input.qty,
-        priceCents: listing.priceCents, shippingCents: shipping,
+        priceCents: unitPriceCents, shippingCents: shipping,
         platformFeeCents: platformFee, payFeeCents: payFee, insuranceCents: insurance,
         totalCents: total, courierCode: input.courierCode, status: "pending_payment",
       },
@@ -208,7 +225,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: {
-        id: true, listingId: true, qty: true,
+        id: true, listingId: true, qty: true, variantId: true,
         listing: { select: { isPreorder: true, preorderShipDays: true } },
       },
     });
@@ -239,6 +256,15 @@ export class OrdersService {
           shipByAt,
         },
       });
+      // Variant-aware decrement. When a variant was picked, decrement
+      // its stock; the listing's own stock is rolled-up so we mirror
+      // the change there too. Otherwise classic listing-level path.
+      if (order.variantId) {
+        await tx.listingVariant.update({
+          where: { id: order.variantId },
+          data: { stock: { decrement: order.qty } },
+        });
+      }
       const listing = await tx.listing.update({
         where: { id: order.listingId },
         data: { stock: { decrement: order.qty } },

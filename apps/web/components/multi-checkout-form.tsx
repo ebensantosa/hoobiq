@@ -12,6 +12,8 @@ export type MultiCheckoutItem = {
   cartItemId: string;
   listingId: string;
   listingSlug: string;
+  /** Pre-selected variant id (single-item path with `?variant=` in URL). */
+  variantId?: string | null;
   title: string;
   cover: string | null;
   priceIdr: number;
@@ -233,6 +235,7 @@ export function MultiCheckoutForm({
               method: "POST",
               body: {
                 listingId: it.listingId,
+                ...(it.variantId && { variantId: it.variantId }),
                 qty: it.qty,
                 addressId,
                 courierCode: pick.courier,

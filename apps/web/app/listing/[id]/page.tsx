@@ -8,6 +8,7 @@ import { ListingReviews } from "@/components/listing-reviews";
 import { BoostTrigger } from "@/components/boost-trigger";
 import { WishlistButton } from "@/components/wishlist-button";
 import { ShareButton } from "@/components/share-button";
+import { VariantPicker } from "@/components/variant-picker";
 import { conditionBadge } from "@/lib/condition-badge";
 import { serverApi } from "@/lib/server/api";
 import { getSessionUser } from "@/lib/server/session";
@@ -177,6 +178,27 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </Link>
                   <BoostTrigger listingId={listing.id} />
                 </>
+              ) : listing.hasVariants && (listing.variants?.length ?? 0) > 0 ? (
+                <div className="flex w-full flex-col gap-3">
+                  <VariantPicker
+                    groupName={listing.variantGroupName ?? "Variasi"}
+                    variants={listing.variants ?? []}
+                    basePriceIdr={listing.priceIdr}
+                    buyHref={`/checkout?listing=${encodeURIComponent(listing.slug)}`}
+                    loginHref={`/masuk?next=${encodeURIComponent(`/checkout?listing=${listing.slug}`)}`}
+                    isLoggedIn={!!me}
+                    ownListing={false}
+                  />
+                  <div className="flex items-center gap-2">
+                    {me && <WishlistButton listingId={listing.id} />}
+                    <ShareButton
+                      url={`/listing/${listing.slug}`}
+                      title={listing.title}
+                      meUsername={me?.username ?? null}
+                      size="sm"
+                    />
+                  </div>
+                </div>
               ) : listing.stock <= 0 ? (
                 <span className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-dashed border-rule px-6 text-sm font-medium text-fg-subtle">
                   Stok habis

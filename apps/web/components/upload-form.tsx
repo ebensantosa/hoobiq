@@ -55,6 +55,24 @@ export type UploadFormExisting = {
   heightCm?: number | null;
   isPreorder?: boolean;
   preorderShipDays?: number | null;
+  hasVariants?: boolean;
+  variantGroupName?: string | null;
+  variants?: Array<{
+    name: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    priceIdr?: number | null;
+    stock: number;
+  }>;
+};
+
+/** Local form shape for one variant row. Strings so empty inputs round-trip. */
+type VariantState = {
+  name: string;
+  description: string;
+  imageUrl: string;
+  priceIdr: string;
+  stock: string;
 };
 
 type FormState = {
@@ -163,6 +181,27 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
   const [widthCm,  setWidthCm]  = React.useState<string>(seed?.widthCm  != null ? String(seed.widthCm)  : "");
   const [heightCm, setHeightCm] = React.useState<string>(seed?.heightCm != null ? String(seed.heightCm) : "");
   // Pre-order toggle. Default OFF — most listings ship right away.
+  // Variations (Shopee-style, single axis V1). Local UI state mirrors
+  // the API shape — listing.stock is auto-rolled-up server-side, but
+  // we mirror that here so the disabled "Stok" field shows the sum.
+  const [hasVariants, setHasVariants] = React.useState<boolean>(seed?.hasVariants ?? false);
+  const [variantGroupName, setVariantGroupName] = React.useState<string>(seed?.variantGroupName ?? "");
+  const [variants, setVariants] = React.useState<VariantState[]>(
+    seed?.variants?.map((v) => ({
+      name: v.name,
+      description: v.description ?? "",
+      imageUrl: v.imageUrl ?? "",
+      priceIdr: v.priceIdr != null ? String(v.priceIdr) : "",
+      stock: String(v.stock),
+    })) ?? [],
+  );
+  // Roll-up stock to the disabled Stok field when variants are active.
+  React.useEffect(() => {
+    if (!hasVariants) return;
+    const total = variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+    setState((s) => ({ ...s, stock: String(total) }));
+  }, [hasVariants, variants]);
+
   const [isPreorder, setIsPreorder] = React.useState<boolean>(existing?.isPreorder ?? false);
   const [preorderShipDays, setPreorderShipDays] = React.useState<string>(
     existing?.preorderShipDays != null ? String(existing.preorderShipDays) : "15",
@@ -261,6 +300,18 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
           preorderShipDays: isPreorder
             ? Math.min(30, Math.max(2, Math.round(Number(preorderShipDays) || 15)))
             : null,
+          variantGroupName: hasVariants ? variantGroupName.trim() : null,
+          variants: hasVariants
+            ? variants
+                .filter((v) => v.name.trim().length > 0)
+                .map((v) => ({
+                  name: v.name.trim(),
+                  description: v.description.trim() || null,
+                  imageUrl: v.imageUrl || null,
+                  priceIdr: v.priceIdr.trim() === "" ? null : Math.max(1000, Math.round(Number(v.priceIdr))) || null,
+                  stock: Math.max(0, Math.round(Number(v.stock) || 0)),
+                }))
+            : [],
         };
         const res = existing
           ? await listingsWriteApi.update(existing.id, payload)
@@ -354,7 +405,7 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
               invalid={!!showErr("compareAt")}
             />
           </Field>
-          <Field label="Stok" error={showErr("stock")}>
+          <Field label="Stok" error={showErr("stock")} hint={hasVariants ? "Otomatis dari total stok variasi." : undefined}>
             <Input
               type="number"
               min={1}
@@ -363,8 +414,21 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
               onChange={(e) => set("stock", e.target.value)}
               onBlur={() => blur("stock")}
               invalid={!!showErr("stock")}
+              disabled={hasVariants}
             />
           </Field>
+        </div>
+
+        <VariantsSection
+          enabled={hasVariants}
+          onToggle={setHasVariants}
+          groupName={variantGroupName}
+          onGroupNameChange={setVariantGroupName}
+          variants={variants}
+          onChange={setVariants}
+        />
+
+        <div className="grid gap-5 md:grid-cols-4">
           <Field label="Berat (gr)" error={showErr("weight")} hint="Untuk kalkulasi ongkir.">
             <Input
               type="number"
@@ -376,9 +440,6 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
               invalid={!!showErr("weight")}
             />
           </Field>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
           <Field label="Panjang (cm) — opsional" hint="Sisi terpanjang paket.">
             <Input type="number" min={1} max={500} value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} placeholder="—" />
           </Field>
@@ -927,5 +988,191 @@ function FieldError({ children }: { children: React.ReactNode }) {
       </svg>
       {children}
     </p>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/*  Variations (Shopee-style) — single axis V1                           */
+/* -------------------------------------------------------------------- */
+
+function VariantsSection({
+  enabled, onToggle, groupName, onGroupNameChange, variants, onChange,
+}: {
+  enabled: boolean;
+  onToggle: (b: boolean) => void;
+  groupName: string;
+  onGroupNameChange: (s: string) => void;
+  variants: VariantState[];
+  onChange: (next: VariantState[]) => void;
+}) {
+  function update(i: number, patch: Partial<VariantState>) {
+    onChange(variants.map((v, idx) => idx === i ? { ...v, ...patch } : v));
+  }
+  function add() {
+    onChange([...variants, { name: "", description: "", imageUrl: "", priceIdr: "", stock: "1" }]);
+  }
+  function remove(i: number) {
+    onChange(variants.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <Section title="Variasi (opsional)" subtitle="Aktifkan kalau produk punya pilihan: warna, karakter, edisi, dll. Buyer wajib pilih salah satu di checkout. Stok dihitung per opsi.">
+      <label className="flex cursor-pointer items-center gap-3">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => {
+            const next = e.target.checked;
+            onToggle(next);
+            if (next && variants.length === 0) {
+              onChange([
+                { name: "", description: "", imageUrl: "", priceIdr: "", stock: "1" },
+                { name: "", description: "", imageUrl: "", priceIdr: "", stock: "1" },
+              ]);
+            }
+          }}
+          className="peer sr-only"
+        />
+        <span className="relative inline-block h-6 w-11 rounded-full bg-panel-2 transition-colors peer-checked:bg-brand-400 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+        <span className="text-sm text-fg">{enabled ? "Pakai variasi" : "Produk tunggal (tanpa variasi)"}</span>
+      </label>
+
+      {enabled && (
+        <div className="mt-4 flex flex-col gap-4 rounded-xl border border-rule bg-panel-2/40 p-4">
+          <div className="flex flex-col gap-1.5">
+            <Label>Nama variasi</Label>
+            <Input
+              value={groupName}
+              onChange={(e) => onGroupNameChange(e.target.value)}
+              maxLength={60}
+              placeholder="Karakter, Warna, Edisi, dll."
+            />
+            <p className="text-[11px] text-fg-subtle">Misal "karakter", "warna", atau apapun.</p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {variants.map((v, i) => (
+              <div key={i} className="grid gap-3 rounded-lg border border-rule bg-canvas/60 p-3 sm:grid-cols-[80px_1fr_auto]">
+                <VariantImagePicker
+                  url={v.imageUrl}
+                  onPick={(url) => update(i, { imageUrl: url })}
+                  onClear={() => update(i, { imageUrl: "" })}
+                />
+                <div className="flex flex-col gap-2">
+                  <Input
+                    value={v.name}
+                    onChange={(e) => update(i, { name: e.target.value })}
+                    maxLength={80}
+                    placeholder={`Cth: ${groupName ? "Pilihan " + groupName : "Bahan, dll"}`}
+                  />
+                  <Input
+                    value={v.description}
+                    onChange={(e) => update(i, { description: e.target.value })}
+                    maxLength={280}
+                    placeholder="Deskripsi opsional (Tulis penjelasan)"
+                  />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Harga (override, opsional)</p>
+                      <Input
+                        type="number"
+                        min={1000}
+                        max={1_000_000_000}
+                        value={v.priceIdr}
+                        onChange={(e) => update(i, { priceIdr: e.target.value })}
+                        placeholder="kosongin = pakai harga utama"
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Stok</p>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={999}
+                        value={v.stock}
+                        onChange={(e) => update(i, { stock: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  aria-label="Hapus opsi"
+                  className="grid h-8 w-8 self-start place-items-center rounded-md text-fg-subtle hover:bg-flame-500/10 hover:text-flame-500 sm:self-center"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={add}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-rule px-4 text-sm font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Tambah opsi
+          </button>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function VariantImagePicker({
+  url, onPick, onClear,
+}: {
+  url: string;
+  onPick: (url: string) => void;
+  onClear: () => void;
+}) {
+  const id = React.useId();
+  const [busy, setBusy] = React.useState(false);
+  async function handle(file: File) {
+    setBusy(true);
+    try {
+      const u = await uploadImage(file, "listings");
+      onPick(u);
+    } catch {
+      // noop — user retries
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={id}
+        className="relative grid aspect-square w-20 cursor-pointer place-items-center overflow-hidden rounded-md border-2 border-dashed border-rule bg-panel-2/40 hover:border-brand-400/60"
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-subtle">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>
+          </svg>
+        )}
+        {busy && <span className="absolute inset-0 grid place-items-center bg-black/40 text-[10px] font-semibold text-white">…</span>}
+      </label>
+      {url && (
+        <button type="button" onClick={onClear} className="text-[10px] text-fg-subtle hover:text-flame-500">
+          Ganti
+        </button>
+      )}
+      <input
+        id={id}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) void handle(f); e.target.value = ""; }}
+      />
+    </div>
   );
 }

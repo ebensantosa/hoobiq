@@ -12,10 +12,11 @@ export const dynamic = "force-dynamic";
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ listing?: string; qty?: string; cart?: string }>;
+  searchParams: Promise<{ listing?: string; qty?: string; cart?: string; variant?: string }>;
 }) {
   const sp = await searchParams;
   const listingId = sp.listing?.trim();
+  const variantId = sp.variant?.trim();
   const qty = Math.max(1, Math.min(10, Number(sp.qty ?? 1) || 1));
   // Multi-item path — comma-separated cart item ids from /keranjang's
   // checkbox selection. When present, takes precedence over the
@@ -168,13 +169,20 @@ export default async function CheckoutPage({
     primary: a.primary,
   }));
 
+  // If listing has variants, resolve the picked variant's price/title
+  // so the checkout summary matches what the buyer saw on the listing.
+  const pickedVariant = variantId && listing.variants
+    ? listing.variants.find((v) => v.id === variantId) ?? null
+    : null;
+
   const items: MultiCheckoutItem[] = [{
     cartItemId: `direct:${listing.id}`,
     listingId: listing.id,
     listingSlug: listing.slug,
-    title: listing.title,
-    cover: listing.cover,
-    priceIdr: listing.priceIdr,
+    variantId: pickedVariant?.id ?? null,
+    title: pickedVariant ? `${listing.title} · ${pickedVariant.name}` : listing.title,
+    cover: pickedVariant?.imageUrl ?? listing.cover,
+    priceIdr: pickedVariant?.priceIdr ?? listing.priceIdr,
     qty,
     weightGrams: listing.weightGrams,
     couriers: listing.couriers ?? [],

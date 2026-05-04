@@ -101,10 +101,10 @@ export function AddressManager({ initial }: { initial: Address[] }) {
               <Field label="Nama penerima"><Input value={editing.data.name} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, name: e.target.value } })} required minLength={2} maxLength={120} /></Field>
               <Field label="No. HP"><Input value={editing.data.phone} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, phone: e.target.value } })} required minLength={8} maxLength={32} /></Field>
             </div>
-            <Field
-              label="Kelurahan / Kecamatan"
-              hint="Cari nama kelurahan kamu — kota, provinsi, dan kode pos akan terisi otomatis. Kalau pencarian bermasalah, isi manual di bawah."
-            >
+            {/* Single source of truth: pick kelurahan/kecamatan from search.
+                Pickernya yang ngisi kota/provinsi/kode pos otomatis — gak
+                perlu input manual ganda. Konfirmasi muncul di bawah picker. */}
+            <Field label="Kelurahan / Kecamatan" hint="Ketik nama kelurahan kamu — kota, provinsi & kode pos terisi otomatis.">
               <DestinationPicker
                 value={
                   editing.data.subdistrictId
@@ -133,74 +133,33 @@ export function AddressManager({ initial }: { initial: Address[] }) {
                           province: d.province,
                           postal: d.postalCode,
                         }
-                      : { ...editing.data, subdistrictId: null },
+                      : {
+                          ...editing.data,
+                          subdistrictId: null,
+                          subdistrict: "", district: "",
+                          city: "", province: "", postal: "",
+                        },
                   })
                 }
               />
               {editing.data.subdistrictId && editing.data.city && (
-                <p className="rounded-lg bg-emerald-400/10 px-3 py-2 text-xs text-emerald-600 dark:text-emerald-400">
-                  ✓ Kel. {editing.data.subdistrict || "—"} · Kec. {editing.data.district || "—"}<br/>
-                  {editing.data.city}, {editing.data.province} · {editing.data.postal}
-                </p>
+                <div className="mt-2 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
+                  <p className="font-semibold">✓ Lokasi terkonfirmasi</p>
+                  <p className="mt-0.5">
+                    Kel. {editing.data.subdistrict} · Kec. {editing.data.district}
+                  </p>
+                  <p>{editing.data.city}, {editing.data.province} · {editing.data.postal}</p>
+                </div>
               )}
             </Field>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Kelurahan">
-                <Input
-                  value={editing.data.subdistrict ?? ""}
-                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, subdistrict: e.target.value } })}
-                  placeholder="Wedarijaksa"
-                  maxLength={80}
-                />
-              </Field>
-              <Field label="Kecamatan">
-                <Input
-                  value={editing.data.district ?? ""}
-                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, district: e.target.value } })}
-                  placeholder="Pati"
-                  maxLength={80}
-                />
-              </Field>
-            </div>
-
-            {/* Manual fallback — always editable so users can still save when
-                Komerce search is down or returns no match. If filled in
-                manually (no subdistrictId), checkout falls back to a
-                city-level ongkir estimate instead of failing. */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Kota / kabupaten">
-                <Input
-                  value={editing.data.city}
-                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, city: e.target.value, subdistrictId: null } })}
-                  placeholder="Jakarta Selatan"
-                  required minLength={2} maxLength={64}
-                />
-              </Field>
-              <Field label="Provinsi">
-                <Input
-                  value={editing.data.province}
-                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, province: e.target.value, subdistrictId: null } })}
-                  placeholder="DKI Jakarta"
-                  required minLength={2} maxLength={64}
-                />
-              </Field>
-              <Field label="Kode pos">
-                <Input
-                  value={editing.data.postal}
-                  onChange={(e) => setEditing({ ...editing, data: { ...editing.data, postal: e.target.value, subdistrictId: null } })}
-                  placeholder="12190"
-                  required minLength={4} maxLength={10}
-                />
-              </Field>
-            </div>
-            <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW">
-              <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} />
+            <Field label="Alamat lengkap" hint="Jalan, nomor rumah, RT/RW.">
+              <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} placeholder="Jl. Mawar No. 12, RT 03/RW 05" />
             </Field>
 
             <Field
-              label="Titik koordinat (peta)"
-              hint="Opsional. Bantu kurir/driver nemuin lokasi tepat. Pakai GPS atau pilih manual di peta."
+              label="Pin lokasi di peta"
+              hint="Opsional. Klik di peta atau pakai GPS — bantu kurir nemuin alamat tepat."
             >
               <MapPinPicker
                 lat={editing.data.lat ?? null}

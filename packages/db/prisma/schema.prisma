@@ -223,6 +223,12 @@ model Address {
   // address via the destination autocomplete. Required for accurate ongkir
   // calculation; if missing, checkout falls back to a city-level estimate.
   subdistrictId Int? @map("subdistrict_id")
+  // GPS pin — dropped via the address form's "pakai lokasi sekarang"
+  // button or a manual map pick. Optional; checkout/courier flows still
+  // work without it (subdistrictId drives ongkir). Useful for visual
+  // confirmation + future driver-assist pickup.
+  lat       Float?
+  lng       Float?
   primary   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 

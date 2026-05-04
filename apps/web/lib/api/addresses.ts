@@ -16,6 +16,8 @@ export type Address = {
   // RajaOngkir/Komerce subdistrict id — required for accurate ongkir at
   // checkout. Optional here for legacy rows; checkout warns if missing.
   subdistrictId: number | null;
+  lat?: number | null;
+  lng?: number | null;
   primary: boolean;
 };
 

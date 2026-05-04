@@ -11,6 +11,7 @@ const empty: AddressInput = {
   subdistrict: "", district: "",
   city: "", province: "", postal: "",
   subdistrictId: null,
+  lat: null, lng: null,
   primary: false,
 };
 
@@ -196,6 +197,18 @@ export function AddressManager({ initial }: { initial: Address[] }) {
             <Field label="Alamat lengkap" hint="Jalan, nomor, RT/RW">
               <Input value={editing.data.line} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, line: e.target.value } })} required minLength={5} maxLength={240} />
             </Field>
+
+            <Field
+              label="Titik koordinat (peta)"
+              hint="Opsional. Bantu kurir/driver nemuin lokasi tepat. Pakai GPS atau pilih manual di peta."
+            >
+              <MapPinPicker
+                lat={editing.data.lat ?? null}
+                lng={editing.data.lng ?? null}
+                onChange={(lat, lng) => setEditing({ ...editing, data: { ...editing.data, lat, lng } })}
+              />
+            </Field>
+
             <label className="flex items-center gap-2 text-sm text-fg-muted">
               <input type="checkbox" checked={editing.data.primary} onChange={(e) => setEditing({ ...editing, data: { ...editing.data, primary: e.target.checked } })} className="h-4 w-4 accent-brand-400" />
               Jadikan alamat utama
@@ -263,4 +276,127 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {hint && <p className="text-xs text-fg-subtle">{hint}</p>}
     </div>
   );
+}
+
+/**
+ * Lightweight pin picker — uses navigator.geolocation for GPS, allows
+ * manual lat/lng entry, and renders an OpenStreetMap iframe preview
+ * centered on the picked point. No JS map library required (keeps the
+ * bundle small); for finer-grained drag/drop picking, "Pilih di peta"
+ * opens openstreetmap.org in a new tab so the user can copy a precise
+ * point back. Coordinates are validated to Indonesian bounds server-side.
+ */
+function MapPinPicker({
+  lat, lng, onChange,
+}: {
+  lat: number | null;
+  lng: number | null;
+  onChange: (lat: number | null, lng: number | null) => void;
+}) {
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  function useGps() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setErr("Browser kamu nggak dukung GPS. Isi koordinat manual di bawah.");
+      return;
+    }
+    setBusy(true); setErr(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onChange(round6(pos.coords.latitude), round6(pos.coords.longitude));
+        setBusy(false);
+      },
+      (e) => {
+        setBusy(false);
+        setErr(
+          e.code === e.PERMISSION_DENIED
+            ? "Akses lokasi ditolak. Cek izin lokasi browser."
+            : "Gagal ambil lokasi. Coba lagi atau isi manual.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+    );
+  }
+
+  function clear() {
+    onChange(null, null);
+    setErr(null);
+  }
+
+  const hasPin = lat != null && lng != null;
+  // OSM embed centered on the pin with a marker. ~0.005 deg = ~500m
+  // window — close enough to verify the pin without zoom controls.
+  const bbox = hasPin
+    ? `${lng - 0.005},${lat - 0.005},${lng + 0.005},${lat + 0.005}`
+    : null;
+  const embedSrc = hasPin
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
+    : null;
+  const pickUrl = hasPin
+    ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`
+    : `https://www.openstreetmap.org/`;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={useGps} disabled={busy}>
+          {busy ? "Mengambil…" : (hasPin ? "↻ Refresh GPS" : "📍 Pakai lokasi sekarang")}
+        </Button>
+        <a
+          href={pickUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center rounded-md border border-rule px-3 text-xs font-semibold text-fg-muted hover:border-brand-400/60 hover:text-brand-500"
+        >
+          Pilih di peta ↗
+        </a>
+        {hasPin && (
+          <Button type="button" variant="ghost" size="sm" onClick={clear}>Hapus pin</Button>
+        )}
+      </div>
+
+      {err && <p role="alert" className="text-xs text-flame-600">{err}</p>}
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Latitude">
+          <Input
+            type="number"
+            step="0.000001"
+            value={lat ?? ""}
+            onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value), lng)}
+            placeholder="-6.200000"
+          />
+        </Field>
+        <Field label="Longitude">
+          <Input
+            type="number"
+            step="0.000001"
+            value={lng ?? ""}
+            onChange={(e) => onChange(lat, e.target.value === "" ? null : Number(e.target.value))}
+            placeholder="106.816666"
+          />
+        </Field>
+      </div>
+
+      {hasPin && embedSrc && (
+        <div className="overflow-hidden rounded-xl border border-rule">
+          <iframe
+            title="Peta lokasi alamat"
+            src={embedSrc}
+            className="block h-64 w-full"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+          <p className="bg-panel-2/40 px-3 py-1.5 text-[11px] text-fg-subtle">
+            Pin: {lat?.toFixed(6)}, {lng?.toFixed(6)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function round6(n: number): number {
+  return Math.round(n * 1_000_000) / 1_000_000;
 }

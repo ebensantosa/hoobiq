@@ -21,6 +21,10 @@ const AddressInput = z.object({
   // Optional so legacy addresses still validate; checkout will surface a
   // clear error if the buyer tries to use one missing this.
   subdistrictId: z.number().int().positive().nullable().optional(),
+  // GPS pin — optional. Validated to plausible Indonesia bounds so a
+  // bad client value doesn't get persisted. (-11..6 lat, 95..141 lng).
+  lat: z.number().min(-11).max(6).nullable().optional(),
+  lng: z.number().min(95).max(141).nullable().optional(),
   primary: z.boolean().default(false),
 });
 type AddressInput = z.infer<typeof AddressInput>;

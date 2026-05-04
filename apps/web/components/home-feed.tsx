@@ -84,7 +84,7 @@ export function HomeFeed({
             UX feedback. Mobile home flows hero → kategori → produk
             so the buyer sees products as fast as possible. */}
         <div className="hidden md:block">
-          <QuickStats stats={stats} />
+          <QuickStats stats={stats} username={username} />
         </div>
 
         {categories.length > 0 && (
@@ -190,7 +190,7 @@ function HeroBanner() {
 /*  Quick Stats — Koleksimu / Wishlist / Transaksi / Rating + Verified    */
 /* -------------------------------------------------------------------- */
 
-function QuickStats({ stats }: { stats: HomeStats }) {
+function QuickStats({ stats, username }: { stats: HomeStats; username: string }) {
   return (
     <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
       <StatCard
@@ -250,27 +250,56 @@ function QuickStats({ stats }: { stats: HomeStats }) {
         }
       />
 
-      {/* Verified Seller — promo card spanning 2 cols on tablet, 1 on
-          desktop's 5-col grid. Click goes to KYC settings if user
-          isn't verified, profile otherwise. */}
+      {/* Verified Seller — green/emerald gradient + checkmark badge
+          when verified, leading to the public profile so other people
+          can see the badge. Otherwise pink/brand promo CTA leading to
+          the KYC submission page. */}
       <Link
-        href={stats.verified ? "/pengaturan" : "/pengaturan/verifikasi-ktp"}
-        className="col-span-2 flex items-center gap-3 rounded-2xl border border-brand-400/30 bg-gradient-to-br from-brand-500/10 to-ultra-500/10 p-4 transition-all hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-lg sm:col-span-2 lg:col-span-1"
+        href={stats.verified ? `/u/${encodeURIComponent(username)}` : "/pengaturan/verifikasi-ktp"}
+        className={
+          "col-span-2 flex items-center gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:col-span-2 lg:col-span-1 " +
+          (stats.verified
+            ? "border-emerald-400/40 bg-gradient-to-br from-emerald-500/15 via-emerald-400/10 to-teal-500/15 hover:border-emerald-400/70"
+            : "border-brand-400/30 bg-gradient-to-br from-brand-500/10 to-ultra-500/10 hover:border-brand-400/60")
+        }
       >
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/20 text-brand-600 dark:text-brand-400">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
+        <div
+          className={
+            "grid h-11 w-11 shrink-0 place-items-center rounded-xl " +
+            (stats.verified
+              ? "bg-emerald-500/25 text-emerald-700 dark:text-emerald-300"
+              : "bg-brand-500/20 text-brand-600 dark:text-brand-400")
+          }
+        >
+          {stats.verified ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          )}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-fg">Verified Seller</p>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+            Verified Seller
+            {stats.verified && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                Aktif
+              </span>
+            )}
+          </p>
           <p className="mt-0.5 text-[11px] leading-snug text-fg-muted">
             {stats.verified
-              ? "Akun kamu sudah terverifikasi untuk transaksi yang aman."
+              ? "Akun kamu udah terverifikasi. Lihat badge di profil."
               : "Verifikasi KTP buat dapet badge & trust ekstra."}
           </p>
-          <p className="mt-1 text-[11px] font-semibold text-brand-500">Selengkapnya →</p>
+          <p className={"mt-1 text-[11px] font-semibold " + (stats.verified ? "text-emerald-700 dark:text-emerald-400" : "text-brand-500")}>
+            {stats.verified ? "Lihat profil →" : "Selengkapnya →"}
+          </p>
         </div>
       </Link>
     </section>

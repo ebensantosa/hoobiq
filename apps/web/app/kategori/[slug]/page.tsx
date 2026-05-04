@@ -16,6 +16,7 @@ type Node = {
   level: number;
   parentId: string | null;
   listingCount: number;
+  imageUrl: string | null;
   children: Node[];
 };
 
@@ -114,8 +115,20 @@ export default async function CategoryPage({
                 href={`/kategori/${c.slug}`}
                 className="group flex flex-col overflow-hidden rounded-2xl border border-rule bg-panel transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400/60 hover:shadow-[0_8px_24px_-12px] hover:shadow-brand-400/40"
               >
-                <div className="flex aspect-[16/9] items-end bg-gradient-to-br from-brand-100 to-ultra-50 p-5">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/85 text-fg shadow-sm backdrop-blur">
+                <div className="relative flex aspect-[16/9] items-end overflow-hidden bg-gradient-to-br from-brand-100 to-ultra-50 p-5">
+                  {c.imageUrl && (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={c.imageUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent" />
+                    </>
+                  )}
+                  <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/85 text-fg shadow-sm backdrop-blur">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                   </span>
                 </div>

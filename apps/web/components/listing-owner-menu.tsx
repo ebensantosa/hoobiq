@@ -80,6 +80,13 @@ export function ListingOwnerMenu({
           >
             Edit listing
           </Link>
+          <Link
+            role="menuitem"
+            href={`/upload?clone=${encodeURIComponent(slug)}`}
+            className="block px-4 py-2 text-left text-sm text-fg-muted transition-colors hover:bg-panel-2 hover:text-fg"
+          >
+            Salin produk
+          </Link>
           <button
             role="menuitem"
             type="button"

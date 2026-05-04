@@ -116,42 +116,50 @@ function validate(state: FormState, images: string[], condition: string): Errors
   return e;
 }
 
-export function UploadForm({ tree, existing }: { tree: Node[]; existing?: UploadFormExisting }) {
+export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?: UploadFormExisting; clone?: UploadFormExisting }) {
   const router = useRouter();
 
+  // Clone seeds the form like `existing` does, but submit goes through
+  // create (not update) — so the seller can spawn near-duplicates of an
+  // existing listing without redoing every spec. Per spec, the cloned
+  // listing zeroes out: title, description, price, compareAt, images,
+  // condition (back to default), and stock — those identify the actual
+  // SKU. Everything else (kategori, sub-kategori, series/set, weight,
+  // dimensions, brand, variant, warranty, couriers) carries over.
+  const seed = existing ?? clone;
   const [state, setState] = React.useState<FormState>({
     title:       existing?.title ?? "",
     description: existing?.description ?? "",
     price:       existing?.priceIdr != null ? String(existing.priceIdr) : "",
     compareAt:   existing?.compareAtIdr != null ? String(existing.compareAtIdr) : "",
-    brand:       existing?.brand ?? "",
-    variant:     existing?.variant ?? "",
-    warranty:    existing?.warranty ?? "",
+    brand:       seed?.brand ?? "",
+    variant:     seed?.variant ?? "",
+    warranty:    seed?.warranty ?? "",
     stock:       String(existing?.stock ?? 1),
-    weight:      String(existing?.weightGrams ?? 500),
-    categoryId:  existing?.categoryId ?? "",
+    weight:      String(seed?.weightGrams ?? 500),
+    categoryId:  seed?.categoryId ?? "",
   });
   const [condition, setCondition] = React.useState<Condition>(
     (existing?.condition as Condition | undefined) ?? "BRAND_NEW_SEALED",
   );
   const [images, setImages]       = React.useState<string[]>(existing?.images ?? []);
   const [imageErr, setImageErr]   = React.useState<string | null>(null);
-  const [couriers, setCouriers]   = React.useState<string[]>(existing?.couriers ?? []);
-  const [origin, setOrigin]       = React.useState<Destination | null>(existing?.origin ?? null);
+  const [couriers, setCouriers]   = React.useState<string[]>(seed?.couriers ?? []);
+  const [origin, setOrigin]       = React.useState<Destination | null>(seed?.origin ?? null);
   // Default ON — collectors expect listings to be at least theoretically
   // tradeable. Sellers untick to opt out per item.
-  const [tradeable, setTradeable] = React.useState<boolean>(existing?.tradeable ?? true);
+  const [tradeable, setTradeable] = React.useState<boolean>(seed?.tradeable ?? true);
   // Default ON — most sellers want their listing to surface on their
   // public profile feed too (free reach). Untick if you want marketplace
   // and feed kept separate (showcase-only feed). Edits keep the existing
   // value when present.
-  const [showOnFeed, setShowOnFeed] = React.useState<boolean>(existing?.showOnFeed ?? true);
+  const [showOnFeed, setShowOnFeed] = React.useState<boolean>(seed?.showOnFeed ?? true);
   // Optional package dimensions — strings so empty input round-trips
   // cleanly. Sent as `null` when blank so the API treats them as
   // "not measured" rather than zero.
-  const [lengthCm, setLengthCm] = React.useState<string>(existing?.lengthCm != null ? String(existing.lengthCm) : "");
-  const [widthCm,  setWidthCm]  = React.useState<string>(existing?.widthCm  != null ? String(existing.widthCm)  : "");
-  const [heightCm, setHeightCm] = React.useState<string>(existing?.heightCm != null ? String(existing.heightCm) : "");
+  const [lengthCm, setLengthCm] = React.useState<string>(seed?.lengthCm != null ? String(seed.lengthCm) : "");
+  const [widthCm,  setWidthCm]  = React.useState<string>(seed?.widthCm  != null ? String(seed.widthCm)  : "");
+  const [heightCm, setHeightCm] = React.useState<string>(seed?.heightCm != null ? String(seed.heightCm) : "");
   // Pre-order toggle. Default OFF — most listings ship right away.
   const [isPreorder, setIsPreorder] = React.useState<boolean>(existing?.isPreorder ?? false);
   const [preorderShipDays, setPreorderShipDays] = React.useState<string>(

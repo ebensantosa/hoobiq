@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@hoobiq/ui";
+import { Button, Card, Input, Label } from "@hoobiq/ui";
 import { api, ApiError } from "@/lib/api/client";
 import { uploadImage } from "@/lib/api/uploads";
 import { useToast } from "@/components/toast-provider";
@@ -22,6 +22,10 @@ export function KtpForm({ initialStatus }: { initialStatus: Status }) {
   const toast = useToast();
   const [front, setFront] = React.useState<string | null>(null);
   const [selfie, setSelfie] = React.useState<string | null>(null);
+  const [fullName, setFullName] = React.useState("");
+  const [nik, setNik] = React.useState("");
+  const [dob, setDob] = React.useState("");
+  const [address, setAddress] = React.useState("");
   const [pending, start] = React.useTransition();
 
   if (initialStatus.verified) {
@@ -96,6 +100,22 @@ export function KtpForm({ initialStatus }: { initialStatus: Status }) {
       toast.error("Foto belum lengkap", "Upload KTP dan selfie sambil pegang KTP.");
       return;
     }
+    if (fullName.trim().length < 2) {
+      toast.error("Nama belum diisi", "Tulis nama lengkap sesuai KTP.");
+      return;
+    }
+    if (!/^\d{16}$/.test(nik.trim())) {
+      toast.error("NIK tidak valid", "NIK harus 16 digit angka.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob.trim())) {
+      toast.error("Tanggal lahir kosong", "Pilih tanggal lahir sesuai KTP.");
+      return;
+    }
+    if (address.trim().length < 10) {
+      toast.error("Alamat belum lengkap", "Tulis alamat sesuai KTP (min 10 karakter).");
+      return;
+    }
     start(async () => {
       try {
         const [frontUrl, selfieUrl] = await Promise.all([
@@ -104,7 +124,13 @@ export function KtpForm({ initialStatus }: { initialStatus: Status }) {
         ]);
         await api("/users/me/ktp", {
           method: "POST",
-          body: { frontUrl, selfieUrl },
+          body: {
+            frontUrl, selfieUrl,
+            fullName: fullName.trim(),
+            nik: nik.trim(),
+            dob: dob.trim(),
+            address: address.trim(),
+          },
         });
         toast.success("KTP terkirim", "Tim Hoobiq akan review dalam 1×24 jam.");
         router.refresh();
@@ -141,6 +167,63 @@ export function KtpForm({ initialStatus }: { initialStatus: Status }) {
           onClear={() => setSelfie(null)}
         />
       </div>
+
+      <Card>
+        <div className="flex flex-col gap-4 p-5">
+          <div>
+            <p className="text-sm font-bold text-fg">Data identitas</p>
+            <p className="mt-0.5 text-xs text-fg-muted">
+              Isi sesuai yang tertulis di KTP. Admin pakai data ini buat cross-check
+              foto kamu — pastikan persis sama biar gak ditolak.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <Label>Nama lengkap (sesuai KTP)</Label>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="EBENTERA SANTOSA"
+                maxLength={120}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>NIK (16 digit)</Label>
+              <Input
+                value={nik}
+                onChange={(e) => setNik(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                placeholder="3300000000000000"
+                inputMode="numeric"
+                maxLength={16}
+                className="font-mono"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Tanggal lahir</Label>
+              <Input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <Label>Alamat (sesuai KTP)</Label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={3}
+                maxLength={400}
+                placeholder="Jl. ___ No. __, RT/RW, Kel. ___, Kec. ___, Kota/Kabupaten ___, Provinsi ___, Kode Pos."
+                className="w-full resize-none rounded-md border border-rule bg-panel px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand-400/60 focus:outline-none focus:ring-2 focus:ring-brand-400/15"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] leading-relaxed text-fg-subtle">
+            Data ini disimpan terenkripsi & tidak ditampilkan publik. Cuma admin
+            review yang bisa lihat — sesuai Kebijakan Privasi.
+          </p>
+        </div>
+      </Card>
 
       <div className="flex justify-end">
         <Button

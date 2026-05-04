@@ -20,6 +20,10 @@ type KycItem = {
   rejectNote: string | null;
   frontUrl: string | null;
   selfieUrl: string | null;
+  fullName: string | null;
+  nik: string | null;
+  dob: string | null;
+  address: string | null;
 };
 
 /**
@@ -145,6 +149,37 @@ function Row({ item, status, onChange }: { item: KycItem; status: string; onChan
             {status === "rejected" && item.rejectNote && (
               <div className="rounded-md border border-flame-400/30 bg-flame-400/5 p-3 text-xs text-flame-700 dark:text-flame-400">
                 <span className="font-semibold">Catatan:</span> {item.rejectNote}
+              </div>
+            )}
+            {(item.fullName || item.nik || item.dob || item.address) && (
+              <div className="rounded-md border border-rule bg-panel/40 p-3 text-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Data identitas</p>
+                <dl className="mt-2 space-y-1.5">
+                  {item.fullName && (
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-fg-subtle">Nama</dt>
+                      <dd className="font-medium text-fg">{item.fullName}</dd>
+                    </div>
+                  )}
+                  {item.nik && (
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-fg-subtle">NIK</dt>
+                      <dd className="font-mono text-fg">{item.nik}</dd>
+                    </div>
+                  )}
+                  {item.dob && (
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-fg-subtle">TTL</dt>
+                      <dd className="text-fg">{item.dob}</dd>
+                    </div>
+                  )}
+                  {item.address && (
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-fg-subtle">Alamat</dt>
+                      <dd className="text-fg whitespace-pre-line">{item.address}</dd>
+                    </div>
+                  )}
+                </dl>
               </div>
             )}
           </div>

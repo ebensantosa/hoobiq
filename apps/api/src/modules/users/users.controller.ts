@@ -17,6 +17,12 @@ const ImageUrl = z.string().refine(
 const KtpSubmitInput = z.object({
   frontUrl: ImageUrl,
   selfieUrl: ImageUrl,
+  // Identity fields cross-checked by admin against the KTP image. All
+  // required so the form gates submission until they're filled.
+  fullName: z.string().trim().min(2).max(120),
+  nik:      z.string().trim().regex(/^\d{16}$/, "NIK harus 16 digit angka."),
+  dob:      z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal: YYYY-MM-DD."),
+  address:  z.string().trim().min(10).max(400),
 });
 
 @Controller("users")
@@ -99,6 +105,7 @@ export class UsersController {
         id: true, username: true, name: true, email: true, avatarUrl: true, city: true,
         ktpStatus: true, ktpSubmittedAt: true, ktpVerifiedAt: true, ktpRejectNote: true,
         ktpFrontUrl: true, ktpSelfieUrl: true,
+        ktpFullName: true, ktpNik: true, ktpDob: true, ktpAddress: true,
       },
     });
     return {
@@ -115,6 +122,10 @@ export class UsersController {
         rejectNote: u.ktpRejectNote,
         frontUrl: u.ktpFrontUrl,
         selfieUrl: u.ktpSelfieUrl,
+        fullName: u.ktpFullName,
+        nik: u.ktpNik,
+        dob: u.ktpDob,
+        address: u.ktpAddress,
       })),
     };
   }
@@ -260,6 +271,10 @@ export class UsersController {
         ktpStatus: "pending",
         ktpFrontUrl: body.frontUrl,
         ktpSelfieUrl: body.selfieUrl,
+        ktpFullName: body.fullName,
+        ktpNik: body.nik,
+        ktpDob: body.dob,
+        ktpAddress: body.address,
         ktpSubmittedAt: new Date(),
         ktpRejectNote: null,
       },

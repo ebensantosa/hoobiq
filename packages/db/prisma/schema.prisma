@@ -55,6 +55,14 @@ model User {
   ktpRejectNote  String?   @map("ktp_reject_note")
   ktpFrontUrl    String?   @map("ktp_front_url")
   ktpSelfieUrl   String?   @map("ktp_selfie_url")
+  // Identity fields the seller fills in alongside the photos so an
+  // admin can cross-check the KTP image. Stored as plain text since
+  // they need to be readable side-by-side with the photo during
+  // review; sensitive enough that we never expose them publicly.
+  ktpFullName    String?   @map("ktp_full_name")
+  ktpNik         String?   @map("ktp_nik")
+  ktpDob         String?   @map("ktp_dob")
+  ktpAddress     String?   @map("ktp_address")
   interestedJson String    @default("[]") @map("interested_json")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")

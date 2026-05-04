@@ -229,6 +229,17 @@ export function DMShell({
           </header>
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-6 py-6">
+            {/* Anti-fraud reminder — fixed at the top of every thread.
+                Buyers got phished into off-platform transfers via DM
+                often enough that this banner pays for itself. */}
+            <div className="mx-auto flex max-w-md items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span><b>Ingat!</b> Jangan pernah transfer di luar Hoobiq Pay buat menghindari penipuan.</span>
+            </div>
+
             {loading ? (
               <div className="text-center text-sm text-fg-subtle">Memuat pesan…</div>
             ) : messages.length === 0 ? (
@@ -240,9 +251,9 @@ export function DMShell({
                 <div key={m.id} className={"flex " + (m.fromMe ? "justify-end" : "justify-start")}>
                   <div
                     className={
-                      "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed break-words " +
+                      "max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed break-words shadow-sm " +
                       (m.fromMe
-                        ? "bg-brand-400 text-white"
+                        ? "bg-gradient-to-br from-brand-500 to-ultra-500 text-white"
                         : "border border-rule bg-panel text-fg")
                     }
                   >
@@ -281,10 +292,32 @@ export function DMShell({
           </form>
         </section>
       ) : (
-        // Empty thread placeholder — only visible on desktop (the list
-        // owns the mobile screen until the buyer picks a conversation).
-        <section className="hidden items-center justify-center text-fg-subtle lg:flex">
-          Pilih percakapan untuk mulai.
+        // Empty state — desktop only (mobile defaults to the list view
+        // until the user taps a conversation). Polished to match the
+        // mockup: pastel illustration + headline + CTA back to the
+        // marketplace if they don't have anyone to chat with yet.
+        <section className="hidden flex-1 flex-col items-center justify-center gap-4 px-8 py-16 text-center lg:flex">
+          <div className="relative grid h-32 w-32 place-items-center">
+            <span aria-hidden className="absolute inset-0 rounded-full bg-brand-400/15 blur-xl" />
+            <span aria-hidden className="absolute -right-2 -top-2 text-3xl">✦</span>
+            <span aria-hidden className="absolute -left-1 bottom-2 text-2xl">✦</span>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="relative text-brand-500">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-fg">Mulai Percakapan</p>
+            <p className="mt-1 max-w-sm text-sm text-fg-muted">
+              Pilih chat di samping atau mulai chat baru dengan seller untuk
+              tanya-tanya soal produk.
+            </p>
+          </div>
+          <a
+            href="/marketplace"
+            className="inline-flex h-10 items-center rounded-full bg-gradient-to-r from-brand-500 to-ultra-500 px-5 text-sm font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+          >
+            Jelajahi Marketplace
+          </a>
         </section>
       )}
       </div>

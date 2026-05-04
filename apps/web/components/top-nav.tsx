@@ -51,6 +51,23 @@ export async function TopNav({ active: _active }: { active?: string }) {
     : null;
   const isSeller = !!sellerProbe && sellerProbe.items.length > 0;
 
+  // Primary address pill — Shopee-style "kirim dari" indicator. Compact
+  // city/subdistrict label on the topnav so the seller knows which
+  // address listings will originate from, with a one-click jump to
+  // /pengaturan/alamat. Only fetched for logged-in users.
+  type RawAddress = {
+    label: string; subdistrict?: string | null; district?: string | null;
+    city: string; primary: boolean;
+  };
+  const addressesRes = user
+    ? await serverApi<{ items: RawAddress[] }>("/addresses").catch(() => null)
+    : null;
+  const primaryAddr =
+    (addressesRes?.items ?? []).find((a) => a.primary) ?? (addressesRes?.items ?? [])[0] ?? null;
+  const addrShort = primaryAddr
+    ? primaryAddr.subdistrict?.trim() || primaryAddr.district?.trim() || primaryAddr.city?.trim() || null
+    : null;
+
   // Build the trimmed menu shape: 5 canonical primary categories,
   // each with their direct sub-categories. Limit to 12 children to
   // keep the panel reasonable when an admin adds many sub-cats.
@@ -143,6 +160,18 @@ export async function TopNav({ active: _active }: { active?: string }) {
               header stays focused on browse + cart + account. */}
           {user ? (
             <>
+              <Link
+                href="/pengaturan/alamat"
+                title={primaryAddr ? "Ubah alamat pengiriman" : "Atur alamat pengiriman"}
+                className="hidden h-9 max-w-[200px] items-center gap-1.5 rounded-lg border border-rule bg-panel px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500 lg:inline-flex"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span className="truncate">
+                  {addrShort ?? <span className="text-flame-600">Atur alamat</span>}
+                </span>
+              </Link>
               {/* Wishlist + DM hidden on mobile — both already
                   reachable from the avatar dropdown / mobile drawer
                   / bottom tab bar (DM = "Pesan"). Keeps the mobile

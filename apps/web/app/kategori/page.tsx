@@ -104,7 +104,10 @@ const fallback = {
 };
 
 export default async function CategoryIndexPage() {
-  const tree = await serverApi<Node[]>("/categories", { revalidate: 60 });
+  // Skip Next.js data cache so admin-uploaded category images appear
+  // without an extra 60s revalidation window. API already has its own
+  // 60s Redis cache that gets invalidated on admin save.
+  const tree = await serverApi<Node[]>("/categories");
   const roots = pickPrimaryCategories((tree ?? []).filter((n) => n.level === 1));
 
   return (

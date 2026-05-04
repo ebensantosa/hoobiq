@@ -61,7 +61,11 @@ export default async function CategoryPage({
   if (condition) q.set("condition", condition);
 
   const [tree, listingsRes, me] = await Promise.all([
-    serverApi<Node[]>("/categories", { revalidate: 60 }),
+    // No data-cache: user-uploaded category images need to show up
+    // immediately after admin saves them (the 60s Next.js cache layered
+    // on top of the API's own 60s Redis cache otherwise compounded
+    // into a ~2-minute lag).
+    serverApi<Node[]>("/categories"),
     serverApi<{ items: ListingSummary[]; nextCursor: string | null }>(`/listings?${q}`),
     getSessionUser(),
   ]);

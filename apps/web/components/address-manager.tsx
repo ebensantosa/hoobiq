@@ -29,6 +29,15 @@ export function AddressManager({ initial }: { initial: Address[] }) {
     e.preventDefault();
     if (!editing) return;
     setErr(null);
+    // Subdistrict id + kelurahan + kecamatan are required so checkout can
+    // hit Komerce with a precise origin/destination. Without them, ongkir
+    // falls back to a city-level estimate that overshoots — and the
+    // listing form's "ambil dari alamat seller" path gets a broken row.
+    const d = editing.data;
+    if (!d.subdistrictId || !(d.subdistrict ?? "").trim() || !(d.district ?? "").trim()) {
+      setErr("Pilih kelurahan/kecamatan dari pencarian dulu — kalau search bermasalah, isi manual lalu pilih ulang dari hasil pencarian.");
+      return;
+    }
     start(async () => {
       try {
         if (editing.id) {

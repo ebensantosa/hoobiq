@@ -380,11 +380,8 @@ export class ListingsService {
     const finalImages = (input.images ?? []).length > 0
       ? input.images
       : variantImages;
-    if (finalImages.length < 3 && !hasVariants) {
-      throw new BadRequestException({ code: "min_images", message: "Minimal 3 foto." });
-    }
     if (finalImages.length === 0) {
-      throw new BadRequestException({ code: "min_images", message: "Minimal 1 foto (dari foto variasi atau foto utama)." });
+      throw new BadRequestException({ code: "min_images", message: "Minimal 1 foto (foto utama atau dari salah satu variasi)." });
     }
 
     const listing = await this.prisma.listing.create({

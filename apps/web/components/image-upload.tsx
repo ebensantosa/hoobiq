@@ -154,7 +154,7 @@ export function ImageUpload({
       />
 
       <p className="mt-3 text-xs text-fg-subtle">
-        Minimal 3 foto, maksimal 8. Foto pertama jadi cover. JPG/PNG ≤ 2&nbsp;MB per foto. Background netral, cahaya cukup, tunjukkan detail kondisi.
+        Min 1, maks 20 foto · JPG/PNG/WebP ≤ 2&nbsp;MB · foto pertama jadi cover · background netral & cahaya cukup biar buyer yakin.
       </p>
       {localErr && (
         <p role="alert" className="mt-2 rounded-lg border border-flame-400/40 bg-flame-400/10 px-3 py-2 text-xs text-flame-600">

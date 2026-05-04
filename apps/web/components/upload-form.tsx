@@ -130,14 +130,10 @@ function validate(state: FormState, images: string[], condition: string, hasVari
   else if (weight > 50_000)                       e.weight = "Maksimal 50.000 gr.";
 
   if (!state.categoryId)                          e.categoryId = "Pilih kategori.";
-  // Variant photos count toward the gallery — Shopee-style. Required
-  // counts: hasVariants ON → at least 1 variant must have an image
-  // (we use that as the listing cover); OFF → legacy min-3 rule.
-  if (hasVariants) {
-    if (variantImageCount < 1 && images.length < 1) e.images = "Upload foto di salah satu variasi (atau foto utama).";
-  } else if (images.length < 3) {
-    e.images = "Upload minimal 3 foto.";
-  }
+  // Min 1 foto. Variant photos count toward the gallery (Shopee-style),
+  // so when variations are on a single variant photo is enough.
+  const photoCount = hasVariants ? images.length + variantImageCount : images.length;
+  if (photoCount < 1) e.images = "Upload minimal 1 foto.";
   if (!conditions.includes(condition as Condition)) e.condition = "Pilih kondisi.";
 
   return e;
@@ -363,11 +359,11 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
         title="Foto"
         subtitle={
           hasVariants
-            ? "Foto variasi otomatis jadi galeri produk. Tambah foto utama di sini cuma kalau perlu."
-            : "Foto pertama jadi cover."
+            ? "Foto variasi otomatis jadi galeri. Tambah foto utama opsional, maks 20 foto."
+            : "Foto pertama jadi cover. Min 1, maks 20 foto. JPG/PNG/WebP ≤ 2 MB."
         }
       >
-        <ImageUpload value={images} onChange={setImages} max={8} onError={setImageErr} />
+        <ImageUpload value={images} onChange={setImages} max={20} onError={setImageErr} />
         {showErr("images") && <FieldError>{showErr("images")}</FieldError>}
       </Section>
 

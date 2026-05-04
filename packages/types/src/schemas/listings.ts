@@ -144,9 +144,8 @@ export const CreateListingInput = z.object({
   // the detail page (cover is large, gallery thumbnails empty), and
   // buyers consistently asked for more angles before paying. Cap stays
   // at 8 to keep the upload payload bounded.
-  // 0–8 fotos. The legacy "min 3" requirement is now handled in the API
-  // service (checks against variant images when variations are on) so a
-  // listing with variants doesn't have to upload 3 redundant covers.
+  // 0–20 fotos. Min count enforced in the API service (variant photos
+  // count toward the gallery) — Zod just caps the array.
   images: z
     .array(
       z.string().refine(
@@ -154,7 +153,7 @@ export const CreateListingInput = z.object({
         { message: "Harus berupa URL http(s) atau data:image URI" }
       )
     )
-    .max(8)
+    .max(20)
     .default([]),
   weightGrams: z.number().int().min(10).max(50_000).default(500),
   // Optional discount + spec extras. compareAtIdr is the "before" price;

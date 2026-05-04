@@ -97,10 +97,35 @@ export default async function CategoryPage({
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
             {breadcrumb.join(" · ")}
           </div>
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-8">
+
+          {/* Hero banner — kategori cover image as the visual anchor.
+              Falls back to a tinted gradient when admin hasn't uploaded
+              one yet. Sits between breadcrumb and the title bar. */}
+          <div className="relative mt-3 aspect-[16/5] w-full overflow-hidden rounded-3xl border border-rule bg-gradient-to-br from-brand-200 via-ultra-200 to-flame-200 dark:from-brand-500/20 dark:via-ultra-500/15 dark:to-flame-500/20">
+            {node.imageUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={node.imageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+              </>
+            ) : (
+              <span aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.5),transparent),radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.35),transparent)] dark:opacity-20" />
+            )}
+            <div className={"relative flex h-full flex-col justify-end gap-1 p-6 md:p-8 " + (node.imageUrl ? "text-white" : "text-fg")}>
+              <span className={"font-mono text-[10px] uppercase tracking-[0.22em] " + (node.imageUrl ? "text-white/80" : "text-fg-subtle")}>
+                {node.level === 1 ? "Kategori utama" : "Sub-kategori"}
+              </span>
+              <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">{node.name}.</h1>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-8">
             <div className="max-w-2xl">
-              <h1 className="text-4xl font-bold text-fg md:text-5xl">{node.name}.</h1>
-              <p className="mt-4 max-w-[56ch] text-fg-muted">
+              <p className="max-w-[56ch] text-fg-muted">
                 {node.level === 1
                   ? "Jelajahi sub-kategori dan temukan koleksi yang kamu cari."
                   : "Jelajahi series/set dan temukan koleksi yang kamu cari."}
@@ -180,10 +205,27 @@ export default async function CategoryPage({
           {breadcrumb.join(" · ")}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-8">
+        <div className="relative mt-3 aspect-[16/5] w-full overflow-hidden rounded-3xl border border-rule bg-gradient-to-br from-brand-200 via-ultra-200 to-flame-200 dark:from-brand-500/20 dark:via-ultra-500/15 dark:to-flame-500/20">
+          {node.imageUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={node.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+            </>
+          ) : (
+            <span aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.5),transparent),radial-gradient(circle_at_70%_70%,rgba(255,255,255,0.35),transparent)] dark:opacity-20" />
+          )}
+          <div className={"relative flex h-full flex-col justify-end gap-1 p-6 md:p-8 " + (node.imageUrl ? "text-white" : "text-fg")}>
+            <span className={"font-mono text-[10px] uppercase tracking-[0.22em] " + (node.imageUrl ? "text-white/80" : "text-fg-subtle")}>
+              Series / Set
+            </span>
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">{node.name}.</h1>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-8">
           <div className="max-w-2xl">
-            <h1 className="text-4xl font-bold text-fg md:text-5xl">{node.name}.</h1>
-            <p className="mt-4 max-w-[56ch] text-fg-muted">
+            <p className="max-w-[56ch] text-fg-muted">
               {descriptionFor(node, ancestors)}
             </p>
           </div>

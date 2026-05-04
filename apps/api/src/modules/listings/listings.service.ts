@@ -372,6 +372,21 @@ export class ListingsService {
       ? variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
       : input.stock;
 
+    // Photos: variant photos double as the listing gallery — Shopee's
+    // "atur foto variasi" pattern — so seller doesn't upload twice.
+    // When listing.images is empty AND variants have images, derive the
+    // gallery from those. Otherwise enforce the legacy min-3 rule.
+    const variantImages = variants.map((v) => v.imageUrl).filter((u): u is string => !!u);
+    const finalImages = (input.images ?? []).length > 0
+      ? input.images
+      : variantImages;
+    if (finalImages.length < 3 && !hasVariants) {
+      throw new BadRequestException({ code: "min_images", message: "Minimal 3 foto." });
+    }
+    if (finalImages.length === 0) {
+      throw new BadRequestException({ code: "min_images", message: "Minimal 1 foto (dari foto variasi atau foto utama)." });
+    }
+
     const listing = await this.prisma.listing.create({
       data: {
         slug,
@@ -389,7 +404,7 @@ export class ListingsService {
         ...(input.warranty !== undefined && { warranty: input.warranty || null }),
         stock: rolledStock,
         condition: input.condition,
-        imagesJson: JSON.stringify(input.images),
+        imagesJson: JSON.stringify(finalImages),
         weightGrams: input.weightGrams,
         couriersJson: JSON.stringify(input.couriers ?? []),
         ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),

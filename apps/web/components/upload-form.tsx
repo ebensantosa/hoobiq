@@ -99,7 +99,7 @@ type Errors = Partial<Record<FieldKey | "form", string>>;
  * never hit a server bounce-back: rules pass on the client → request goes
  * out clean.
  */
-function validate(state: FormState, images: string[], condition: string): Errors {
+function validate(state: FormState, images: string[], condition: string, hasVariants = false, variantImageCount = 0): Errors {
   const e: Errors = {};
   if (state.title.trim().length < 8)              e.title = "Minimal 8 karakter.";
   else if (state.title.trim().length > 160)       e.title = "Maksimal 160 karakter.";
@@ -130,7 +130,14 @@ function validate(state: FormState, images: string[], condition: string): Errors
   else if (weight > 50_000)                       e.weight = "Maksimal 50.000 gr.";
 
   if (!state.categoryId)                          e.categoryId = "Pilih kategori.";
-  if (images.length < 3)                          e.images = "Upload minimal 3 foto.";
+  // Variant photos count toward the gallery — Shopee-style. Required
+  // counts: hasVariants ON → at least 1 variant must have an image
+  // (we use that as the listing cover); OFF → legacy min-3 rule.
+  if (hasVariants) {
+    if (variantImageCount < 1 && images.length < 1) e.images = "Upload foto di salah satu variasi (atau foto utama).";
+  } else if (images.length < 3) {
+    e.images = "Upload minimal 3 foto.";
+  }
   if (!conditions.includes(condition as Condition)) e.condition = "Pilih kondisi.";
 
   return e;
@@ -222,7 +229,14 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
   // creating the listing record.
   const [progress, setProgress] = React.useState<{ stage: "idle" | "images" | "save"; done: number; total: number }>({ stage: "idle", done: 0, total: 0 });
 
-  const liveErrors = React.useMemo(() => validate(state, images, condition), [state, images, condition]);
+  const variantImageCount = React.useMemo(
+    () => variants.filter((v) => v.imageUrl).length,
+    [variants],
+  );
+  const liveErrors = React.useMemo(
+    () => validate(state, images, condition, hasVariants, variantImageCount),
+    [state, images, condition, hasVariants, variantImageCount],
+  );
   const showErr = (k: FieldKey) => (touched[k] || submitErr ? liveErrors[k] : undefined);
   const isValid = Object.keys(liveErrors).length === 0 && !imageErr;
 
@@ -345,7 +359,14 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
 
   return (
     <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-6" noValidate>
-      <Section title="Foto" subtitle="Foto pertama jadi cover.">
+      <Section
+        title="Foto"
+        subtitle={
+          hasVariants
+            ? "Foto variasi otomatis jadi galeri produk. Tambah foto utama di sini cuma kalau perlu."
+            : "Foto pertama jadi cover."
+        }
+      >
         <ImageUpload value={images} onChange={setImages} max={8} onError={setImageErr} />
         {showErr("images") && <FieldError>{showErr("images")}</FieldError>}
       </Section>

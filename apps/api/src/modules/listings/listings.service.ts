@@ -389,6 +389,24 @@ export class ListingsService {
       throw new BadRequestException({ code: "min_images", message: "Minimal 1 foto (foto utama atau dari salah satu variasi)." });
     }
 
+    // Pengiriman defaults — seller no longer sets origin/couriers per
+    // listing (Shopee-style: comes from their profile address). When
+    // input doesn't carry them, fall back to seller's primary address
+    // subdistrictId and a sensible default courier set so the listing
+    // is still shippable from day one.
+    const DEFAULT_COURIERS = ["jne", "jnt", "sicepat", "anteraja", "ide", "pos", "tiki", "ninja", "wahana"];
+    let resolvedOriginId: number | null = input.originSubdistrictId ?? null;
+    if (resolvedOriginId == null) {
+      const primary = await this.prisma.address.findFirst({
+        where: { userId: sellerId, primary: true },
+        select: { subdistrictId: true },
+      });
+      resolvedOriginId = primary?.subdistrictId ?? null;
+    }
+    const resolvedCouriers = (input.couriers && input.couriers.length > 0)
+      ? input.couriers
+      : DEFAULT_COURIERS;
+
     const listing = await this.prisma.listing.create({
       data: {
         slug,
@@ -408,8 +426,8 @@ export class ListingsService {
         condition: input.condition,
         imagesJson: JSON.stringify(finalImages),
         weightGrams: input.weightGrams,
-        couriersJson: JSON.stringify(input.couriers ?? []),
-        ...(input.originSubdistrictId !== undefined && { originSubdistrictId: input.originSubdistrictId }),
+        couriersJson: JSON.stringify(resolvedCouriers),
+        ...(resolvedOriginId != null && { originSubdistrictId: resolvedOriginId }),
         // Default trade-on per spec — sellers opt out, not in.
         tradeable: input.tradeable ?? true,
         showOnFeed: input.showOnFeed ?? true,

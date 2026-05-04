@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Card, Input, Label, Textarea } from "@hoobiq/ui";
 import { ImageUpload } from "./image-upload";
-import { CourierPicker } from "./courier-picker";
-import { DestinationPicker, type Destination } from "./destination-picker";
+import type { Destination } from "./destination-picker";
 import { Spinner } from "./spinner";
 import { listingsWriteApi } from "@/lib/api/listings-write";
 import { uploadImage } from "@/lib/api/uploads";
@@ -167,8 +166,12 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
   );
   const [images, setImages]       = React.useState<string[]>(existing?.images ?? []);
   const [imageErr, setImageErr]   = React.useState<string | null>(null);
-  const [couriers, setCouriers]   = React.useState<string[]>(seed?.couriers ?? []);
-  const [origin, setOrigin]       = React.useState<Destination | null>(seed?.origin ?? null);
+  // Pengiriman is no longer set per-listing — origin + couriers come
+  // from the seller's profile address (server-side default). For edits
+  // we still pass through any pre-existing values so we don't clobber
+  // them silently on save.
+  const [couriers] = React.useState<string[]>(seed?.couriers ?? []);
+  const [origin]   = React.useState<Destination | null>(seed?.origin ?? null);
   // Default ON — collectors expect listings to be at least theoretically
   // tradeable. Sellers untick to opt out per item.
   const [tradeable, setTradeable] = React.useState<boolean>(seed?.tradeable ?? true);
@@ -533,19 +536,6 @@ export function UploadForm({ tree, existing, clone }: { tree: Node[]; existing?:
             />
           </Field>
         </div>
-      </Section>
-
-      <Section title="Pengiriman" subtitle="Wajib di-set supaya pembeli bisa hitung ongkir.">
-        <Field label="Lokasi pickup" hint="Kelurahan/kecamatan tempat kamu kirim paket.">
-          <DestinationPicker
-            value={origin}
-            onChange={setOrigin}
-            placeholder="Cari kecamatan/kelurahan kamu…"
-          />
-        </Field>
-        <Field label="Ekspedisi yang didukung" hint="Centang yang biasa kamu pakai. Minimal 1.">
-          <CourierPicker value={couriers} onChange={setCouriers} />
-        </Field>
       </Section>
 
       <Section title="Pre-order" subtitle="Aktifkan jika barang membutuhkan waktu sebelum dikirim.">

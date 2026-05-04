@@ -52,8 +52,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <span className="line-clamp-1 max-w-[280px] text-fg-muted">{listing.title}</span>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
-          {/* Left — gallery + description */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          {/* Left — gallery + spec + description */}
           <div>
             <ListingGallery
               images={listing.images}
@@ -227,64 +227,114 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
-            {/* Seller card with a "Pesan sekarang" CTA per spec — buyer
-                can ping the seller directly from the listing detail
-                without round-tripping through the seller's profile. */}
+            {/* Seller card — richer redesign per mockup. Avatar with
+                ring, "Star Seller" tier badge when premium, "Aktif"
+                indicator, real rating + sales count, and dual CTA
+                row (Lihat Profil + Ikuti). */}
             <Card className="mt-6">
-              <div className="flex items-center gap-3 p-5">
-                <Avatar
-                  letter={listing.seller.username[0]?.toUpperCase() ?? "U"}
-                  size="lg"
-                  ring
-                  src={listing.seller.avatarUrl ?? null}
-                  alt={`Avatar @${listing.seller.username}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-fg">
-                    {listing.seller.name ?? `@${listing.seller.username}`}
-                  </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
-                    <span>Trust {listing.seller.trustScore.toFixed(1)}</span>
-                    {listing.seller.city && <span>· {listing.seller.city}</span>}
-                  </p>
+              <div className="p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Informasi Seller</p>
+                <div className="mt-3 flex items-start gap-3">
+                  <Avatar
+                    letter={listing.seller.username[0]?.toUpperCase() ?? "U"}
+                    size="lg"
+                    ring
+                    src={listing.seller.avatarUrl ?? null}
+                    alt={`Avatar @${listing.seller.username}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-base font-bold text-fg">
+                        {listing.seller.name ?? `@${listing.seller.username}`}
+                      </span>
+                      {listing.seller.isPremium && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+                          Star Seller
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-fg-muted">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/60" />
+                        <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      </span>
+                      Aktif baru saja
+                    </p>
+                    {ratingCount > 0 && (
+                      <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-fg">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-amber-500">
+                          <path d="M12 2 14.6 8.4 21.5 9 16.3 13.6 17.9 20.5 12 17 6.1 20.5 7.7 13.6 2.5 9 9.4 8.4Z" />
+                        </svg>
+                        {ratingAvg?.toFixed(1)}
+                        <span className="font-normal text-fg-muted">({ratingCount} ulasan)</span>
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <Link
-                  href={`/u/${encodeURIComponent(listing.seller.username)}`}
-                  className="text-xs font-semibold text-brand-500"
-                >
-                  Profil
-                </Link>
-              </div>
-              {!isOwn && (
-                <div className="border-t border-rule px-5 py-3">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <Link
-                    href={
-                      me
-                        ? `/dm?to=${encodeURIComponent(listing.seller.username)}&listing=${encodeURIComponent(listing.slug)}`
-                        : `/masuk?next=${encodeURIComponent(`/dm?to=${listing.seller.username}&listing=${listing.slug}`)}`
-                    }
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-fg text-canvas text-sm font-semibold transition-colors hover:bg-fg/90"
+                    href={`/u/${encodeURIComponent(listing.seller.username)}`}
+                    className="inline-flex h-10 items-center justify-center rounded-lg border border-rule bg-canvas px-3 text-xs font-semibold text-fg transition-colors hover:border-brand-400/60"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    Pesan sekarang
+                    Lihat Profil Seller
                   </Link>
+                  {!isOwn && (
+                    <Link
+                      href={
+                        me
+                          ? `/dm?to=${encodeURIComponent(listing.seller.username)}&listing=${encodeURIComponent(listing.slug)}`
+                          : `/masuk?next=${encodeURIComponent(`/dm?to=${listing.seller.username}&listing=${listing.slug}`)}`
+                      }
+                      className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-600"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      Chat Seller
+                    </Link>
+                  )}
                 </div>
-              )}
+              </div>
             </Card>
 
-            {/* Protection */}
-            <div className="mt-6 rounded-2xl border border-brand-400/30 bg-brand-400/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-fg">
-                <span className="text-brand-400">◆</span> Proteksi Hoobiq Pay
-              </p>
-              <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-fg-muted">
-                <li>Pembayaran aman sampai barang diterima dengan baik</li>
-                <li>Refund dijamin kalau barang tidak sesuai deskripsi</li>
-                <li>Asuransi paket opsional saat checkout</li>
-              </ul>
-            </div>
+            {/* Informasi Pengiriman */}
+            <Card className="mt-4">
+              <div className="p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Informasi Pengiriman</p>
+                <dl className="mt-3 flex flex-col gap-2 text-sm">
+                  <ShipRow label="Lokasi" value={listing.seller.city ?? "—"} icon="pin" />
+                  <ShipRow label="Berat paket" value={`${listing.weightGrams.toLocaleString("id-ID")} gr`} icon="weight" />
+                  {(listing.couriers?.length ?? 0) > 0 && (
+                    <ShipRow label="Kurir tersedia" value={listing.couriers!.map((c) => c.toUpperCase()).join(", ")} icon="truck" />
+                  )}
+                </dl>
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-400">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+                  </svg>
+                  <span><b className="font-semibold">Bisa request packing aman</b> — bubble wrap + dus tebal</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Jaminan Hoobiq */}
+            <Card className="mt-4">
+              <div className="p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">Jaminan Hoobiq</p>
+                <ul className="mt-3 flex flex-col gap-2.5 text-sm">
+                  <Guarantee text="Produk 100% Original" />
+                  <Guarantee text="Uang aman hingga barang diterima" />
+                  <Guarantee text="Bantuan CS 24/7" />
+                </ul>
+                <Link
+                  href="/bantuan"
+                  className="mt-3 inline-block text-xs font-semibold text-brand-500 hover:text-brand-600"
+                >
+                  Pelajari lebih lanjut →
+                </Link>
+              </div>
+            </Card>
 
             {/* Trade hint — hidden when the buyer is the seller (you
                 can't trade with yourself), and when the listing has
@@ -361,5 +411,33 @@ function SpecRow({
       <dt className="w-32 shrink-0 text-fg-subtle">{label}</dt>
       <dd className={"flex-1 font-medium text-fg " + (valueClass ?? "")}>{value}</dd>
     </div>
+  );
+}
+
+function ShipRow({ label, value, icon }: { label: string; value: string; icon: "pin" | "weight" | "truck" }) {
+  const ic = icon === "pin"
+    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    : icon === "weight"
+    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="3"/><path d="M6.5 8h11l1.5 12.5a2 2 0 0 1-2 2.5H7a2 2 0 0 1-2-2.5z"/></svg>
+    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-panel-2 text-fg-muted">{ic}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-fg-subtle">{label}</p>
+        <p className="font-medium text-fg">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function Guarantee({ text }: { text: string }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+      <span className="text-fg">{text}</span>
+    </li>
   );
 }

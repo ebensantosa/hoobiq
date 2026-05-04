@@ -87,22 +87,25 @@ export function HomeFeed({
           <QuickStats stats={stats} username={username} />
         </div>
 
-        {/* Two-column layout — main content + sticky right rail.
-            Below lg: rail collapses to nothing (mobile prioritises
-            scrolling product feeds, not sidebar discovery). */}
+        {/* Categories are full-width — sidebar lives below in the
+            product two-column grid only, so the kategori cards never
+            get squeezed into the narrow main column. */}
+        {categories.length > 0 && (
+          <>
+            <SectionHeader
+              title="Jelajahi Kategori"
+              href="/kategori"
+              ctaLabel="Lihat semua"
+            />
+            <CategoryRow categories={categories} />
+          </>
+        )}
+
+        {/* Two-column layout — product feed + right rail. Categories
+            already rendered full-width above; the rail starts here so
+            its top aligns with "Pilihan Untukmu". */}
         <div className="mt-2 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            {categories.length > 0 && (
-              <SectionHeader
-                title="Jelajahi Kategori"
-                href="/kategori"
-                ctaLabel="Lihat semua"
-              />
-            )}
-            {categories.length > 0 && (
-              <CategoryRow categories={categories} />
-            )}
-
             <div className="mt-12">
               <SectionHeader title="Pilihan Untukmu" />
               <PilihanTabs listings={pool} meUsername={username} />
@@ -129,9 +132,6 @@ export function HomeFeed({
             )}
           </div>
 
-          {/* Right rail — discovery + acquisition surfaces. Sticks to
-              top so it stays visible while scrolling the long product
-              column. */}
           <aside className="hidden flex-col gap-5 lg:flex">
             {trending.length > 0 && (
               <RailTrending items={trending.slice(0, 5)} />

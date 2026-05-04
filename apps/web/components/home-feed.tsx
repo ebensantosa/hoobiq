@@ -87,43 +87,63 @@ export function HomeFeed({
           <QuickStats stats={stats} username={username} />
         </div>
 
-        {categories.length > 0 && (
-          <SectionHeader
-            title="Jelajahi Kategori"
-            href="/kategori"
-            ctaLabel="Lihat semua"
-          />
-        )}
-        {categories.length > 0 && (
-          <CategoryRow categories={categories} />
-        )}
+        {/* Two-column layout — main content + sticky right rail.
+            Below lg: rail collapses to nothing (mobile prioritises
+            scrolling product feeds, not sidebar discovery). */}
+        <div className="mt-2 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0">
+            {categories.length > 0 && (
+              <SectionHeader
+                title="Jelajahi Kategori"
+                href="/kategori"
+                ctaLabel="Lihat semua"
+              />
+            )}
+            {categories.length > 0 && (
+              <CategoryRow categories={categories} />
+            )}
 
-        <div className="mt-12">
-          <SectionHeader title="Pilihan Untukmu" />
-          <PilihanTabs listings={pool} meUsername={username} />
+            <div className="mt-12">
+              <SectionHeader title="Pilihan Untukmu" />
+              <PilihanTabs listings={pool} meUsername={username} />
+            </div>
+
+            {trending.length > 0 && (
+              <div className="mt-12">
+                <SectionHeader
+                  title="Trending Minggu Ini"
+                  href="/marketplace?sort=trending"
+                  ctaLabel="Lihat semua"
+                />
+                <TrendingStrip items={trending.slice(0, 5)} />
+              </div>
+            )}
+
+            {pool.length === 0 && (
+              <div className="mt-10 rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
+                Belum ada listing untuk ditampilkan.{" "}
+                <Link href="/upload" className="font-semibold text-brand-500">
+                  Pasang listing pertama
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Right rail — discovery + acquisition surfaces. Sticks to
+              top so it stays visible while scrolling the long product
+              column. */}
+          <aside className="hidden flex-col gap-5 lg:flex lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+            {trending.length > 0 && (
+              <RailTrending items={trending.slice(0, 5)} />
+            )}
+            <RailMulaiJual />
+          </aside>
         </div>
 
-        {trending.length > 0 && (
-          <div className="mt-12">
-            <SectionHeader
-              title="Trending Minggu Ini"
-              href="/marketplace?sort=trending"
-              ctaLabel="Lihat semua"
-            />
-            <TrendingStrip items={trending.slice(0, 5)} />
-          </div>
-        )}
+        {/* Bottom CTA banner — full bleed inside the page padding. */}
+        <BottomSellCTA />
 
         <TrustSection />
-
-        {pool.length === 0 && (
-          <div className="mt-10 rounded-2xl border border-rule bg-panel/40 p-10 text-center text-fg-muted">
-            Belum ada listing untuk ditampilkan.{" "}
-            <Link href="/upload" className="font-semibold text-brand-500">
-              Pasang listing pertama
-            </Link>
-          </div>
-        )}
       </div>
     </AppShell>
   );
@@ -581,6 +601,123 @@ function PremiumGrid({ items }: { items: ListingSummary[] }) {
 /* -------------------------------------------------------------------- */
 /*  Trust / Benefit row                                                 */
 /* -------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------- */
+/*  Right rail — Trending + Mulai Jual                                   */
+/* -------------------------------------------------------------------- */
+
+function RailTrending({ items }: { items: ListingSummary[] }) {
+  return (
+    <div className="rounded-2xl border border-rule bg-gradient-to-br from-brand-50 to-ultra-50 dark:from-brand-500/10 dark:to-ultra-500/10">
+      <div className="flex items-center justify-between gap-2 px-5 pt-4">
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400">
+          <span aria-hidden>🔥</span> Trending Sekarang
+        </p>
+        <Link href="/marketplace?sort=trending" className="text-[11px] font-semibold text-brand-500 hover:text-brand-600">
+          Lihat semua
+        </Link>
+      </div>
+      <ul className="mt-2 flex flex-col">
+        {items.map((l, i) => (
+          <li key={l.id}>
+            <Link
+              href={`/listing/${l.slug}`}
+              className="flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-canvas/40"
+            >
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-500 font-mono text-[10px] font-bold text-white">
+                {i + 1}
+              </span>
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-panel-2">
+                {l.cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={l.cover} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <CardArt variant={pickArt(l.slug)} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-1 text-sm font-semibold text-fg">{l.title}</p>
+                <p className="text-[11px] text-fg-muted">
+                  Rp {l.priceIdr.toLocaleString("id-ID")}
+                </p>
+              </div>
+              {l.boosted && (
+                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-flame-500">HOT</span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function RailMulaiJual() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-rule bg-gradient-to-br from-ultra-500/10 via-brand-500/10 to-flame-500/10 p-5">
+      <p className="text-base font-bold text-fg">Mulai Jual Koleksimu</p>
+      <p className="mt-1 text-xs leading-relaxed text-fg-muted">
+        Upload koleksimu, atur harga, dan mulai berjualan sekarang!
+      </p>
+      <ul className="mt-3 flex flex-col gap-1.5 text-[11px] text-fg-muted">
+        <li className="flex items-center gap-2">
+          <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          Gratis & mudah
+        </li>
+        <li className="flex items-center gap-2">
+          <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          Jangkau banyak kolektor
+        </li>
+        <li className="flex items-center gap-2">
+          <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          Pembayaran aman
+        </li>
+      </ul>
+      <Link
+        href="/upload"
+        className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-500 to-ultra-500 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(168,85,247,0.55)] transition-transform hover:-translate-y-0.5"
+      >
+        Mulai Jual
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12h14M13 5l7 7-7 7"/>
+        </svg>
+      </Link>
+    </div>
+  );
+}
+
+function BottomSellCTA() {
+  return (
+    <section className="mt-12 overflow-hidden rounded-3xl border border-rule bg-gradient-to-r from-brand-200/40 via-ultra-200/30 to-flame-200/40 p-6 dark:from-brand-500/15 dark:via-ultra-500/15 dark:to-flame-500/15 md:p-10">
+      <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+        <div className="flex items-center gap-4">
+          <span aria-hidden className="hidden h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/70 text-3xl shadow-md backdrop-blur md:grid">📦</span>
+          <div>
+            <h3 className="text-xl font-extrabold text-fg md:text-2xl">Punya koleksi untuk dijual?</h3>
+            <p className="mt-1 text-sm text-fg-muted">
+              Jangkau ribuan kolektor di Hoobiq dan ubah koleksimu jadi cuan!
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/upload"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-500 to-ultra-500 px-6 text-sm font-bold text-white shadow-[0_10px_28px_-10px_rgba(168,85,247,0.6)] transition-transform hover:-translate-y-0.5 md:px-8"
+        >
+          Mulai Jual Sekarang
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 function TrustSection() {
   const items = [

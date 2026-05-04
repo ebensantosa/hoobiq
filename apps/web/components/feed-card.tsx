@@ -525,57 +525,171 @@ function ActionButton({
 }
 
 function PostImageGrid({ images }: { images: string[] }) {
+  const [lightboxIdx, setLightboxIdx] = React.useState<number | null>(null);
+  const open = (i: number) => setLightboxIdx(i);
   const n = images.length;
   // Smart layout matches the composer preview so what you compose === what you see.
-  if (n === 1) {
-    return (
-      <div className="px-3 pb-3">
-        <Tile src={images[0]!} className="aspect-[16/10]" />
-      </div>
-    );
-  }
-  if (n === 2) {
+  const grid = (() => {
+    if (n === 1) {
+      return (
+        <div className="px-3 pb-3">
+          <Tile src={images[0]!} className="aspect-[16/10]" onClick={() => open(0)} />
+        </div>
+      );
+    }
+    if (n === 2) {
+      return (
+        <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
+          <Tile src={images[0]!} className="aspect-square" onClick={() => open(0)} />
+          <Tile src={images[1]!} className="aspect-square" onClick={() => open(1)} />
+        </div>
+      );
+    }
+    if (n === 3) {
+      return (
+        <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
+          <Tile src={images[0]!} className="row-span-2 aspect-[3/4]" onClick={() => open(0)} />
+          <Tile src={images[1]!} className="aspect-[4/3]" onClick={() => open(1)} />
+          <Tile src={images[2]!} className="aspect-[4/3]" onClick={() => open(2)} />
+        </div>
+      );
+    }
     return (
       <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
-        <Tile src={images[0]!} className="aspect-square" />
-        <Tile src={images[1]!} className="aspect-square" />
+        <Tile src={images[0]!} className="aspect-square" onClick={() => open(0)} />
+        <Tile src={images[1]!} className="aspect-square" onClick={() => open(1)} />
+        <Tile src={images[2]!} className="aspect-square" onClick={() => open(2)} />
+        <Tile
+          src={images[3]!}
+          className="aspect-square"
+          overlay={n > 4 ? `+${n - 4}` : null}
+          onClick={() => open(3)}
+        />
       </div>
     );
-  }
-  if (n === 3) {
-    return (
-      <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
-        <Tile src={images[0]!} className="row-span-2 aspect-[3/4]" />
-        <Tile src={images[1]!} className="aspect-[4/3]" />
-        <Tile src={images[2]!} className="aspect-[4/3]" />
-      </div>
-    );
-  }
-  // 4+ images: show 4, overlay "+N more" on the last tile if needed.
+  })();
   return (
-    <div className="grid grid-cols-2 gap-1.5 px-3 pb-3">
-      <Tile src={images[0]!} className="aspect-square" />
-      <Tile src={images[1]!} className="aspect-square" />
-      <Tile src={images[2]!} className="aspect-square" />
-      <Tile
-        src={images[3]!}
-        className="aspect-square"
-        overlay={n > 4 ? `+${n - 4}` : null}
-      />
-    </div>
+    <>
+      {grid}
+      {lightboxIdx != null && (
+        <Lightbox
+          images={images}
+          index={lightboxIdx}
+          onClose={() => setLightboxIdx(null)}
+          onIndex={setLightboxIdx}
+        />
+      )}
+    </>
   );
 }
 
 function Tile({
-  src, className, overlay,
-}: { src: string; className?: string; overlay?: string | null }) {
+  src, className, overlay, onClick,
+}: { src: string; className?: string; overlay?: string | null; onClick?: () => void }) {
   return (
-    <div className={"relative overflow-hidden rounded-xl bg-panel-2 " + (className ?? "")}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={"group relative block overflow-hidden rounded-xl bg-panel-2 " + (className ?? "")}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+      <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" loading="lazy" />
       {overlay && (
         <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-2xl font-bold text-white backdrop-blur-[1px]">
           {overlay}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function Lightbox({
+  images, index, onClose, onIndex,
+}: {
+  images: string[];
+  index: number;
+  onClose: () => void;
+  onIndex: (i: number) => void;
+}) {
+  const total = images.length;
+  const prev = React.useCallback(
+    () => onIndex((index - 1 + total) % total),
+    [index, total, onIndex],
+  );
+  const next = React.useCallback(
+    () => onIndex((index + 1) % total),
+    [index, total, onIndex],
+  );
+
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
+    }
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose, prev, next]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Tutup"
+        className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); prev(); }}
+            aria-label="Sebelumnya"
+            className="absolute left-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-4"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); next(); }}
+            aria-label="Berikutnya"
+            className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-4"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 18 6-6-6-6"/>
+            </svg>
+          </button>
+        </>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={images[index]!}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90vh] max-w-[92vw] select-none rounded-xl object-contain shadow-2xl"
+      />
+
+      {total > 1 && (
+        <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-3 py-1 font-mono text-xs text-white">
+          {index + 1} / {total}
         </span>
       )}
     </div>

@@ -87,6 +87,30 @@ export async function TopNav({ active: _active }: { active?: string }) {
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-canvas/90 backdrop-blur supports-[backdrop-filter]:bg-canvas/80">
+      {/* Thin "Dikirim ke" strip — shown only when logged in. Mirrors
+          Klik Indomaret's address bar so the user always knows which
+          alamat will be used for ongkir + pickup. Click to manage. */}
+      {user && (
+        <div className="border-b border-rule bg-panel-2/40">
+          <div className="mx-auto flex h-7 max-w-[1280px] items-center px-4 sm:px-6 lg:px-10">
+            <Link
+              href="/pengaturan/alamat"
+              className="inline-flex items-center gap-1.5 text-[11px] text-fg-muted transition-colors hover:text-brand-500"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>Dikirim ke</span>
+              <span className="font-semibold text-fg">
+                {addrShort ?? <span className="text-flame-600">Atur alamat</span>}
+              </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </Link>
+          </div>
+        </div>
+      )}
       {/* Inner container is the canonical 1280px content frame and
           uses the same horizontal padding most public pages do
           (px-4 sm:px-6 lg:px-10), so the header's logo / search /
@@ -160,18 +184,6 @@ export async function TopNav({ active: _active }: { active?: string }) {
               header stays focused on browse + cart + account. */}
           {user ? (
             <>
-              <Link
-                href="/pengaturan/alamat"
-                title={primaryAddr ? "Ubah alamat pengiriman" : "Atur alamat pengiriman"}
-                className="hidden h-9 max-w-[200px] items-center gap-1.5 rounded-lg border border-rule bg-panel px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500 lg:inline-flex"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-                <span className="truncate">
-                  {addrShort ?? <span className="text-flame-600">Atur alamat</span>}
-                </span>
-              </Link>
               {/* Wishlist + DM hidden on mobile — both already
                   reachable from the avatar dropdown / mobile drawer
                   / bottom tab bar (DM = "Pesan"). Keeps the mobile

@@ -31,8 +31,10 @@ export async function AppShell({
     <div className="flex min-h-screen flex-col">
       <TopNav active={active} />
       {/* Header height: 56px on mobile (h-14) and 64px on sm+ (h-16).
-          The spacer matches both so content never tucks under the bar. */}
-      <div className="pt-14 sm:pt-16" />
+          The spacer matches both so content never tucks under the bar.
+          When logged in, the topnav adds a 28px "Dikirim ke" strip on top,
+          so the spacer grows to match. */}
+      <div className={user ? "pt-[84px] sm:pt-[92px]" : "pt-14 sm:pt-16"} />
       {/* Public marketplace layout — full width up to 1440px, no
           sidebar. Pages own their own horizontal padding so wide
           listings (marketplace grid) and narrow forms (checkout) can

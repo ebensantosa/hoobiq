@@ -132,7 +132,7 @@ export function HomeFeed({
           {/* Right rail — discovery + acquisition surfaces. Sticks to
               top so it stays visible while scrolling the long product
               column. */}
-          <aside className="hidden flex-col gap-5 lg:flex lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+          <aside className="hidden flex-col gap-5 lg:flex">
             {trending.length > 0 && (
               <RailTrending items={trending.slice(0, 5)} />
             )}

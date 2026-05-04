@@ -37,6 +37,10 @@ export function FeedComposer({
   const [caption, setCaption] = React.useState("");
   const [pending, start] = React.useTransition();
   const [dragOver, setDragOver] = React.useState(false);
+  /** Inline rejection notice — toasts often slip past peripheral
+   *  vision so we also surface a persistent banner inside the
+   *  composer until the user picks again. Cleared on next ingest. */
+  const [pickWarning, setPickWarning] = React.useState<string | null>(null);
   const inputId = React.useId();
 
   function reset() {
@@ -46,10 +50,13 @@ export function FeedComposer({
   }
 
   async function ingest(files: FileList | File[] | null) {
+    setPickWarning(null);
     if (!files || (files as { length: number }).length === 0) return;
     const slots = MAX_IMAGES - previews.length;
     if (slots <= 0) {
-      toast.error("Slot foto penuh", `Maks ${MAX_IMAGES} foto per post.`);
+      const msg = `Slot foto penuh — maks ${MAX_IMAGES} foto per post.`;
+      setPickWarning(msg);
+      toast.error("Slot foto penuh", msg);
       return;
     }
     const arr = Array.from(files as ArrayLike<File>).slice(0, slots);
@@ -61,11 +68,20 @@ export function FeedComposer({
       else if (f.size > MAX_BYTES) tooLarge.push(f.name);
       else ok.push(f);
     }
+    // Build a single combined warning so the user sees ALL reasons in
+    // one banner instead of getting a stack of dismissable toasts.
+    const reasons: string[] = [];
     if (tooLarge.length) {
-      toast.error(`${tooLarge.length} foto ditolak`, "Ukuran maksimum 5 MB per foto.");
+      reasons.push(`${tooLarge.length} foto ditolak (>5 MB): ${tooLarge.slice(0, 2).join(", ")}${tooLarge.length > 2 ? ", …" : ""}`);
     }
     if (wrongType.length) {
-      toast.error(`${wrongType.length} foto format tidak didukung`, "Gunakan PNG, JPG, atau WebP.");
+      reasons.push(`${wrongType.length} format tidak didukung — pakai PNG/JPG/WebP: ${wrongType.slice(0, 2).join(", ")}${wrongType.length > 2 ? ", …" : ""}`);
+    }
+    if (reasons.length) {
+      const banner = reasons.join(" · ");
+      setPickWarning(banner);
+      // Toast as well for users who notice the corner notification.
+      toast.error("Beberapa foto ditolak", banner);
     }
     if (!ok.length) return;
     try {
@@ -153,6 +169,17 @@ export function FeedComposer({
             />
           </div>
 
+          {pickWarning && (
+            <div className="flex items-start gap-2 rounded-lg border border-flame-400/40 bg-flame-400/10 px-3 py-2 text-xs text-flame-700 dark:text-flame-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span className="flex-1"><b>Foto belum kepilih:</b> {pickWarning}</span>
+              <button type="button" onClick={() => setPickWarning(null)} aria-label="Tutup" className="text-flame-700/70 hover:text-flame-800">
+                ×
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 border-t border-rule pt-3">
             <ComposerChip
               as="label"
@@ -215,7 +242,10 @@ export function FeedComposer({
               Reset
             </button>
           </header>
-          <div className="relative aspect-square w-full bg-canvas">
+          {/* Cover preview — capped at ~360px tall so the composer
+              stays on-screen even with full-portrait photos. Aspect
+              ratio shrinks to fit, gak ngambil seluruh viewport. */}
+          <div className="relative max-h-[360px] w-full overflow-hidden bg-canvas" style={{ aspectRatio: "4 / 3" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cover}

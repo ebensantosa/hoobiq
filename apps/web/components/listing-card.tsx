@@ -114,11 +114,12 @@ export function ListingCard({
               constant across discounted and non-discounted items. */}
           <PriceLine priceIdr={l.priceIdr} compareAtIdr={l.compareAtIdr ?? null} />
 
-          <div className="flex items-center justify-between gap-1.5 text-[11px] text-fg-subtle">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <TierBadge tier={tierForLevel(l.seller.level ?? 1)} premium={!!l.seller.isPremium} size="sm" />
-              <span className="min-w-0 truncate">{l.seller.city ?? "—"}</span>
-            </span>
+          {/* Two-row meta block keeps the tier + condition pills from
+              colliding at narrow card widths: row 1 holds the badges
+              (wraps to a new line if both don't fit), row 2 is just
+              the city in plain text. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <TierBadge tier={tierForLevel(l.seller.level ?? 1)} premium={!!l.seller.isPremium} size="sm" />
             <span
               className={
                 "inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[9px] font-bold uppercase leading-none tracking-wider " +
@@ -128,6 +129,9 @@ export function ListingCard({
               {cond.label}
             </span>
           </div>
+          {l.seller.city && (
+            <p className="truncate text-[11px] text-fg-subtle">{l.seller.city}</p>
+          )}
         </div>
       </Link>
 

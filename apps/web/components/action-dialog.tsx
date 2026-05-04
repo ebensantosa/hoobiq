@@ -117,13 +117,17 @@ function Dialog({ cfg, onClose }: { cfg: ActionDialogConfig; onClose: () => void
         className="absolute inset-0 bg-black/55 backdrop-blur-sm"
       />
       <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-rule bg-canvas shadow-2xl">
-        <div className="px-5 py-4 border-b border-rule">
+        <div className="px-5 py-4">
           <h2 className="text-base font-bold text-fg">{cfg.title}</h2>
           {cfg.description && (
             <p className="mt-1 text-sm text-fg-muted">{cfg.description}</p>
           )}
         </div>
-        <div className="flex flex-col gap-4 px-5 py-4">
+        {/* Body only renders when there's something to show — fields or
+            an error. Otherwise the empty padded div would produce a
+            ghost gap between header and footer borders. */}
+        {((cfg.fields?.length ?? 0) > 0 || err) && (
+        <div className="flex flex-col gap-4 px-5 pb-4">
           {(cfg.fields ?? []).map((f) => (
             <div key={f.key} className="flex flex-col gap-1.5">
               <Label>{f.label}</Label>
@@ -162,7 +166,8 @@ function Dialog({ cfg, onClose }: { cfg: ActionDialogConfig; onClose: () => void
             </p>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-rule px-5 py-3">
+        )}
+        <div className="flex justify-end gap-2 px-5 py-3">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>
             {cfg.cancelLabel ?? "Batal"}
           </Button>

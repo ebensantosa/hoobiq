@@ -59,14 +59,14 @@ export function TierBadge({
 }) {
   const m = TIER_META[tier];
   const sz = {
-    sm: "h-6 px-2 text-[10px]",
-    md: "h-7 px-2.5 text-[11px]",
-    lg: "h-8 px-3 text-xs",
+    sm: "h-5 px-2 text-[10px]",
+    md: "h-6 px-2.5 text-[11px]",
+    lg: "h-7 px-3 text-xs",
   }[size];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-bold uppercase tracking-widest text-white shadow-sm",
+        "inline-flex shrink-0 items-center gap-1 rounded-full font-bold uppercase leading-none tracking-wider text-white shadow-sm",
         "bg-gradient-to-r",
         m.color,
         premium ? `ring-2 ring-offset-1 ring-offset-canvas ${m.ring}` : "",

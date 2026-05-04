@@ -114,14 +114,14 @@ export function ListingCard({
               constant across discounted and non-discounted items. */}
           <PriceLine priceIdr={l.priceIdr} compareAtIdr={l.compareAtIdr ?? null} />
 
-          <div className="flex items-center justify-between gap-2 text-[11px] text-fg-subtle">
-            <span className="flex min-w-0 items-center gap-1.5 truncate">
+          <div className="flex items-center justify-between gap-1.5 text-[11px] text-fg-subtle">
+            <span className="flex min-w-0 items-center gap-1.5">
               <TierBadge tier={tierForLevel(l.seller.level ?? 1)} premium={!!l.seller.isPremium} size="sm" />
-              <span className="truncate">{l.seller.city ?? "—"}</span>
+              <span className="min-w-0 truncate">{l.seller.city ?? "—"}</span>
             </span>
             <span
               className={
-                "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider " +
+                "inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[9px] font-bold uppercase leading-none tracking-wider " +
                 tonePill
               }
             >

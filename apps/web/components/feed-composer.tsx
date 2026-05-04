@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar, Button } from "@hoobiq/ui";
 import { api, ApiError } from "@/lib/api/client";
 import { uploadImages } from "@/lib/api/uploads";
@@ -119,32 +120,12 @@ export function FeedComposer({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-rule bg-panel">
-      {/* Header — avatar + intro line. Always visible so the composer
-          reads as "you are about to post" even before files are picked. */}
-      <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
-        <Avatar
-          letter={me.username[0]?.toUpperCase() ?? "U"}
-          size="sm"
-          src={me.avatarUrl ?? null}
-          alt="Avatar"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-fg">{me.name ?? `@${me.username}`}</p>
-          <p className="truncate text-[11px] text-fg-subtle">Pamerin koleksi kamu — foto + caption opsional.</p>
-        </div>
-        {!isEmpty && (
-          <button
-            type="button"
-            onClick={reset}
-            disabled={pending}
-            className="rounded-full px-2 py-1 text-xs text-fg-subtle hover:bg-panel-2 hover:text-fg disabled:opacity-50"
-          >
-            Reset
-          </button>
-        )}
-      </header>
-
       {isEmpty ? (
+        // Empty state matches the mockup: avatar + single-line prompt
+        // up top, 4 colored quick-action chips below. The whole prompt
+        // is a label that focuses the textarea on click; chips do their
+        // own thing (Foto opens picker; Video/Koleksi/Jualan are V1
+        // placeholders that just focus the box for now).
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -153,29 +134,78 @@ export function FeedComposer({
             setDragOver(false);
             void ingest(e.dataTransfer.files);
           }}
-          className={"flex flex-col gap-3 p-4 " + (dragOver ? "bg-brand-400/5" : "")}
+          className={"flex flex-col gap-4 p-4 " + (dragOver ? "bg-brand-400/5" : "")}
         >
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            maxLength={MAX_CAPTION}
-            rows={3}
-            placeholder="Tulis status, cerita, atau pull rate kamu… (opsional kalau pasang foto)"
-            className="w-full resize-none rounded-lg bg-transparent px-1 text-sm leading-relaxed text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-0"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label
+          <div className="flex items-center gap-3">
+            <Avatar
+              letter={me.username[0]?.toUpperCase() ?? "U"}
+              size="md"
+              src={me.avatarUrl ?? null}
+              alt="Avatar"
+            />
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              maxLength={MAX_CAPTION}
+              rows={1}
+              placeholder="Apa yang ingin kamu bagikan hari ini?"
+              className="min-h-10 flex-1 resize-none rounded-full bg-panel-2/50 px-4 py-2.5 text-sm leading-relaxed text-fg placeholder:text-fg-subtle focus:bg-panel-2 focus:outline-none focus:ring-2 focus:ring-brand-400/15"
+            />
+          </div>
+
+          <div className="grid grid-cols-4 gap-1 border-t border-rule pt-3">
+            <ComposerChip
+              as="label"
               htmlFor={inputId}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-rule px-3 py-1.5 text-xs font-semibold text-fg-muted transition-colors hover:border-brand-400/60 hover:text-brand-500"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="9" cy="9" r="2"/>
-                <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>
-              </svg>
-              Tambah foto
-            </label>
-            <div className="flex items-center gap-3">
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="9" cy="9" r="2"/>
+                  <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>
+                </svg>
+              }
+              label="Foto"
+              tone="brand"
+            />
+            <ComposerChip
+              as="button"
+              onClick={() => toast.error("Belum tersedia", "Upload video lagi disiapin — pakai foto dulu ya.")}
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+              }
+              label="Video"
+              tone="flame"
+            />
+            <ComposerChip
+              as="link"
+              href="/wishlist"
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+                </svg>
+              }
+              label="Koleksi"
+              tone="amber"
+            />
+            <ComposerChip
+              as="link"
+              href="/upload"
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+              }
+              label="Jualan"
+              tone="emerald"
+            />
+          </div>
+
+          {(caption.trim().length > 0) && (
+            <div className="flex items-center justify-between gap-2 pt-1">
               <span className="font-mono text-[11px] tabular-nums text-fg-subtle">
                 {caption.length} / {MAX_CAPTION}
               </span>
@@ -183,13 +213,31 @@ export function FeedComposer({
                 {pending ? "Mengirim…" : "Post"}
               </Button>
             </div>
-          </div>
-          <p className="text-[10px] text-fg-subtle">
-            PNG · JPG · WebP · maks 5 MB · sampai 8 foto. Kosongin foto kalau cuma mau nge-status.
-          </p>
+          )}
         </div>
       ) : (
         <div className="flex flex-col">
+          {/* With-photos header — avatar + reset button. */}
+          <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
+            <Avatar
+              letter={me.username[0]?.toUpperCase() ?? "U"}
+              size="sm"
+              src={me.avatarUrl ?? null}
+              alt="Avatar"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-fg">{me.name ?? `@${me.username}`}</p>
+              <p className="truncate text-[11px] text-fg-subtle">Pamerin koleksi kamu — caption opsional.</p>
+            </div>
+            <button
+              type="button"
+              onClick={reset}
+              disabled={pending}
+              className="rounded-full px-2 py-1 text-xs text-fg-subtle hover:bg-panel-2 hover:text-fg disabled:opacity-50"
+            >
+              Reset
+            </button>
+          </header>
           <div className="relative aspect-square w-full bg-canvas">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -297,6 +345,43 @@ export function FeedComposer({
       )}
     </div>
   );
+}
+
+/* -------------------------------------------------------------------- */
+/*  Composer quick-action chips (Foto / Video / Koleksi / Jualan)        */
+/* -------------------------------------------------------------------- */
+
+const TONE_CLASSES: Record<"brand" | "flame" | "amber" | "emerald", { bg: string; text: string }> = {
+  brand:   { bg: "bg-brand-500/15",   text: "text-brand-600 dark:text-brand-400"   },
+  flame:   { bg: "bg-flame-500/15",   text: "text-flame-600 dark:text-flame-400"   },
+  amber:   { bg: "bg-amber-500/15",   text: "text-amber-600 dark:text-amber-400"   },
+  emerald: { bg: "bg-emerald-500/15", text: "text-emerald-600 dark:text-emerald-400" },
+};
+
+type ComposerChipProps = {
+  icon: React.ReactNode;
+  label: string;
+  tone: "brand" | "flame" | "amber" | "emerald";
+} & (
+  | { as: "label"; htmlFor: string }
+  | { as: "button"; onClick: () => void }
+  | { as: "link"; href: string }
+);
+
+function ComposerChip(props: ComposerChipProps) {
+  const t = TONE_CLASSES[props.tone];
+  const inner = (
+    <>
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${t.bg} ${t.text}`}>
+        {props.icon}
+      </span>
+      <span className="text-xs font-semibold text-fg">{props.label}</span>
+    </>
+  );
+  const cls = "flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-panel-2";
+  if (props.as === "label") return <label htmlFor={props.htmlFor} className={cls}>{inner}</label>;
+  if (props.as === "link")  return <Link href={props.href} className={cls}>{inner}</Link>;
+  return <button type="button" onClick={props.onClick} className={cls}>{inner}</button>;
 }
 
 function readDataUrl(file: File): Promise<string> {
